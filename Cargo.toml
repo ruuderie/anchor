@@ -19,6 +19,7 @@ axum = { version = "0.7.4", optional = true }
 axum-server = { version = "0.6.0", features = ["tls-rustls"], optional = true }
 cfg-if = "1.0.0"
 console_error_panic_hook = "0.1.7"
+contentful = "0.8.0"
 http = "1.0.0"
 leptonic = { version = "0.5.0", features = [] }
 leptos = { version = "0.6.5", features = [] }
@@ -41,7 +42,7 @@ hydrate = [
     "leptos/hydrate",
     "leptos_meta/hydrate",
     "leptos_router/hydrate",
-    "leptonic/hydrate"
+    "leptonic/hydrate",
 ]
 ssr = [
     "dep:axum",
@@ -69,7 +70,7 @@ panic = "abort"
 style-dir = "style"
 
 # REQUIRED: Leptonic's build-script will copy static JS dependencies to this directory. Relative to your project root.
-# Leptonic's `<Root>` component expects JS files to be available at a "js" directory at runtime (for dynamic script includes). Specify a different prop value if you choose a non-stadard location here. 
+# Leptonic's `<Root>` component expects JS files to be available at a "js" directory at runtime (for dynamic script includes). Specify a different prop value if you choose a non-stadard location here.
 js-dir = "public/js"
 
 [package.metadata.leptos]

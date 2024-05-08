@@ -1,0 +1,16 @@
+// src/config.rs
+pub struct Config {
+    pub contentful_space_id: String,
+    pub contentful_management_token: String,
+}
+
+impl Config {
+    pub fn load_from_env() -> Config {
+        Config {
+            contentful_space_id: std::env::var("CONTENTFUL_SPACE_ID")
+                .expect("CONTENTFUL_SPACE_ID missing from environment"),
+            contentful_management_token: std::env::var("CONTENTFUL_MANAGEMENT_TOKEN")
+                .expect("CONTENTFUL_MANAGEMENT_TOKEN missing from environment"),
+        }
+    }
+}
