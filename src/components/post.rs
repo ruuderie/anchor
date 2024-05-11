@@ -1,48 +1,41 @@
-use crate::config::Config;
-use crate::error_template::{AppError, ErrorTemplate}; // Import if not already used in your project
-use contentful::{models::SystemProperties, ContentfulManagementClient};
+use crate::config::Config; // If you still have the Config struct
+use crate::error_template::{AppError, ErrorTemplate}; // Assuming you keep this
 use leptonic::prelude::*;
 use leptos::*;
-use serde_json::json;
-use std::env;
+use serde::Deserialize;
+
+#[derive(Deserialize, PartialEq)]
+struct Post {
+    name: String,
+    title: String,
+    body: String,
+    image: Option<String>,
+    recommended_posts: Option<Vec<String>>,
+}
 
 #[component]
 pub fn Post() -> impl IntoView {
-    let config = Config::load_from_env();
-
-    let slug = create_signal(String::new()); // For dynamic routing
-    let post = create_resource(slug, move || async move {
-        let client = contentful::Client::new(
-            config.contentful_management_token,
-            config.contentful_space_id,
-        );
-
-        // Assuming posts are published, use Contentful Delivery API (CDA)
-        // for production scenarios due to its optimization for read operations
-
-        let entry: BlogPost = client
-            .entries()
-            .get()
-            .with("content_type", "blogPost")
-            .with("fields.slug", &slug())
-            .one()
-            .await?;
-        println!("{:?}", entry);
-        Ok(entry)
-    });
-
-    view! {
-        <main>
-            {
-                match post.read() {
-                    Some(data) => view! { cx,
+    // Create a signal to hold your post data
+    let post = create_signal(create_memo(|_| {
+        // Pass a closure here
+        // Sample Post Data
+        Post {
+            name: "Sample Post".to_string(),
+            title: "My First Blog Post".to_string(),
+            body: "This is the body of my sample blog post.".to_string(),
+            image: Some("https://www.example.com/image.jpg".to_string()),
+            recommended_posts: None,
+        }
+    }));
+    view! { cx,
+        <main> {
+            move || {
+                let data = post;
                         <h1>{data.title.clone()}</h1>
-                        <div dangerously_set_inner_html={data.body.clone()} />
-                    },
-                    None => view! { cx, <p>"Loading..."</p> }
-                }
-            }
+                        <img src=data.image.clone().unwrap_or_default() alt=data.title.clone() />
+                        <div>{data.body.clone()}</div>
 
-        </main>
+            }
+        } </main>
     }
 }
