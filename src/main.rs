@@ -1,17 +1,26 @@
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
+    use dotenv::dotenv;
+use std::env;
+use std::error::Error;
     use axum::Router;
     use leptos::*;
     use leptos_axum::{generate_route_list, LeptosRoutes};
     use leptonic_template_ssr::app::*;
     use leptonic_template_ssr::fileserv::file_and_error_handler;
+    use leptonic_template_ssr::services::contentful_services::get_blog_posts; // Import get_blog_posts function
+    use leptonic_template_ssr::config::Config;
 
     use tracing_subscriber::{
         prelude::__tracing_subscriber_SubscriberExt,
         util::SubscriberInitExt,
         Layer,
     };
+    dotenv::dotenv().ok(); 
+    let config = Config::load_from_env(); // Assuming you have config
+
+    get_blog_posts(&config).await; // Assuming you have get_blog_posts function
 
     let log_filter = tracing_subscriber::filter::Targets::new()
         .with_default(tracing::Level::INFO)
@@ -29,7 +38,7 @@ async fn main() {
     let fmt_layer_filtered = fmt_layer.with_filter(log_filter);
 
     tracing_subscriber::Registry::default()
-        .with(fmt_layer_filtered)
+        .with(fmt_layer_filtered) 
         .init();
 
     // Setting get_configuration(None) means we'll be using cargo-leptos's env values

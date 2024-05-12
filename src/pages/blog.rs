@@ -1,52 +1,54 @@
 use crate::config::Config;
 use crate::error_template::{AppError, ErrorTemplate};
 use contentful::{models::SystemProperties, ContentfulManagementClient, QueryBuilder}; // Import QueryBuilder
+use crate::services::contentful_services::get_blog_posts; // Import get_blog_posts function
 use leptonic::prelude::*;
+use leptos::html::P;
 use leptos::*;
 use serde_json::json;
 use std::env;
-use crate::components::Post
+use crate::components::post::{Post, Post as PostView}; // Import Post struct
 use serde::Deserialize; // We can still use this for potential expansion
 
 #[component]
 pub fn Blog() -> impl IntoView {
-    let config = Config::load_from_env(); // Assuming you have config
-
+    println!("Blog loaded");
     // For fetching data, you'd use your Contentful service here
-
-    let posts = create_resource((), move || async move {
-        // Using () for the trigger
-        // Placeholder: Sample list of posts
+        // Create a list of sample Post instances
         let sample_posts = vec![
             Post {
+                id: "1".to_string(),
+                name: "Sample Post 1".to_string(),
                 title: "My First Blog Post".to_string(),
-                slug: "first-post".to_string(), /*...*/
+                body: "This is the body of my first sample blog post.".to_string(),
+                image: Some("https://www.example.com/image1.jpg".to_string()), // Placeholder image URL
+                recommended_posts: None,
             },
             Post {
-                title: "Another Post".to_string(),
-                slug: "another-post".to_string(), /*...*/
+                id: "2".to_string(),
+                name: "Sample Post 2".to_string(),
+                title: "Another Exciting Post".to_string(),
+                body: "This is the content of my second sample blog post.".to_string(),
+                image: Some("https://www.example.com/image2.jpg".to_string()),
+                recommended_posts: None,
             },
         ];
 
-        Ok(Some(sample_posts)) // Return sample posts as Some(data)
-    });
-
-    view! {
-        <main>
-            <h2>"Latest Blog Posts"</h2>
-            {
-                match posts.read() {
-                    Some(Some(data)) => view! {
-                        <ul>
-                            {data.iter().map(|post| view!{
-                                <li><A href={format!("/blog/{}", post.slug)}>{post.title.clone()}</A></li>
-                            })}
-                        </ul>
-                    },
-                    Some(None) => view! { <p>"Loading..."</p> },
-                    None => view! { <ErrorTemplate/> }
-                }
-            }
-        </main>
+    view! { 
+        
+            <div id="blog_posts">
+                <h1>Blog Posts</h1>
+                <For
+                    each=move || { sample_posts.clone() }
+                    key=|post| post.id.clone()
+                    children=move |post: Post| {
+                        view! {
+                            
+                            <Post data={post} />
+                        }
+                    }
+                />
+            </div>
     }
 }
+

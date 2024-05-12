@@ -4,6 +4,7 @@ use leptos::*;
 #[component]
 pub fn Home() -> impl IntoView {
     let (count, set_count) = create_signal(0);
+    println!("Home page rendered");
 
     view! {
         <Box style="display: flex; flex-direction: column; align-items: center; padding: 1em; min-height: 100%; min-width: 100%">
@@ -15,4 +16,5 @@ pub fn Home() -> impl IntoView {
             </Button>
         </Box>
     }
+    
 }

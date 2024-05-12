@@ -4,7 +4,7 @@ use leptos_meta::{provide_meta_context, Meta, Stylesheet, Title};
 use leptos_router::*;
 
 use crate::error_template::{AppError, ErrorTemplate};
-use crate::pages::home::Home;
+use crate::pages::{blog::Blog, home::Home};
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -31,6 +31,8 @@ pub fn App() -> impl IntoView {
             }>
                 <Routes>
                     <Route path="" view=|| view! { <Home/> }/>
+                    <Route path="/blog" view=|| view! { <Blog/> }/>
+
                 </Routes>
             </Router>
         </Root>

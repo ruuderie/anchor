@@ -1,0 +1,1760 @@
+{
+   "sys":"SystemProperties"{
+      "id":"ZkzzTdQNVJIryHl5uxu9w",
+      "version":Some(20),
+      "revision":"None",
+      "created_at":"Some(2023-08-23T19":"47":35.236Z),
+      "updated_at":"Some(2023-08-24T02":"25":53.696Z)
+   },
+   "fields":"Object"{
+      "body":"Object"{
+         "en-US":"Object"{
+            "content":"Array"[
+               "Object"{
+                  "content":"Array"[
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""Navigating the landscape of small business loans can be challenging. At Oplyst International, we understand that when your business needs funds, your primary concern is securing the funds as quickly and efficiently as possible. However, understanding the associated interest rates and fees is essential for making a sound financial decision. Here's our guide to keep you informed.\\u{a0}"")"
+                     }
+                  ],
+                  "data":"Object"{
+                     
+                  },
+                  "nodeType":"String(""paragraph"")"
+               },
+               "Object"{
+                  "content":"Array"[
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           "Object"{
+                              "type":"String(""bold"")"
+                           }
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""Understanding Loan Rates – Why It Matters"")"
+                     },
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""\\u{a0}"")"
+                     }
+                  ],
+                  "data":"Object"{
+                     
+                  },
+                  "nodeType":"String(""paragraph"")"
+               },
+               "Object"{
+                  "content":"Array"[
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""Overlooking the interest rate and associated fees when borrowing can have financial implications. These rates determine the lenders' profit margins and ultimately the cost you bear for accessing funds. A higher rate means your repayment will be significantly more, potentially impacting your business negatively.\\u{a0}"")"
+                     }
+                  ],
+                  "data":"Object"{
+                     
+                  },
+                  "nodeType":"String(""paragraph"")"
+               },
+               "Object"{
+                  "content":"Array"[
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""All business owners should invest time in understanding these rates, ensuring they choose the best option for their business's long-term health.\\u{a0}\\u{a0}\n"")"
+                     },
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           "Object"{
+                              "type":"String(""bold"")"
+                           }
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""Oplyst International's Basic Qualification Criteria"")"
+                     },
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String("" To be considered for our primary lending program, ensure you meet the following:\\u{a0}"")"
+                     }
+                  ],
+                  "data":"Object"{
+                     
+                  },
+                  "nodeType":"String(""paragraph"")"
+               },
+               "Object"{
+                  "content":"Array"[
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "marks":"Array"[
+                                       
+                                    ],
+                                    "nodeType":"String(""text"")",
+                                    "value":"String(""A minimum of 1 year  in business\\u{a0}"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""paragraph"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""list-item"")"
+                     },
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "marks":"Array"[
+                                       
+                                    ],
+                                    "nodeType":"String(""text"")",
+                                    "value":"String(""A credit score of at least 600\\u{a0}"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""paragraph"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""list-item"")"
+                     },
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "marks":"Array"[
+                                       
+                                    ],
+                                    "nodeType":"String(""text"")",
+                                    "value":"String(""Monthly revenue surpassing $20,000\\u{a0}"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""paragraph"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""list-item"")"
+                     }
+                  ],
+                  "data":"Object"{
+                     
+                  },
+                  "nodeType":"String(""unordered-list"")"
+               },
+               "Object"{
+                  "content":"Array"[
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           "Object"{
+                              "type":"String(""bold"")"
+                           }
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""How to Get Started with Oplyst International?"")"
+                     },
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""\\u{a0}"")"
+                     }
+                  ],
+                  "data":"Object"{
+                     
+                  },
+                  "nodeType":"String(""paragraph"")"
+               },
+               "Object"{
+                  "content":"Array"[
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""Starting your loan application is seamless. Reach out to our dedicated team at our toll-free number, available 24/7 at . Alternatively, visit our website and submit an online application with essential business details. "")"
+                     }
+                  ],
+                  "data":"Object"{
+                     
+                  },
+                  "nodeType":"String(""paragraph"")"
+               },
+               "Object"{
+                  "content":"Array"[
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           "Object"{
+                              "type":"String(""bold"")"
+                           }
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""Breaking Down Interest Rates"")"
+                     },
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""\\u{a0}"")"
+                     }
+                  ],
+                  "data":"Object"{
+                     
+                  },
+                  "nodeType":"String(""paragraph"")"
+               },
+               "Object"{
+                  "content":"Array"[
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""Business loans generally revolve around four primary interest rates:\\u{a0}"")"
+                     }
+                  ],
+                  "data":"Object"{
+                     
+                  },
+                  "nodeType":"String(""paragraph"")"
+               },
+               "Object"{
+                  "content":"Array"[
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "marks":"Array"[
+                                       
+                                    ],
+                                    "nodeType":"String(""text"")",
+                                    "value":"String(""Simple Interest\\u{a0}"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""paragraph"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""list-item"")"
+                     },
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "marks":"Array"[
+                                       
+                                    ],
+                                    "nodeType":"String(""text"")",
+                                    "value":"String(""Compound Interest\\u{a0}"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""paragraph"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""list-item"")"
+                     },
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "marks":"Array"[
+                                       
+                                    ],
+                                    "nodeType":"String(""text"")",
+                                    "value":"String(""Annual Percentage Rate (APR)\\u{a0}"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""paragraph"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""list-item"")"
+                     },
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "marks":"Array"[
+                                       
+                                    ],
+                                    "nodeType":"String(""text"")",
+                                    "value":"String(""Factor Rate\\u{a0}"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""paragraph"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""list-item"")"
+                     }
+                  ],
+                  "data":"Object"{
+                     
+                  },
+                  "nodeType":"String(""unordered-list"")"
+               },
+               "Object"{
+                  "content":"Array"[
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""The "")"
+                     },
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           "Object"{
+                              "type":"String(""bold"")"
+                           }
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""Simple Interest"")"
+                     },
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String("" is a straightforward rate charged on the principal amount borrowed, calculated based on the loan term and the principal.\\u{a0}"")"
+                     }
+                  ],
+                  "data":"Object"{
+                     
+                  },
+                  "nodeType":"String(""paragraph"")"
+               },
+               "Object"{
+                  "content":"Array"[
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           "Object"{
+                              "type":"String(""bold"")"
+                           }
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""Compound Interest"")"
+                     },
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String("", on the other hand, charges interest on both the principal and any accrued interest. Some lenders, especially short-term ones, might offer loans that compound daily, making the overall cost higher than simple interest.\\u{a0}"")"
+                     }
+                  ],
+                  "data":"Object"{
+                     
+                  },
+                  "nodeType":"String(""paragraph"")"
+               },
+               "Object"{
+                  "content":"Array"[
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           "Object"{
+                              "type":"String(""bold"")"
+                           }
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""APR"")"
+                     },
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String("" offers a clearer picture of the overall cost, incorporating the interest rate, any loan fees, and the loan's term. It's essential to understand that a shorter loan term might have a higher APR but could result in lesser interest over the loan's life.\\u{a0}"")"
+                     }
+                  ],
+                  "data":"Object"{
+                     
+                  },
+                  "nodeType":"String(""paragraph"")"
+               },
+               "Object"{
+                  "content":"Array"[
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           "Object"{
+                              "type":"String(""bold"")"
+                           }
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""Factor Rate"")"
+                     },
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String("" is an upfront charge, where the interest is calculated instantly and included in the loan's life and payment schedule. For instance, a factor rate of 1.4 on a $100,000 loan translates to $40,000 in interest.\\u{a0}"")"
+                     }
+                  ],
+                  "data":"Object"{
+                     
+                  },
+                  "nodeType":"String(""paragraph"")"
+               },
+               "Object"{
+                  "content":"Array"[
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           "Object"{
+                              "type":"String(""bold"")"
+                           }
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""Considering Loan Fees"")"
+                     },
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""\\u{a0}Loan fees influence the APR. When comparing lenders, it's vital to note both the interest rates and the associated fees. Common fees include:\\u{a0}"")"
+                     }
+                  ],
+                  "data":"Object"{
+                     
+                  },
+                  "nodeType":"String(""paragraph"")"
+               },
+               "Object"{
+                  "content":"Array"[
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "marks":"Array"[
+                                       
+                                    ],
+                                    "nodeType":"String(""text"")",
+                                    "value":"String(""Application fees\\u{a0}"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""paragraph"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""list-item"")"
+                     },
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "marks":"Array"[
+                                       
+                                    ],
+                                    "nodeType":"String(""text"")",
+                                    "value":"String(""Origination fees\\u{a0}"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""paragraph"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""list-item"")"
+                     },
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "marks":"Array"[
+                                       
+                                    ],
+                                    "nodeType":"String(""text"")",
+                                    "value":"String(""Processing fees\\u{a0}"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""paragraph"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""list-item"")"
+                     },
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "marks":"Array"[
+                                       
+                                    ],
+                                    "nodeType":"String(""text"")",
+                                    "value":"String(""Service charges\\u{a0}"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""paragraph"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""list-item"")"
+                     },
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "marks":"Array"[
+                                       
+                                    ],
+                                    "nodeType":"String(""text"")",
+                                    "value":"String(""Prepayment penalties\\u{a0}"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""paragraph"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""list-item"")"
+                     },
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "marks":"Array"[
+                                       
+                                    ],
+                                    "nodeType":"String(""text"")",
+                                    "value":"String(""Check or bank withdrawal fees\\u{a0}"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""paragraph"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""list-item"")"
+                     },
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "marks":"Array"[
+                                       
+                                    ],
+                                    "nodeType":"String(""text"")",
+                                    "value":"String(""Late payment charges\\u{a0}"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""paragraph"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""list-item"")"
+                     }
+                  ],
+                  "data":"Object"{
+                     
+                  },
+                  "nodeType":"String(""unordered-list"")"
+               },
+               "Object"{
+                  "content":"Array"[
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""It's essential to understand and compare these charges, as they can substantially affect the overall cost of the loan.\\u{a0}"")"
+                     }
+                  ],
+                  "data":"Object"{
+                     
+                  },
+                  "nodeType":"String(""paragraph"")"
+               },
+               "Object"{
+                  "content":"Array"[
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           "Object"{
+                              "type":"String(""bold"")"
+                           }
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""Comparative Rates by Lender Types"")"
+                     },
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""\\u{a0}"")"
+                     }
+                  ],
+                  "data":"Object"{
+                     
+                  },
+                  "nodeType":"String(""paragraph"")"
+               },
+               "Object"{
+                  "content":"Array"[
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""Different lenders offer varying APR ranges. Remember, the APR is the loan's real cost, including all associated fees:\\u{a0}"")"
+                     }
+                  ],
+                  "data":"Object"{
+                     
+                  },
+                  "nodeType":"String(""paragraph"")"
+               },
+               "Object"{
+                  "content":"Array"[
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "content":"Array"[
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             "Object"{
+                                                "type":"String(""bold"")"
+                                             }
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""Loan Type"")"
+                                       },
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""\\u{a0}"")"
+                                       }
+                                    ],
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "nodeType":"String(""paragraph"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""table-header-cell"")"
+                           },
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "content":"Array"[
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             "Object"{
+                                                "type":"String(""bold"")"
+                                             }
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""Traditional Banks"")"
+                                       },
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""\\u{a0}"")"
+                                       }
+                                    ],
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "nodeType":"String(""paragraph"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""table-header-cell"")"
+                           },
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "content":"Array"[
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             "Object"{
+                                                "type":"String(""bold"")"
+                                             }
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""Alternative Lenders like Oplyst International"")"
+                                       },
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""\\u{a0}"")"
+                                       }
+                                    ],
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "nodeType":"String(""paragraph"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""table-header-cell"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""table-row"")"
+                     },
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "content":"Array"[
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""Long-Term Loans (5 Years or More)\\u{a0}"")"
+                                       }
+                                    ],
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "nodeType":"String(""paragraph"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""table-cell"")"
+                           },
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "content":"Array"[
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""4-13%\\u{a0}"")"
+                                       }
+                                    ],
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "nodeType":"String(""paragraph"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""table-cell"")"
+                           },
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "content":"Array"[
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""N/A\\u{a0}"")"
+                                       }
+                                    ],
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "nodeType":"String(""paragraph"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""table-cell"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""table-row"")"
+                     },
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "content":"Array"[
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""Short-Term Loans\\u{a0}"")"
+                                       }
+                                    ],
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "nodeType":"String(""paragraph"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""table-cell"")"
+                           },
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "content":"Array"[
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""8%\\u{a0}"")"
+                                       }
+                                    ],
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "nodeType":"String(""paragraph"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""table-cell"")"
+                           },
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "content":"Array"[
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""6.698-99.7%\\u{a0}"")"
+                                       }
+                                    ],
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "nodeType":"String(""paragraph"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""table-cell"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""table-row"")"
+                     },
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "content":"Array"[
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""Lines of Credit\t\\u{a0}"")"
+                                       }
+                                    ],
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "nodeType":"String(""paragraph"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""table-cell"")"
+                           },
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "content":"Array"[
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""Prime + 1.5% –\\u{a0}"")"
+                                       }
+                                    ],
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "nodeType":"String(""paragraph"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""table-cell"")"
+                           },
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "content":"Array"[
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""8-80%\\u{a0}"")"
+                                       }
+                                    ],
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "nodeType":"String(""paragraph"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""table-cell"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""table-row"")"
+                     },
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "content":"Array"[
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""Equipment Financing\\u{a0}"")"
+                                       }
+                                    ],
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "nodeType":"String(""paragraph"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""table-cell"")"
+                           },
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "content":"Array"[
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""5.50% –\t\\u{a0}"")"
+                                       }
+                                    ],
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "nodeType":"String(""paragraph"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""table-cell"")"
+                           },
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "content":"Array"[
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""8-40%\\u{a0}"")"
+                                       }
+                                    ],
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "nodeType":"String(""paragraph"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""table-cell"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""table-row"")"
+                     },
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "content":"Array"[
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""Invoice Financing\\u{a0}"")"
+                                       }
+                                    ],
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "nodeType":"String(""paragraph"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""table-cell"")"
+                           },
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "content":"Array"[
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""0.5%/week\\u{a0}"")"
+                                       }
+                                    ],
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "nodeType":"String(""paragraph"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""table-cell"")"
+                           },
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "content":"Array"[
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""5%/month\t13-68%\\u{a0}\\u{a0}"")"
+                                       }
+                                    ],
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "nodeType":"String(""paragraph"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""table-cell"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""table-row"")"
+                     },
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "content":"Array"[
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""Credit Cards\\u{a0}"")"
+                                       }
+                                    ],
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "nodeType":"String(""paragraph"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""table-cell"")"
+                           },
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "content":"Array"[
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""13-18%\\u{a0}"")"
+                                       }
+                                    ],
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "nodeType":"String(""paragraph"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""table-cell"")"
+                           },
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "content":"Array"[
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""N/A\\u{a0}"")"
+                                       }
+                                    ],
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "nodeType":"String(""paragraph"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""table-cell"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""table-row"")"
+                     },
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "content":"Array"[
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""Merchant Cash Advance\\u{a0}"")"
+                                       }
+                                    ],
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "nodeType":"String(""paragraph"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""table-cell"")"
+                           },
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "content":"Array"[
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""N/A\\u{a0}"")"
+                                       }
+                                    ],
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "nodeType":"String(""paragraph"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""table-cell"")"
+                           },
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "content":"Array"[
+                                       "Object"{
+                                          "data":"Object"{
+                                             
+                                          },
+                                          "marks":"Array"[
+                                             
+                                          ],
+                                          "nodeType":"String(""text"")",
+                                          "value":"String(""20-250%\\u{a0}\\u{a0}"")"
+                                       }
+                                    ],
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "nodeType":"String(""paragraph"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""table-cell"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""table-row"")"
+                     }
+                  ],
+                  "data":"Object"{
+                     
+                  },
+                  "nodeType":"String(""table"")"
+               },
+               "Object"{
+                  "content":"Array"[
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""\\u{a0}Remember, factors like collateral, credit scores, and loan terms can also influence these rates.\\u{a0}"")"
+                     },
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           "Object"{
+                              "type":"String(""bold"")"
+                           }
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""Determining Your Interest Rate"")"
+                     },
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""\\u{a0}Several elements influence the specific interest rate you'll get, such as:\\u{a0}"")"
+                     }
+                  ],
+                  "data":"Object"{
+                     
+                  },
+                  "nodeType":"String(""paragraph"")"
+               },
+               "Object"{
+                  "content":"Array"[
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "marks":"Array"[
+                                       
+                                    ],
+                                    "nodeType":"String(""text"")",
+                                    "value":"String(""Personal credit score\\u{a0}"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""paragraph"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""list-item"")"
+                     },
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "marks":"Array"[
+                                       
+                                    ],
+                                    "nodeType":"String(""text"")",
+                                    "value":"String(""Business profitability and revenue\\u{a0}"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""paragraph"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""list-item"")"
+                     },
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "marks":"Array"[
+                                       
+                                    ],
+                                    "nodeType":"String(""text"")",
+                                    "value":"String(""Duration your business has been operational\\u{a0}"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""paragraph"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""list-item"")"
+                     },
+                     "Object"{
+                        "content":"Array"[
+                           "Object"{
+                              "content":"Array"[
+                                 "Object"{
+                                    "data":"Object"{
+                                       
+                                    },
+                                    "marks":"Array"[
+                                       
+                                    ],
+                                    "nodeType":"String(""text"")",
+                                    "value":"String(""Your business sector\\u{a0}"")"
+                                 }
+                              ],
+                              "data":"Object"{
+                                 
+                              },
+                              "nodeType":"String(""paragraph"")"
+                           }
+                        ],
+                        "data":"Object"{
+                           
+                        },
+                        "nodeType":"String(""list-item"")"
+                     }
+                  ],
+                  "data":"Object"{
+                     
+                  },
+                  "nodeType":"String(""unordered-list"")"
+               },
+               "Object"{
+                  "content":"Array"[
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""\\u{a0}In addition, the broader loan market dynamics, Federal Funds rate, the urgency of funds, and whether the loan has a fixed or variable rate can impact the interest rates.\\u{a0}"")"
+                     }
+                  ],
+                  "data":"Object"{
+                     
+                  },
+                  "nodeType":"String(""paragraph"")"
+               },
+               "Object"{
+                  "content":"Array"[
+                     "Object"{
+                        "data":"Object"{
+                           
+                        },
+                        "marks":"Array"[
+                           
+                        ],
+                        "nodeType":"String(""text"")",
+                        "value":"String(""Being informed is vital. Recognizing the implications of interest rates and fees is integral to managing your business's finances proficiently. We invite you to explore the competitive small business loan rates available at Oplyst International and make the best choice for your venture."")"
+                     }
+                  ],
+                  "data":"Object"{
+                     
+                  },
+                  "nodeType":"String(""paragraph"")"
+               }
+            ],
+            "data":"Object"{
+               
+            },
+            "nodeType":"String(""document"")"
+         }
+      },
+      "title":"Object"{
+         "en-US":"String(""Oplyst International's Guide to Small Business Loan Rates "")"
+      }
+   }
+}
