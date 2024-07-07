@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::error_template::{AppError, ErrorTemplate};
-use contentful::{models::SystemProperties, ContentfulManagementClient, QueryBuilder}; // Import QueryBuilder
+//use contentful::{models::SystemProperties, ContentfulManagementClient, QueryBuilder}; // Import QueryBuilder
 use crate::services::contentful_services::get_blog_posts; // Import get_blog_posts function
 use leptonic::prelude::*;
 use leptos::html::P;
@@ -49,6 +49,8 @@ pub fn Blog() -> impl IntoView {
                     }
                 />
             </div>
+
+
     }
 }
 

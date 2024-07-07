@@ -20,7 +20,7 @@ use std::error::Error;
     dotenv::dotenv().ok(); 
     let config = Config::load_from_env(); // Assuming you have config
 
-    get_blog_posts(&config).await; // Assuming you have get_blog_posts function
+    let _ = get_blog_posts(&config).await; // Assuming you have get_blog_posts function
 
     let log_filter = tracing_subscriber::filter::Targets::new()
         .with_default(tracing::Level::INFO)
