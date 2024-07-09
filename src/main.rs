@@ -7,10 +7,10 @@ use std::error::Error;
     use axum::Router;
     use leptos::*;
     use leptos_axum::{generate_route_list, LeptosRoutes};
-    use leptonic_template_ssr::app::*;
-    use leptonic_template_ssr::fileserv::file_and_error_handler;
-    use leptonic_template_ssr::services::contentful_services::get_blog_posts; // Import get_blog_posts function
-    use leptonic_template_ssr::config::Config;
+    use ruuderie_ai::app::*;
+    use ruuderie_ai::fileserv::file_and_error_handler;
+    use ruuderie_ai::services::contentful_services::get_blog_posts; // Import get_blog_posts function
+    use ruuderie_ai::config::Config;
 
     use tracing_subscriber::{
         prelude::__tracing_subscriber_SubscriberExt,

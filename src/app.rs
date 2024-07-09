@@ -11,9 +11,11 @@ use crate::pages::{blog::Blog, home::Home};
 #[component]
 pub fn container(children: Children) -> impl IntoView {
     view! {
+        <section class="section">
         <div class="container">
             {children()}
         </div>
+        </section>
     }
 }
 
@@ -102,7 +104,7 @@ pub fn App() -> impl IntoView {
     provide_meta_context();
 
     view! {
-        // sets the document title
+        <Stylesheet id="leptos" href="/pkg/ruuderie-ai.css"/>
         <Title text="Welcome to Ruud Erie.ai "/>
         <Container>
         <PageHeader/>

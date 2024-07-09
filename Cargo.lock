@@ -1437,34 +1437,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "leptonic-template-ssr"
-version = "0.1.0"
-dependencies = [
- "axum",
- "axum-server",
- "cfg-if",
- "console_error_panic_hook",
- "contentful",
- "dotenv",
- "http 1.1.0",
- "leptonic",
- "leptos",
- "leptos_axum",
- "leptos_meta",
- "leptos_router",
- "serde",
- "serde_json",
- "thiserror",
- "time",
- "tokio",
- "tower",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "tracing-wasm",
-]
-
-[[package]]
 name = "leptonic-theme"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2447,6 +2419,34 @@ name = "rustversion"
 version = "1.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ffc183a10b4478d04cbbbfc96d0873219d962dd5accaff2ffbd4ceb7df837f4"
+
+[[package]]
+name = "ruuderie-ai"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "axum-server",
+ "cfg-if",
+ "console_error_panic_hook",
+ "contentful",
+ "dotenv",
+ "http 1.1.0",
+ "leptonic",
+ "leptos",
+ "leptos_axum",
+ "leptos_meta",
+ "leptos_router",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "time",
+ "tokio",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "tracing-wasm",
+]
 
 [[package]]
 name = "ryu"
