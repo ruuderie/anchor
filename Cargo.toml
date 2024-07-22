@@ -15,8 +15,15 @@ opt-level = 3
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+    `
+
 axum = { version = "0.7.4", optional = true }
 axum-server = { version = "0.6.0", features = ["tls-rustls"], optional = true }
+sea-orm = { version = "0.12", features = [
+    "sqlx-postgres",
+    "runtime-tokio-rustls",
+    "macros",
+] }
 cfg-if = "1.0.0"
 console_error_panic_hook = "0.1.7"
 contentful = "0.8.0"
@@ -37,7 +44,7 @@ tower-http = { version = "0.5.1", features = ["fs"], optional = true }
 tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
 tracing-wasm = "0.2.1"
-
+uuid = { version = "1.4.1", features = ["v4", "fast-rng", "macro-diagnostics"] }
 [features]
 hydrate = [
     "leptos/hydrate",
@@ -71,7 +78,8 @@ panic = "abort"
 style-dir = "style"
 
 # REQUIRED: Leptonic's build-script will copy static JS dependencies to this directory. Relative to your project root.
-# Leptonic's `<Root>` component expects JS files to be available at a "js" directory at runtime (for dynamic script includes). Specify a different prop value if you choose a non-stadard location here.
+# Leptonic's `<Root>` component expects JS files to be available at a "js" directory at runtime (for dynamic script includes).
+# Specify a different prop value if you choose a non-stadard location here.
 js-dir = "public/js"
 
 [package.metadata.leptos]
@@ -85,7 +93,8 @@ site-root = "target/site"
 # Defaults to pkg
 site-pkg-dir = "pkg"
 
-# [Optional] The source CSS file. If it ends with .sass or .scss then it will be compiled by dart-sass into CSS. The CSS is optimized by Lightning CSS before being written to <site-root>/<site-pkg>/app.css
+# [Optional] The source CSS file. If it ends with .sass or .scss then it will be compiled by dart-sass into CSS.
+#  The CSS is optimized by Lightning CSS before being written to <site-root>/<site-pkg>/app.css
 style-file = "style/main.css"
 
 # Assets source dir. All files found here will be copied and synchronized to site-root.
@@ -109,7 +118,8 @@ end2end-dir = "end2end"
 #  The browserlist query used for optimizing the CSS.
 browserquery = "defaults"
 
-# Set by cargo-leptos watch when building with that tool. Controls whether autoreload JS will be included in the head
+# Set by cargo-leptos watch when building with that tool.
+# Controls whether autoreload JS will be included in the head
 watch = false
 
 # The environment Leptos will run in, usually either "DEV" or "PROD"

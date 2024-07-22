@@ -1,6 +1,6 @@
 use crate::config::Config; // If you still have the Config struct
 use crate::error_template::{AppError, ErrorTemplate}; // Assuming you keep this
-use crate::models::blog::Post;
+use crate::models::article::Article;
 use leptonic::prelude::*;
 use leptos::*;
 #[component]
