@@ -1,5 +1,7 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
+use crate::models::user::{UserType}
+
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "users")]
@@ -11,6 +13,7 @@ pub struct User {
     pub password_hash: String,
     pub created_at: DateTime,
     pub updated_at: DateTime,
+    pub user_type: UserType,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter)]
