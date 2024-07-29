@@ -21,6 +21,9 @@ sea-orm = { version = "0.12", features = [
     "sqlx-postgres",
     "runtime-tokio-rustls",
     "macros",
+    "with-uuid",
+    "with-json",
+    "with-chrono",
 ] }
 cfg-if = "1.0.0"
 console_error_panic_hook = "0.1.7"

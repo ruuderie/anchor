@@ -3,28 +3,24 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "categories")]
-pub struct Category {
-    #[sea_orm(primary_key, column_type = "uuid")]
+pub struct Model {
+    #[sea_orm(primary_key, column_type = "Uuid")]
     pub id: Uuid,
-    #[sea_orm(column_type = "text")]
+    #[sea_orm(column_type = "Text")]
     pub name: String,
-    #[sea_orm(column_type = "timestamp")]
     pub created_at: DateTime,
-    #[sea_orm(column_type = "timestamp")]
     pub updated_at: DateTime,
 }
 
-#[derive(Copy, Clone, Debug, EnumIter)]
-pub enum CategoryRelation {}
-
-impl Related<super::other::Entity> for Category {
+#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+pub enum Relation {
+    #[sea_orm(has_many = "super::articlecategory::Entity")]
+    ArticleCategory,
+}
+impl Related<super::articlecategory::Entity> for Entity {
     fn to() -> RelationDef {
-        panic!("No RelationDef")
-    }
-
-    fn via() -> Option<RelationDef> {
-        None
+        Relation::ArticleCategory.def()
     }
 }
 
-impl ActiveModelBehavior for Category {}
+impl ActiveModelBehavior for ActiveModel {}

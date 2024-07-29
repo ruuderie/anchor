@@ -5,13 +5,13 @@ use sea_orm::entity::prelude::*;
 pub struct Model {
     #[sea_orm(primary_key, column_type = "uuid")]
     pub id: Uuid,
-    #[sea_orm(column_type = "text")]
+    #[sea_orm(column_type = "Text")]
     pub heading: String,
-    #[sea_orm(column_type = "text")]
+    #[sea_orm(column_type = "Text")]
     pub subheading: String,
-    #[sea_orm(column_type = "text")]
+    #[sea_orm(column_type = "Text")]
     pub call_to_action: String,
-    #[sea_orm(column_type = "text")]
+    #[sea_orm(column_type = "Text")]
     pub video_url: String,
     #[sea_orm(column_type = "Array(Text)")]
     pub company_logos: Vec<String>,
@@ -23,7 +23,7 @@ pub struct Model {
     pub testimonials: Vec<String>,
     #[sea_orm(column_type = "Array(Text)")]
     pub faq: Vec<String>,
-    #[sea_orm(column_type = "text")]
+    #[sea_orm(column_type = "Text")]
     pub footer: String,
 }
 

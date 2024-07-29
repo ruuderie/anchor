@@ -16,24 +16,7 @@ pub fn Blog() -> impl IntoView {
     println!("Blog loaded");
     // For fetching data, you'd use your Contentful service here
     // Create a list of sample Post instances
-    let sample_posts = vec![
-        Post {
-            id: "1".to_string(),
-            name: "Sample Post 1".to_string(),
-            title: "My First Blog Post".to_string(),
-            body: "This is the body of my first sample blog post.".to_string(),
-            image: Some("https://www.example.com/image1.jpg".to_string()), // Placeholder image URL
-            recommended_posts: None,
-        },
-        Post {
-            id: "2".to_string(),
-            name: "Sample Post 2".to_string(),
-            title: "Another Exciting Post".to_string(),
-            body: "This is the content of my second sample blog post.".to_string(),
-            image: Some("https://www.example.com/image2.jpg".to_string()),
-            recommended_posts: None,
-        },
-    ];
+    let sample_posts: Vec<Article> = vec![];
 
     view! {
 
@@ -42,7 +25,7 @@ pub fn Blog() -> impl IntoView {
                 <For
                     each=move || { sample_posts.clone() }
                     key=|post| post.id.clone()
-                    children=move |post: Post| {
+                    children=move |post: Article| {
                         view! {
 
                             <Post data={post} />

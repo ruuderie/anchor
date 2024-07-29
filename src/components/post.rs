@@ -4,7 +4,7 @@ use crate::models::article::Article;
 use leptonic::prelude::*;
 use leptos::*;
 #[component]
-pub fn Post(data: Post) -> impl IntoView {
+pub fn Post(data: Article) -> impl IntoView {
     view! {
             <main>
                 /*
@@ -45,7 +45,7 @@ pub fn Post(data: Post) -> impl IntoView {
       </a>
 
       <p class="mt-2 line-clamp-3 text-sm/relaxed text-gray-500">
-        {data.body.clone()}
+        {data.content.clone()}
       </p>
 
       <a href="#" class="group mt-4 inline-flex items-center gap-1 text-sm font-medium text-blue-600">

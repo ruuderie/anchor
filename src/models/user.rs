@@ -5,8 +5,12 @@ pub enum LoginAction {
     Granted(UserType),
     Denied,
 }
+#[derive(PartialEq, Debug, Eq, Clone, Serialize, Deserialize, EnumIter, DeriveActiveEnum)]
+#[sea_orm(rs_type = "String", db_type = "String(Some(1))")]
 pub enum UserType {
+    #[sea_orm(string_value = "Admin")]
     Admin,
+    #[sea_orm(string_value = "User")]
     User,
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
