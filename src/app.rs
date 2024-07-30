@@ -1,13 +1,13 @@
 use leptonic::prelude::*;
+use leptos::*;
 use leptos::{svg::view, *};
 use leptos_meta::*;
-use leptos_router::*;
-use leptos::*;
 use leptos_meta::{provide_meta_context, Meta, Stylesheet, Title};
+use leptos_router::*;
 use leptos_router::*;
 
 use crate::error_template::{AppError, ErrorTemplate};
-use crate::pages::{blog::Blog, home::Home};
+use crate::pages::{blog::Blog, home::Home, login::Login};
 #[component]
 pub fn container(children: Children) -> impl IntoView {
     view! {
@@ -60,6 +60,10 @@ pub fn NavBar() -> impl IntoView {
                     <a class="navbar-item" href="/blog">
                         "Blog"
                     </a>
+                    // login page
+                    <a class="navbar-item" href="/login">
+                        "Login"
+                        </a>
                     // ... add more menu items if needed
                 </div>
             </div>
@@ -69,11 +73,11 @@ pub fn NavBar() -> impl IntoView {
 
 #[component]
 pub fn SideBar() -> impl IntoView {
-    view! { 
+    view! {
         <div class="column is-one-quarter"> // Adjust column width as needed
             <aside class="menu">
                 <p class="menu-label">
-                    "Sidebar" 
+                    "Sidebar"
                 </p>
                 <ul class="menu-list">
                     // ... your sidebar content ...
@@ -85,19 +89,20 @@ pub fn SideBar() -> impl IntoView {
 #[component]
 pub fn Content() -> impl IntoView {
     view! {             <Router fallback=|| {
-        let mut outside_errors = Errors::default();
-        outside_errors.insert_with_default_key(AppError::NotFound);
-        view! {
-            <ErrorTemplate outside_errors/>
-        }
-    }>
-        <Routes>
-            <Route path="" view=|| view! { <Home/> }/>
-            <Route path="/blog" view=|| view! { <Blog/> }/>
+            let mut outside_errors = Errors::default();
+            outside_errors.insert_with_default_key(AppError::NotFound);
+            view! {
+                <ErrorTemplate outside_errors/>
+            }
+        }>
+            <Routes>
+                <Route path="" view=|| view! { <Home/> }/>
+                <Route path="/blog" view=|| view! { <Blog/> }/>
+                <Route path="/login" view=|| view! { <Login/> }/>
 
-        </Routes>
-    </Router>
-}
+            </Routes>
+        </Router>
+    }
 }
 #[component]
 pub fn App() -> impl IntoView {
