@@ -47,6 +47,7 @@ impl Related<super::user::Entity> for Entity {
 
 #[async_trait::async_trait]
 impl ActiveModelBehavior for super::auth_token::ActiveModel {
+    //pass in user entity to get user_id
     fn new() -> Self {
         let expiration = chrono::Utc::now() + chrono::Duration::minutes(30);
 
