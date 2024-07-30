@@ -25,6 +25,8 @@ pub enum Relation {
     //has many comments
     #[sea_orm(has_many = "super::comment::Entity")]
     Comment,
+    #[sea_orm(has_many = "super::auth_token::Entity")]
+    AuthToken,
 }
 impl Related<super::article::Entity> for Entity {
     fn to() -> RelationDef {
@@ -36,5 +38,9 @@ impl Related<super::comment::Entity> for Entity {
         Relation::Comment.def()
     }
 }
-
+impl Related<super::auth_token::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::AuthToken.def()
+    }
+}
 impl ActiveModelBehavior for ActiveModel {}

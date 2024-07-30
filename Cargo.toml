@@ -26,6 +26,7 @@ sea-orm = { version = "0.12", features = [
     "with-chrono",
 ] }
 cfg-if = "1.0.0"
+chrono = { version = "0.4.19", features = ["serde"] }
 console_error_panic_hook = "0.1.7"
 contentful = "0.8.0"
 dotenv = "0.15.0"
@@ -46,6 +47,8 @@ tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
 tracing-wasm = "0.2.1"
 uuid = { version = "1.4.1", features = ["v4", "fast-rng", "macro-diagnostics"] }
+bcrypt = "0.15.1"
+rand = "0.8.5"
 [features]
 hydrate = [
     "leptos/hydrate",

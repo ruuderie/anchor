@@ -15,7 +15,7 @@ pub enum UserType {
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct User {
-    pub id: i32,
+    pub id: Uuid,
     pub username: String,
     pub email: String,
     pub password_hash: String,

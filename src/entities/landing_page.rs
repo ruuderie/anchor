@@ -1,7 +1,7 @@
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
-#[sea_orm(table_name = "landing_page")]
+#[sea_orm(table_name = "landing_pages")]
 pub struct Model {
     #[sea_orm(primary_key, column_type = "uuid")]
     pub id: Uuid,
