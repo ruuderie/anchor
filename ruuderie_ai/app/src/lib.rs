@@ -1,14 +1,31 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+use cfg_if::cfg_if;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub mod app;
+pub mod components;
+pub mod config;
+pub mod entities;
+pub mod models;
+pub mod pages;
+pub mod services;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+pub mod error_template;
+#[cfg(feature = "ssr")]
+pub mod fileserv;
+
+cfg_if! { if #[cfg(feature = "hydrate")] {
+    use leptos::*;
+    use wasm_bindgen::prelude::wasm_bindgen;
+    use crate::app::*;
+
+    #[wasm_bindgen]
+    pub fn hydrate() {
+        console_error_panic_hook::set_once();
+        tracing_wasm::set_as_global_default_with_config(
+            tracing_wasm::WASMLayerConfigBuilder::default()
+                .set_max_level(tracing::Level::DEBUG)
+                .build(),
+        );
+
+        leptos::mount_to_body(App);
     }
-}
+}}
