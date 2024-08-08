@@ -9,6 +9,7 @@ edition.workspace = true
 
 [dependencies]
 app = { path = "../app", default-features = false, features = ["ssr"] }
+derive_more = { workspace = true }
 entity = { path = "../entity" }
 
 http.workspace = true

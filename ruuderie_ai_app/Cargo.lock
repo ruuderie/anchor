@@ -539,6 +539,7 @@ dependencies = [
  "app",
  "axum 0.6.20",
  "bigdecimal 0.4.5",
+ "derive_more",
  "entity",
  "http 1.1.0",
  "leptos",

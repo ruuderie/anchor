@@ -3,22 +3,23 @@ services:
   app:
     container_name: "leptos-app"
     build:
-      context: .
+      context: ./ruuderie_ai_app
+      dockerfile: Dockerfile
       args:
-        - USERNAME=${USERNAME}
-        - USER_ID=${USER_ID}
-        - USER_GID=${USER_GID}
-        - PROJECT_DIR=${PROJECT_DIR}
-        - APP_DIR=${APP_DIR}
-        - BIN_TARGET=${BIN_TARGET}
-    working_dir: "/workspace"
+        - USERNAME=${USERNAME:-user}
+        - USER_ID=${USER_ID:-1000}
+        - USER_GID=${USER_GID:-1000}
+        - PROJECT_DIR=.
+        - BIN_TARGET=backend
+    working_dir: "/ruuderie_ai_app"
     volumes:
-      - .:/workspace:cached
-    command: sleep infinity
+      - ./ruuderie_ai_app:/ruuderie_ai_app:cached
+    command: sh -c 'echo ${PROJECT_DIR} && /usr/local/bin/backend'
     network_mode: service:db
-    user: ${USERNAME}:${USERNAME}
+    user: ${USERNAME:-user}:${USERNAME:-user}
     env_file:
       - .env
+
   db:
     image: postgres:14.1
     restart: unless-stopped
@@ -30,5 +31,6 @@ services:
       - POSTGRES_DB=postgres
       - POSTGRES_HOSTNAME=localhost
       - POSTGRES_PORT=5432
+
 volumes:
   postgres-data:
