@@ -1,0 +1,67 @@
+[package]
+name = "app"
+version.workspace = true
+authors.workspace = true
+description.workspace = true
+edition.workspace = true
+
+[dependencies]
+derive_more = { workspace = true }
+entity = { path = "../entity", default-features = false }
+http.workspace = true
+leptos.workspace = true
+leptos_axum = { workspace = true, optional = true }
+leptos_dom.workspace = true
+leptos_meta.workspace = true
+leptos_query.workspace = true
+leptos_router.workspace = true
+leptos-struct-table = { workspace = true }
+
+leptos-use = { workspace = true, features = [
+    "axum",
+    "math",
+    "ssr",
+    "wasm_ssr",
+    "docs",
+] }
+serde = { workspace = true, features = [
+    "derive",
+    "serde_derive",
+    "alloc",
+    "rc",
+] }
+thiserror.workspace = true
+tracing = { workspace = true, features = ["async-await", "log"] }
+
+async-trait = "0.1.74"
+cfg-if = "1.0.0"
+base64 = "0.21.4"
+convert_case = "0.6.0"
+rand = "=0.8.5"
+wasm-bindgen = "0.2.87"
+web-sys = "0.3.64"
+js-sys = "0.3.64"
+serde_json = { version = "1.0.107", features = ["alloc"] }
+futures = "0.3.28"
+reqwest = { version = "0.11.22", features = ["json"] }
+strum = { version = "0.25.0", features = ["derive"] }
+uuid = {workspace = true}
+
+[features]
+default = ["ssr"]
+hydrate = [
+    "entity/client-side",
+    "leptos/hydrate",
+    "leptos_meta/hydrate",
+    "leptos_query/hydrate",
+    "leptos_router/hydrate",
+]
+ssr = [
+    "entity/server-side",
+    "leptos/ssr",
+    "leptos_meta/ssr",
+    "leptos_query/ssr",
+    "leptos_router/ssr",
+    "leptos-use/ssr",
+    "dep:leptos_axum",
+]

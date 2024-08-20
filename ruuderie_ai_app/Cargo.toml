@@ -1,0 +1,101 @@
+# Define the workspace and its member crates
+[workspace]
+members = ["app", "backend", "entity", "frontend", "migration"]
+# Use the new dependency resolver to avoid conflicts
+resolver = "2"
+
+# Shared package information for all workspace members
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Ruud Salym Erie"]
+description = "A Rust app built with Axum, Leptos, SeaORM, and more"
+license = "MIT OR Apache-2.0"
+
+# Release profile configuration for optimized builds
+[profile.release]
+codegen-units = 1 # Optimize for size rather than parallel codegen
+lto = true        # Enable Link Time Optimization
+opt-level = 'z'   # Optimize for size
+strip = true      # Remove debug symbols
+
+# Specific profile for WebAssembly releases
+[profile.wasm-release]
+inherits = "release"
+opt-level = 'z'      # Optimize for size
+lto = true           # Enable Link Time Optimization
+codegen-units = 1    # Further optimize for size
+panic = "abort"      # Remove stack unwinding on panic
+
+# Development profile configuration
+[profile.dev]
+# Potential to opt-in on higher optimization for our code. This may increase incremental compilation times, but will reduce binary size.
+opt-level = 0
+
+# High optimization for our dependencies in development. This should increase performance drastically without hitting our incremental compilation times.
+# This will lead to obscure error messages from third party libraries. Comment this out when experiencing a tricky bug.
+[profile.dev.package."*"]
+opt-level = 3
+
+# Shared dependencies for all workspace members
+[workspace.dependencies]
+axum = { version = "0.7.4" }
+axum-server = { version = "0.6.0", features = ["tls-rustls"] }
+sea-orm = { version = "0.12", features = [
+    "sqlx-postgres",
+    "runtime-tokio-rustls",
+    "macros",
+    "with-uuid",
+    "with-json",
+    "with-chrono",
+] }
+cfg-if = "1.0.0"
+chrono = { version = "0.4.19", features = ["serde"] }
+console_error_panic_hook = "0.1.7"
+contentful = "0.8.0"
+dotenv = "0.15.0"
+derive_more = "0.99.17"
+http = "1.0.0"
+leptos = { version = "0.6.13" }
+leptos_axum = { version = "0.6.13" }
+leptos_meta = { version = "0.6.5" }
+leptos_router = { version = "0.6.5" }
+leptos-struct-table = "0.10.2"
+leptos-use = { version = "0.11.4", features = [
+    "axum",
+    "math",
+    "ssr",
+    "wasm_ssr",
+    "docs",
+] }
+leptos_dom = "0.6.13"
+leptos_query = { version = "0.5.3", default-features = false }
+serde = { version = "1.0.204", default-features = false }
+serde_json = "1.0.113"
+thiserror = "1.0.56"
+time = { version = "0.3.36", features = ["wasm-bindgen"] }
+tokio = { version = "1.36.0", features = ["rt-multi-thread"] }
+tower = { version = "0.4.13" }
+tower-http = { version = "0.5.1", features = ["fs"] }
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+tracing-wasm = "0.2.1"
+uuid = { version = "1.4.1", features = ["v4", "fast-rng", "macro-diagnostics"] }
+bcrypt = "0.15.1"
+rand = "0.8.5"
+
+# Leptos workspace-specific configuration
+[workspace.metadata.leptos]
+name = "ruuderie-ai"
+output-name = "ruuderie-ai"
+# Package containing the binary (server-side) code
+bin-package = "backend"
+# Package containing the library (client-side) code
+lib-package = "frontend"
+assets-dir = "public"
+reload-port = 3001
+site-addr = "127.0.0.1:3000"
+site-pkg-dir = "pkg"
+site-root = "target/site"
+style-file = "style/main.css"
+watch = false
