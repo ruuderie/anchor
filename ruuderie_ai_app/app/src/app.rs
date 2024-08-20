@@ -1,4 +1,4 @@
-use leptonic::prelude::*;
+
 use leptos::*;
 use leptos::{svg::view, *};
 use leptos_meta::*;

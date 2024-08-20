@@ -1,5 +1,4 @@
-use crate::config::Config;
-use contentful::{ ContentfulManagementClient};
+use crate::utils::config::Config;
 
 pub async fn get_blog_posts(config: &Config)  -> Result<(), Box<dyn std::error::Error>>{
    /* let client = ContentfulManagementClient::new(

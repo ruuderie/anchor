@@ -12,7 +12,7 @@ path = "src/lib.rs"
 
 [dependencies]
 migration = { path = "../migration", optional = true }
-
+bcrypt = { workspace = true }
 derive_more = { workspace = true }
 serde = { workspace = true, features = [
     "derive",
@@ -32,7 +32,7 @@ figment = { version = "0.10.10", features = [
     "yaml",
 ], optional = true }
 uuid = { version = "1.4.1", features = ["v4", "v7"] }
-
+rand = { workspace = true }
 [dependencies.sea-orm]
 version = "0.12.3"
 features = ["with-chrono", "with-json", "with-uuid"]

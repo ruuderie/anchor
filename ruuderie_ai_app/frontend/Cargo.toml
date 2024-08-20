@@ -14,7 +14,6 @@ app = { path = "../app", default-features = false, features = ["hydrate"] }
 leptos = { workspace = true, features = ["hydrate"] }
 leptos_meta = { workspace = true, features = ["hydrate"] }
 leptos_router = { workspace = true, features = ["hydrate"] }
-leptonic = { workspace = true, features = ["hydrate"] }
 tracing.workspace = true
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
@@ -36,13 +35,8 @@ hydrate = [
     "leptos/hydrate",
     "leptos_meta/hydrate",
     "leptos_router/hydrate",
-    "leptonic/hydrate",
 ]
-ssr = ["leptos/ssr", "leptos_meta/ssr", "leptos_router/ssr", "leptonic/ssr"]
-
-[package.metadata.leptonic]
-style-dir = "style"
-js-dir = "public/js"
+ssr = ["leptos/ssr", "leptos_meta/ssr", "leptos_router/ssr"]
 
 [package.metadata.leptos]
 # The name used by wasm-bindgen/cargo-leptos for the JS/WASM bundle

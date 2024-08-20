@@ -56,18 +56,16 @@ contentful = "0.8.0"
 dotenv = "0.15.0"
 derive_more = "0.99.17"
 http = "1.0.0"
-leptonic = { version = "0.5.0" }
-leptos = { version = "0.6.5" }
-leptos_axum = { version = "0.6.5" }
+leptos = { version = "0.6.13" }
+leptos_axum = { version = "0.6.13" }
 leptos_meta = { version = "0.6.5" }
 leptos_router = { version = "0.6.5" }
 leptos-struct-table = "0.10.2"
-leptos-use = { version = "0.11.3", features = [
+leptos-use = { version = "0.11.4", features = [
     "axum",
     "math",
     "ssr",
     "wasm_ssr",
-    "spin",
     "docs",
 ] }
 leptos_dom = "0.6.13"
@@ -75,7 +73,7 @@ leptos_query = { version = "0.5.3", default-features = false }
 serde = { version = "1.0.204", default-features = false }
 serde_json = "1.0.113"
 thiserror = "1.0.56"
-time = { version = "0.3.31", features = ["wasm-bindgen"] }
+time = { version = "0.3.36", features = ["wasm-bindgen"] }
 tokio = { version = "1.36.0", features = ["rt-multi-thread"] }
 tower = { version = "0.4.13" }
 tower-http = { version = "0.5.1", features = ["fs"] }

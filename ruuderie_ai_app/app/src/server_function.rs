@@ -1,270 +1,171 @@
-#[cfg(feature = "ssr")]
-use std::sync::Arc;
-
-use entity::{
-    chrono::{NaiveDate, ParseError},
-    lists,
-    prelude::*,
-    sea_orm::{
-        entity::ActiveModelTrait, query::QueryOrder, ColumnTrait, EntityTrait, ModelTrait,
-        QueryFilter, Select,
-    },
-    todos, uuid,
-};
 use leptos::*;
-use reqwest::Client;
-use serde::{Deserialize, Serialize};
-use serde_json;
-use thiserror::Error;
+use entity::{article, user, comment};
+use uuid::Uuid;
 
 #[cfg(feature = "ssr")]
-pub fn db() -> Result<entity::db::DB, ServerFnError> {
-    use_context::<entity::db::DB>()
-        .ok_or("Pool missing.")
-        .map_err(|e| ServerFnError::ServerError(e.to_string()))
+use {
+    entity::sea_orm::{EntityTrait, ActiveModelTrait, ActiveValue::Set, DbErr},
+    entity::db::DB,
+};
+
+// Custom error type
+#[derive(Debug, thiserror::Error)]
+pub enum AppError {
+    #[error("Database error: {0}")]
+    Database(#[from] DbErr),
+    #[error("{0}")]
+    NotFound(String),
+    #[error("{0}")]
+    Other(String),
 }
 
-/* # Server Functions
- * They must be async, return Result<T, ServerFnError>
- * Return types must implement serde::Serialize since args have to be sent to the server after being serialized
- * Args must implement serde::Serialize and serde::de::DeserializeOwned
- */
-
-#[server(Foo, "/api")]
-pub async fn foo() -> Result<String, ServerFnError> {
-    Ok(String::from("Bar!"))
+// Helper function to convert AppError to ServerFnError
+fn app_err_to_server_err(err: AppError) -> ServerFnError {
+    ServerFnError::ServerError(err.to_string())
 }
 
-#[server(AddList, "/api")]
-pub async fn add_list(title: String) -> Result<lists::Model, ServerFnError> {
-    let db = db()?;
-
-    let list = lists::ActiveModel::new(title)
-        .insert(db.conn())
-        .await
-        .map_err(|e| {
-            let str = format!("{e}");
-            ServerFnError::ServerError(str)
-        })?;
-
-    Ok(list)
-}
-
-#[server(FindList, "/api")]
-pub async fn find_list(list_id: uuid::Uuid) -> Result<lists::Model, ServerFnError> {
-    let db = db()?;
-
-    let list = lists::Entity::find_by_id(list_id)
-        .one(db.conn())
-        .await
-        .map_err(|e| ServerFnError::ServerError(format!("{e}")))?;
-
-    if list.is_none() {
-        return Err(ServerFnError::ServerError("No list found".to_string()));
+#[server(AddArticle, "/api")]
+pub async fn add_article(title: String, content: String, author_id: Uuid) -> Result<(), ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        let db = use_context::<DB>().expect("DB missing");
+        let conn = db.conn();
+        let article = article::ActiveModel {
+            title: Set(title),
+            content: Set(content),
+            author_id: Set(author_id),
+            ..Default::default()
+        };
+        article.insert(conn).await.map_err(AppError::from).map_err(app_err_to_server_err)?;
+        Ok(())
     }
 
-    Ok(list.unwrap())
+    #[cfg(not(feature = "ssr"))]
+    Ok(())
 }
 
-#[server(DeleteList, "/api")]
-pub async fn delete_list(list_id: uuid::Uuid) -> Result<(), ServerFnError> {
-    let db = db()?;
-
-    let list = lists::Entity::find_by_id(list_id)
-        .one(db.conn())
-        .await
-        .map_err(|e| ServerFnError::ServerError(format!("{e}")))?;
-
-    if list.is_none() {
-        return Err(ServerFnError::ServerError("No list found".to_string()));
+#[server(GetArticle, "/api")]
+pub async fn get_article(id: Uuid) -> Result<article::Model, ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        let db = use_context::<DB>().expect("DB missing");
+        let conn = db.conn();
+        let article = article::Entity::find_by_id(id)
+            .one(conn)
+            .await
+            .map_err(AppError::from)
+            .map_err(app_err_to_server_err)?;
+        
+        article.ok_or_else(|| app_err_to_server_err(AppError::NotFound("Article not found".to_string())))
     }
 
-    list.unwrap()
-        .delete(db.conn())
-        .await
-        .map_err(|_| ServerFnError::ServerError("No list deleted".to_string()))?;
-
-    Ok(())
+    #[cfg(not(feature = "ssr"))]
+    Err(ServerFnError::ServerError("Not implemented".to_string()))
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Order {
-    Asc,
-    Desc,
-}
+#[server(UpdateArticle, "/api")]
+pub async fn update_article(id: Uuid, title: Option<String>, content: Option<String>) -> Result<(), ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        let db = use_context::<DB>().expect("DB missing");
+        let conn = db.conn();
+        let article = article::Entity::find_by_id(id)
+            .one(conn)
+            .await
+            .map_err(AppError::from)
+            .map_err(app_err_to_server_err)?
+            .ok_or_else(|| app_err_to_server_err(AppError::NotFound("Article not found".to_string())))?;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum TodoOrderBy {
-    Title(Order),
-    DueDate(Order),
-}
-
-#[server(ListTodos, "/api")]
-pub async fn list_todos(
-    list_id: uuid::Uuid,
-    search: Option<String>,
-    order_by: Option<TodoOrderBy>,
-) -> Result<Vec<todos::Model>, ServerFnError> {
-    let db = db()?;
-
-    let list = lists::Entity::find_by_id(list_id)
-        .one(db.conn())
-        .await
-        .map_err(|e| ServerFnError::ServerError(format!("{e}")))?;
-
-    if list.is_none() {
-        return Err(ServerFnError::ServerError("No list found".to_string()));
+        let mut article: article::ActiveModel = article.into();
+        
+        if let Some(title) = title {
+            article.title = Set(title);
+        }
+        if let Some(content) = content {
+            article.content = Set(content);
+        }
+        
+        article.update(conn).await.map_err(AppError::from).map_err(app_err_to_server_err)?;
+        Ok(())
     }
 
-    let todos = list.unwrap().find_related(todos::Entity);
-
-    let todos = if let Some(search) = search {
-        let filter = entity::sea_orm::Condition::any()
-            .add(todos::Column::Title.contains(&search))
-            .add(todos::Column::Description.contains(&search));
-
-        todos.filter(filter)
-    } else {
-        todos
-    };
-
-    let todos = todos
-        .order_by_asc(todos::Column::CreatedAt)
-        .all(db.conn())
-        .await
-        .map_err(|err| {
-            tracing::error!("Failed to list todos: {}", err);
-            ServerFnError::ServerError("No todos found".to_string())
-        })?;
-
-    Ok(todos)
-}
-
-#[server(AddTodo, "/api")]
-pub async fn add_todo(
-    list_id: uuid::Uuid,
-    title: String,
-    description: Option<String>,
-    due_date: Option<String>,
-) -> Result<(), ServerFnError> {
-    let db = db()?;
-
-    let due_date = due_date
-        .and_then(|str| if str.is_empty() { None } else { Some(str) })
-        .map(|string| {
-            let naive_date = NaiveDate::parse_from_str(&string, "%Y-%m-%d")
-                .map_err(|op| ServerFnError::ServerError(format!("{}", op)))?;
-
-            // type annotation needed here
-            Ok::<NaiveDate, ServerFnError>(naive_date)
-        })
-        .transpose()?;
-
-    todos::ActiveModel::new(list_id, title, description, due_date)
-        .insert(db.conn())
-        .await
-        .map_err(|e| {
-            let str = format!("{e}");
-            ServerFnError::ServerError(str)
-        })?;
-
+    #[cfg(not(feature = "ssr"))]
     Ok(())
 }
 
-#[server(DeleteTodo, "/api")]
-pub async fn delete_todo(id: uuid::Uuid) -> Result<(), ServerFnError> {
-    let db = db()?;
+#[server(DeleteArticle, "/api")]
+pub async fn delete_article(id: Uuid) -> Result<(), ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        let db = use_context::<DB>().expect("DB missing");
+        let conn = db.conn();
+        article::Entity::delete_by_id(id)
+            .exec(conn)
+            .await
+            .map_err(AppError::from)
+            .map_err(app_err_to_server_err)?;
+        Ok(())
+    }
 
-    let todo = todos::Entity::find_by_id(id)
-        .one(db.conn())
-        .await
-        .map_err(|_| ServerFnError::ServerError("No todo found".to_string()))?
-        .expect("should be unreachable #160");
-
-    todo.delete(db.conn())
-        .await
-        .map_err(|_| ServerFnError::ServerError("No todo deleted".to_string()))?;
+    #[cfg(not(feature = "ssr"))]
     Ok(())
 }
 
-#[server(EditTodo, "/api")]
-pub async fn edit_todo(
-    id: uuid::Uuid,
-    title: String,
-    description: Option<String>,
-    due_date: Option<String>,
-) -> Result<(), ServerFnError> {
-    let db = db()?;
+#[server(CreateUser, "/api")]
+pub async fn create_user(username: String, email: String, password: String) -> Result<(), ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        let db = use_context::<DB>().expect("DB missing");
+        let conn = db.conn();
+        let user = user::ActiveModel {
+            username: Set(username),
+            email: Set(email),
+            password_hash: Set(password), // Note: In a real application, you should hash the password before storing
+            ..Default::default()
+        };
+        user.insert(conn).await.map_err(AppError::from).map_err(app_err_to_server_err)?;
+        Ok(())
+    }
 
-    let due_date = due_date
-        .and_then(|str| if str.is_empty() { None } else { Some(str) })
-        .map(|string| {
-            let naive_date = NaiveDate::parse_from_str(&string, "%Y-%m-%d")
-                .map_err(|op| ServerFnError::ServerError(format!("{}", op)))?;
-
-            // type annotation needed here
-            Ok::<NaiveDate, ServerFnError>(naive_date)
-        })
-        .transpose()?;
-
-    let mut updated: todos::ActiveModel = todos::Entity::find_by_id(id)
-        .one(db.conn())
-        .await
-        .map_err(|_| ServerFnError::ServerError("No todo found".to_string()))?
-        .expect("should be unreachable #183")
-        .into();
-
-    updated.title = entity::sea_orm::Set(title);
-    updated.description = entity::sea_orm::Set(description);
-    updated.due_date = entity::sea_orm::Set(due_date);
-
-    updated
-        .update(db.conn())
-        .await
-        .map_err(|_| ServerFnError::ServerError("No to-do updated".to_string()))?;
-
+    #[cfg(not(feature = "ssr"))]
     Ok(())
 }
 
-#[server(ToggleTodo, "/api")]
-pub async fn toggle_todo(id: uuid::Uuid) -> Result<(), ServerFnError> {
-    let db = db()?;
-    let mut updated: todos::ActiveModel = todos::Entity::find_by_id(id)
-        .one(db.conn())
-        .await
-        .map_err(|_| ServerFnError::ServerError("No to-do found".to_string()))?
-        .unwrap()
-        .into();
+#[server(GetUser, "/api")]
+pub async fn get_user(id: Uuid) -> Result<user::Model, ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        let db = use_context::<DB>().expect("DB missing");
+        let conn = db.conn();
+        let user = user::Entity::find_by_id(id)
+            .one(conn)
+            .await
+            .map_err(AppError::from)
+            .map_err(app_err_to_server_err)?;
+        
+        user.ok_or_else(|| app_err_to_server_err(AppError::NotFound("User not found".to_string())))
+    }
 
-    updated.done = entity::sea_orm::Set(!updated.done.unwrap());
-
-    updated
-        .update(db.conn())
-        .await
-        .map_err(|_| ServerFnError::ServerError("No to-do updated".to_string()))?;
-
-    Ok(())
+    #[cfg(not(feature = "ssr"))]
+    Err(ServerFnError::ServerError("Not implemented".to_string()))
 }
 
-// #[derive(Clone, Debug, Deserialize, Serialize)]
-// #[serde(rename_all = "camelCase")]
-// pub struct Post {
-//     pub user_id: u32,
+#[server(CreateComment, "/api")]
+pub async fn create_comment(content: String, article_id: Uuid, user_id: Uuid) -> Result<(), ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        let db = use_context::<DB>().expect("DB missing");
+        let conn = db.conn();
+        let comment = comment::ActiveModel {
+            content: Set(content),
+            article_id: Set(article_id),
+            user_id: Set(user_id),
+            ..Default::default()
+        };
+        comment.insert(conn).await.map_err(AppError::from).map_err(app_err_to_server_err)?;
+        Ok(())
+    }
 
-//     pub id: u32,
-//     pub title: String,
-//     pub body: String,
-// }
-
-// #[server(FetchPosts, "/api")]
-// pub async fn fetch_posts() -> Result<Vec<Post>, ServerFnError> {
-//     let res = Client::new()
-//         .get("https://jsonplaceholder.typicode.com/posts?_start=0&_end=10")
-//         .query(&[("userId", 1)])
-//         .send()
-//         .await
-//         .map_err(|_| ServerFnError::ServerError("No posts found".to_string()))?;
-//     let body = res.json::<Vec<Post>>().await?;
-
-//     Ok(body)
-// }
+    #[cfg(not(feature = "ssr"))]
+    Ok(())
+}

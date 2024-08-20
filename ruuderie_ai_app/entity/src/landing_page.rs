@@ -1,46 +1,24 @@
-#[cfg(feature = "ssr")]
-pub mod server {
-    use sea_orm::entity::prelude::*;
+use sea_orm::entity::prelude::*;
+use serde::{Deserialize, Serialize};
 
-    #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
-    #[sea_orm(table_name = "landing_pages")]
-    pub struct Model {
-        #[sea_orm(primary_key, column_type = "uuid")]
-        pub id: Uuid,
-        #[sea_orm(column_type = "Text")]
-        pub heading: String,
-        #[sea_orm(column_type = "Text")]
-        pub subheading: String,
-        #[sea_orm(column_type = "Text")]
-        pub call_to_action: String,
-        #[sea_orm(column_type = "Text")]
-        pub video_url: String,
-        #[sea_orm(column_type = "Array(Text)")]
-        pub company_logos: Vec<String>,
-        #[sea_orm(column_type = "Array(Text)")]
-        pub benefits: Vec<String>,
-        #[sea_orm(column_type = "Array(Text)")]
-        pub how_it_works: Vec<String>,
-        #[sea_orm(column_type = "Array(Text)")]
-        pub testimonials: Vec<String>,
-        #[sea_orm(column_type = "Array(Text)")]
-        pub faq: Vec<String>,
-        #[sea_orm(column_type = "Text")]
-        pub footer: String,
-    }
-
-    #[derive(Copy, Clone, Debug, EnumIter)]
-    pub enum Relation {}
-
-    impl Related<super::other::Entity> for Entity {
-        fn to() -> RelationDef {
-            panic!("No RelationDef")
-        }
-
-        fn via() -> Option<RelationDef> {
-            None
-        }
-    }
-
-    impl ActiveModelBehavior for ActiveModel {}
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
+#[sea_orm(table_name = "landing_pages")]
+pub struct Model {
+    #[sea_orm(primary_key, column_type = "Uuid")]
+    pub id: Uuid,
+    pub heading: String,
+    pub subheading: String,
+    pub call_to_action: String,
+    pub video_url: String,
+    pub company_logos: Vec<String>,
+    pub benefits: Vec<String>,
+    pub how_it_works: Vec<String>,
+    pub testimonials: Vec<String>,
+    pub faq: Vec<String>,
+    pub footer: String,
 }
+
+#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+pub enum Relation {}
+
+impl ActiveModelBehavior for ActiveModel {}

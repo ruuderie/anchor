@@ -1,7 +1,9 @@
-use crate::config::Config; // If you still have the Config struct
 use crate::error_template::{AppError, ErrorTemplate}; // Assuming you keep this
-use crate::models::article::Article;
-use leptonic::prelude::*;
+use crate::server_function::get_article;
+use entity::article::{
+  Model as Article
+};
+
 use leptos::*;
 #[component]
 pub fn Post(data: Article) -> impl IntoView {

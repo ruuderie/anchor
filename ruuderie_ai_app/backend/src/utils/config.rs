@@ -1,5 +1,6 @@
 // src/config.rs
 
+#[derive(Debug, Clone)]
 pub struct Config {
     pub contentful_space_id: String,
     pub contentful_management_token: String,
