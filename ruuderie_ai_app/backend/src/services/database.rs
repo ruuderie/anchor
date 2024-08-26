@@ -3,6 +3,7 @@ use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use std::env;
 use std::time::Duration;
 
+#[allow(dead_code)]
 pub async fn establish_connection() -> Result<DatabaseConnection, sea_orm::DbErr> {
     dotenv().ok();
 

@@ -1,27 +1,29 @@
-version: "3.9"
 services:
   app:
     container_name: "leptos-app"
     build:
-      context: ./ruuderie_ai_app
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./ruuderie_ai_app/Dockerfile
       args:
         - USERNAME=${USERNAME:-user}
         - USER_ID=${USER_ID:-1000}
         - USER_GID=${USER_GID:-1000}
-        - PROJECT_DIR=.
-        - BIN_TARGET=backend
-    working_dir: "/ruuderie_ai_app"
+    working_dir: "/app"
     volumes:
-      - ./ruuderie_ai_app:/ruuderie_ai_app:cached
-    command: sh -c 'echo ${PROJECT_DIR} && /usr/local/bin/backend'
-    network_mode: service:db
-    user: ${USERNAME:-user}:${USERNAME:-user}
+      - ./ruuderie_ai_app:/app:cached
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    networks:
+      - app-network
+    depends_on:
+      - db
     env_file:
       - .env
 
   db:
     image: postgres:14.1
+    container_name: "postgres-db"
     restart: unless-stopped
     volumes:
       - postgres-data:/var/lib/postgresql/data
@@ -29,8 +31,11 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=postgres
-      - POSTGRES_HOSTNAME=localhost
-      - POSTGRES_PORT=5432
+    networks:
+      - app-network
+
+networks:
+  app-network:
 
 volumes:
   postgres-data:

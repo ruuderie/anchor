@@ -3,22 +3,28 @@ mod utils;
 
 use axum_macros::FromRef;
 use dotenv::dotenv;
+use std::env;
 use entity::db::{DBConfig, DB};
-use http::{header, HeaderMap, Request};
+use http::header;
 use app::app::*;
 use utils::config::Config;
-use crate::{ services::fileserv::file_and_error_handler, services::contentful_services::get_blog_posts};
+use crate::services::fileserv::file_and_error_handler;
+use crate::services::contentful_services::get_blog_posts;
 use axum::{
     body::Body as AxumBody,
-    extract::{FromRef, Path, RawQuery, State},
+    extract::{Path, State},
     response::{IntoResponse, Response},
-    routing::post,
+    routing::{get, post},
     Router,
 };
+use std::net::SocketAddr;
 use leptos::*;
-use leptos_axum::{handle_server_fns_with_context, LeptosRoutes};
-use tower_http::trace::TraceLayer;
+use leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes};
+use tower_http::trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer};
+use tower_http::sensitive_headers::SetSensitiveRequestHeadersLayer;
 use tracing::Level;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+
 #[derive(FromRef, Debug, Clone)]
 pub struct AppState {
     pub leptos_options: LeptosOptions,
@@ -29,23 +35,21 @@ pub struct AppState {
 async fn server_fn_handler(
     State(app_state): State<AppState>,
     path: Path<String>,
-    headers: HeaderMap,
-    raw_query: RawQuery,
-    request: Request<AxumBody>,
+    req: http::Request<AxumBody>,
 ) -> impl IntoResponse {
-    tracing::info!("serverfn: {:?}", path);
     handle_server_fns_with_context(
         move || {
             provide_context(app_state.db.clone());
             provide_context(app_state.config.clone());
         },
-        request,
+        req,
     )
     .await
 }
+
 async fn leptos_routes_handler(
     State(app_state): State<AppState>,
-    req: Request<AxumBody>,
+    req: http::Request<AxumBody>,
 ) -> Response {
     let handler = leptos_axum::render_app_to_stream_with_context(
         app_state.leptos_options.clone(),
@@ -58,16 +62,16 @@ async fn leptos_routes_handler(
     handler(req).await
 }
 
-#[cfg(feature = "ssr")]
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
+    
+    // Ensure LEPTOS_OUTPUT_NAME is set
+    if env::var("LEPTOS_OUTPUT_NAME").is_err() {
+        env::set_var("LEPTOS_OUTPUT_NAME", "ruuderie-ai");
+    }
 
     // Setup logging
-    let log_filter = tracing_subscriber::filter::Targets::new()
-        .with_default(tracing::Level::INFO)
-        .with_target("tokio", tracing::Level::WARN)
-        .with_target("runtime", tracing::Level::WARN);
     let fmt_layer = tracing_subscriber::fmt::layer()
         .pretty()
         .with_file(true)
@@ -75,24 +79,32 @@ async fn main() {
         .with_ansi(true)
         .with_thread_names(false)
         .with_thread_ids(false);
-    let fmt_layer_filtered = fmt_layer.with_filter(log_filter);
-    tracing_subscriber::Registry::default()
-        .with(fmt_layer_filtered)
+    
+    tracing_subscriber::registry()
+        .with(EnvFilter::from_default_env())
+        .with(fmt_layer)
         .init();
 
     // Load configuration
     let config = Config::load_from_env();
-    let _blog_posts = get_blog_posts(&config).await;
+    if let Err(e) = get_blog_posts(&config).await {
+        eprintln!("Error getting blog posts: {}", e);
+        // Decide if you want to continue or exit here
+    }
 
-    // Setting get_configuration(None) means we'll be using cargo-leptos's env values
-    let conf = get_configuration(None).await.unwrap();
+    let conf = match get_configuration(Some("Cargo.toml")).await {
+        Ok(conf) => conf,
+        Err(e) => {
+            eprintln!("Failed to load Leptos configuration: {:?}", e);
+            return Err(e.into());
+        }
+    };
     let leptos_options = conf.leptos_options;
     let addr = leptos_options.site_addr;
-
     // Setup database
-    let db_conf = DBConfig::figment().extract::<DBConfig>().unwrap();
-    let db = DB::connect(&db_conf).await.unwrap();
-    db.run_migrations().await.unwrap();
+    let db_conf = DBConfig::figment().extract::<DBConfig>()?;
+    let db = DB::connect(&db_conf).await?;
+    db.run_migrations().await?;
 
     let app_state = AppState {
         leptos_options: leptos_options.clone(),
@@ -102,7 +114,7 @@ async fn main() {
 
     let routes = generate_route_list(|| view! { <App/> });
 
-    // build our application with a route
+    // Build our application with a route
     let app = Router::new()
         .route("/api/*fn_name", post(server_fn_handler))
         .leptos_routes_with_handler(routes, get(leptos_routes_handler))
@@ -121,15 +133,8 @@ async fn main() {
 
     tracing::info!("listening on http://{}", &addr);
 
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
-}
+    let listener = tokio::net::TcpListener::bind(&addr).await?;
+    axum::serve(listener, app).await?;
 
-#[cfg(not(feature = "ssr"))]
-pub fn main() {
-    // no client-side main function
-    // unless we want this to work with e.g., Trunk for a purely client-side app
-    // see lib.rs for hydration function instead
+    Ok(())
 }

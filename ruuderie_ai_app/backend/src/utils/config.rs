@@ -14,7 +14,7 @@ impl Config {
             contentful_management_token: std::env::var("CONTENTFUL_MANAGEMENT_TOKEN")
                 .expect("CONTENTFUL_MANAGEMENT_TOKEN missing from environment"),
         };
-        println!("config loaded from env");
+        println!("config loaded from env {:?}", app_config);
         app_config
 
     }
