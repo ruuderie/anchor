@@ -4,8 +4,8 @@ CARGO = cargo
 LEPTOS = cargo leptos
 TAILWIND = tailwindcss
 APP_DIR = ruuderie_ai_app
-TAILWIND_INPUT = $(shell find ./$(APP_DIR) -name "*.css" | head -n 1)
-TAILWIND_OUTPUT = ./$(APP_DIR)/style/output.css
+TAILWIND_INPUT := $(shell find $(CURDIR)/$(APP_DIR)/app/public/style -name "*.css" | head -n 1)
+TAILWIND_OUTPUT = ./$(APP_DIR)/app/public/style/output.css
 
 # Default target
 .PHONY: all
@@ -94,10 +94,14 @@ lint:
 .PHONY: tailwind-watch
 tailwind-watch:
 	@echo "Watching Tailwind CSS..."
+	@echo "Current directory: $(CURDIR)"
+	@echo "APP_DIR: $(APP_DIR)"
 	@echo "Input file: $(TAILWIND_INPUT)"
 	@echo "Output file: $(TAILWIND_OUTPUT)"
+	@echo "Listing contents of $(CURDIR)/$(APP_DIR)/app/public/style:"
+	@ls -l $(CURDIR)/$(APP_DIR)/app/public/style
 	@if [ -z "$(TAILWIND_INPUT)" ]; then \
-		echo "Error: No CSS file found in $(APP_DIR)"; \
+		echo "Error: No CSS file found in $(CURDIR)/$(APP_DIR)/app/public/style"; \
 		exit 1; \
 	fi
 	cd $(APP_DIR)/app && $(TAILWIND) -i $(TAILWIND_INPUT) -o $(TAILWIND_OUTPUT) --watch

@@ -109,7 +109,6 @@ pub fn App() -> impl IntoView {
     provide_meta_context();
 
     view! {
-        <Stylesheet id="leptos" href="/pkg/ruuderie-ai.css"/>
         <Title text="Welcome to Ruud Erie.ai "/>
         <Container>
         <PageHeader/>

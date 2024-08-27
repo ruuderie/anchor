@@ -1,8 +1,18 @@
-use crate::error_template::{AppError, ErrorTemplate}; // Assuming you keep this
-use crate::server_function::get_article;
-use entity::article::{
+use crate::error_template::{AppError, ErrorTemplate};
+use uuid::Uuid;
+// Assuming you keep this
+/*use entity::article::{
   Model as Article
-};
+};*/
+//add clone
+#[derive(Debug, Clone)]
+pub struct Article {
+    pub id: Uuid,
+    pub title: String,
+    pub content: String,
+    pub image: String,
+    pub body: String,
+}
 
 use leptos::*;
 #[component]

@@ -1,7 +1,7 @@
 use leptos::*;
-use entity::{article, user, comment};
+//use entity::{article, user, comment};
 use uuid::Uuid;
-
+/*
 #[cfg(feature = "ssr")]
 use {
     entity::sea_orm::{EntityTrait, ActiveModelTrait, ActiveValue::Set, DbErr},
@@ -168,4 +168,4 @@ pub async fn create_comment(content: String, article_id: Uuid, user_id: Uuid) ->
 
     #[cfg(not(feature = "ssr"))]
     Ok(())
-}
+} */

@@ -1,11 +1,15 @@
 use std::time::Duration;
 
-use derive_more::Deref;
+#[cfg(feature = "tracing")]
+use tracing;
+
+#[cfg(feature = "figment")]
 use figment::{
     providers::Env,
     value::{Dict, Map},
     Figment, Metadata, Profile, Provider,
 };
+
 use migration::MigratorTrait;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection, DbErr};
 use serde::{Deserialize, Serialize};
@@ -20,15 +24,13 @@ pub struct DBConfig {
     pub idle_timeout: Option<u64>,
 }
 
+#[cfg(feature = "figment")]
 impl DBConfig {
     pub fn figment() -> Figment {
         Figment::from(DBConfig::default())
             .merge(Env::prefixed("aaa").split("_"))
             .select(Profile::from_env_or("aaaaaa", Profile::const_new("debug")))
     }
-    // fn fetch_db_url() -> String {
-    //     dotenvy::var("DATABASE_URL").expect("DATABASE_URL not found..")
-    // }
 }
 
 impl Default for DBConfig {
@@ -43,7 +45,7 @@ impl Default for DBConfig {
     }
 }
 
-// implement the Provider trait for DBConfig so it works as a provider
+#[cfg(feature = "figment")]
 impl Provider for DBConfig {
     fn metadata(&self) -> Metadata {
         Metadata::named("Rental DVD Database Config")
@@ -58,15 +60,22 @@ impl Provider for DBConfig {
 
 #[derive(Debug, Error)]
 pub enum Error {
+    #[cfg(feature = "figment")]
     #[error("FigmentErr {0}")]
     Figment(#[from] figment::Error),
     #[error("SeaOrmDbErr {0}")]
-    SeaOrmDb(#[from] DbErr),
+    SeaOrmDb(DbErr),
     #[error("MaxConnectionsOverflowErr: {0}")]
     MaxConnectionsOverflow(#[from] std::num::TryFromIntError),
 }
 
-#[derive(Clone, Debug, Deref)]
+impl From<sea_orm::DbErr> for Error {
+    fn from(err: sea_orm::DbErr) -> Self {
+        Error::SeaOrmDb(err)
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct DB {
     conn: DatabaseConnection,
 }
@@ -74,26 +83,23 @@ pub struct DB {
 impl DB {
     pub async fn connect(config: &DBConfig) -> Result<Self, Error> {
         let mut options: ConnectOptions = config.url.clone().into();
-
         options
-            .max_connections(config.max_connections.try_into()?)
+            .max_connections(config.max_connections as u32)
             .min_connections(config.min_connections.unwrap_or_default())
             .connect_timeout(Duration::from_secs(config.connect_timeout));
 
+        #[cfg(feature = "tracing")]
         tracing::info!("Connecting to database: {:?}", config);
 
         if let Some(idle_timeout) = config.idle_timeout {
             options.idle_timeout(Duration::from_secs(idle_timeout));
         }
         let conn = Database::connect(options).await?;
-
         Ok(Self { conn })
     }
 
     pub async fn run_migrations(&self) -> std::result::Result<(), Error> {
         migration::Migrator::up(self.conn(), None).await?;
-        //migration::Migration::up(self.conn(), None).await?;
-
         Ok(())
     }
 

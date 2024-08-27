@@ -1,11 +1,8 @@
-use crate::auth_token::{Entity as AuthTokenEntity, ActiveModel as AuthTokenActiveModel, Model as AuthTokenModel};
+use crate::auth_token::{ActiveModel as AuthTokenActiveModel, Model as AuthTokenModel};
+use rand::{distributions::Alphanumeric, Rng};
+use sea_orm::{ActiveModelTrait, DatabaseConnection, Set, DbErr};
 use crate::models::user::User;
 use bcrypt::{hash, verify, DEFAULT_COST};
-use chrono::prelude::*;
-use rand::{distributions::Alphanumeric, thread_rng, Rng};
-use sea_orm::{ActiveModelTrait, DatabaseConnection, Set, ActiveValue, DbErr};
-use sea_orm::prelude::DateTimeUtc;
-use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 async fn create_auth_token(

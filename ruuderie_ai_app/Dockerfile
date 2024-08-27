@@ -1,5 +1,5 @@
 # Frontend Build Stage
-FROM rust:1.80.1 as frontend-builder
+FROM rust:1.80.1-bullseye as frontend-builder
 
 RUN apt-get update && apt-get install -y \
     curl \
@@ -7,19 +7,34 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \
     nodejs \
-    npm
+    npm \
+    git \
+    tree
 
 RUN npm install -g sass
 
-RUN rustup default nightly && \
+RUN rustup default stable && \
     rustup target add wasm32-unknown-unknown
 
-RUN cargo install cargo-leptos
+RUN cargo install --git https://github.com/trunk-rs/trunk trunk
 
 WORKDIR /app
 COPY ruuderie_ai_app .
 
-RUN cd app && cargo leptos build --release
+# Debug: Print directory structure
+RUN echo "Frontend Directory structure:" && tree -L 3
+
+# Debug: Find index.html files
+RUN find . -name "index.html"
+
+# Debug: Print Cargo.toml contents
+RUN echo "Frontend Cargo.toml:" && cat app/Cargo.toml
+
+# Debug: Show dependency tree for frontend
+RUN cd app && echo "Frontend dependency tree:" && cargo tree
+
+# Build frontend with Trunk
+RUN cd app && trunk build --release --verbose
 
 # Backend Build Stage
 FROM rust:1.80.1 as backend-builder
@@ -29,20 +44,23 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     pkg-config \
     libssl-dev \
-    gcc-aarch64-linux-gnu \
-    g++-aarch64-linux-gnu
+    tree
 
-RUN rustup default stable && \
-    rustup target add aarch64-unknown-linux-gnu
-
-RUN mkdir -p ~/.cargo && \
-    echo '[target.aarch64-unknown-linux-gnu]' >> ~/.cargo/config && \
-    echo 'linker = "aarch64-linux-gnu-gcc"' >> ~/.cargo/config
+RUN rustup default stable
 
 WORKDIR /app
 COPY ruuderie_ai_app .
 
-RUN cargo build --release --target aarch64-unknown-linux-gnu --package backend
+# Debug: Print directory structure
+RUN echo "Backend Directory structure:" && tree -L 3
+
+# Debug: Print Cargo.toml contents
+RUN echo "Backend Cargo.toml:" && cat backend/Cargo.toml
+
+# Debug: Show dependency tree for backend
+RUN cd backend && echo "Backend dependency tree:" && cargo tree
+
+RUN cargo build --release --package backend --verbose
 
 # Runtime Stage
 FROM debian:bullseye-slim as runtime
@@ -52,13 +70,13 @@ RUN apt-get update && apt-get install -y \
     tzdata \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=backend-builder /app/target/aarch64-unknown-linux-gnu/release/backend /usr/local/bin/
-COPY --from=frontend-builder /app/app/target/site /app/site
+COPY --from=backend-builder /app/target/release/backend /usr/local/bin/
+COPY --from=frontend-builder /app/app/dist /app/dist
 
 WORKDIR /app
 
 ENV LEPTOS_OUTPUT_NAME="ruuderie-ai"
-ENV LEPTOS_SITE_ROOT="/app/site"
+ENV LEPTOS_SITE_ROOT="/app/dist"
 ENV LEPTOS_SITE_PKG_DIR="pkg"
 ENV LEPTOS_SITE_ADDR="0.0.0.0:3000"
 ENV LEPTOS_RELOAD_PORT="3001"

@@ -11,6 +11,4 @@ pub mod user;
 pub mod articlecategory;
 pub mod auth_token;
 pub mod models;
-
-#[cfg(feature = "server-side")]
 pub mod db;

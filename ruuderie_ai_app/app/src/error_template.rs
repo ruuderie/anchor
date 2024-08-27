@@ -3,8 +3,7 @@ use http::status::StatusCode;
 use leptos::*;
 use thiserror::Error;
 
-#[cfg(feature = "ssr")]
-use leptos_axum::ResponseOptions;
+
 
 #[derive(Clone, Debug, Error)]
 pub enum AppError {
@@ -41,13 +40,6 @@ pub fn ErrorTemplate(
     println!("Errors: {errors:#?}");
 
     let num_errors = errors.len();
-
-    cfg_if! { if #[cfg(feature="ssr")] {
-        let response = use_context::<ResponseOptions>();
-        if let Some(response) = response {
-            response.set_status(errors[0].status_code());
-        }
-    }}
 
     view! {
         <section class="section">

@@ -1,7 +1,7 @@
 use crate::error_template::{AppError, ErrorTemplate};
 //use contentful::{models::SystemProperties, ContentfulManagementClient, QueryBuilder}; // Import QueryBuilder
-use crate::components::post::Post; // Import Post struct
-use entity::article::Model as Article;
+use crate::components::post::{Post, Article}; // Import Post struct
+//use entity::article::Model as Article;
 //use crate::services::contentful_services::get_blog_posts; // Import get_blog_posts function
 
 use leptos::html::P;
