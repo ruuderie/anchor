@@ -22,6 +22,7 @@ use leptos::*;
 use leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes};
 use tower_http::trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer};
 use tower_http::sensitive_headers::SetSensitiveRequestHeadersLayer;
+use tower_http::services::ServeDir;
 use tracing::Level;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
@@ -65,7 +66,7 @@ async fn leptos_routes_handler(
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
-    
+
     // Ensure LEPTOS_OUTPUT_NAME is set
     if env::var("LEPTOS_OUTPUT_NAME").is_err() {
         env::set_var("LEPTOS_OUTPUT_NAME", "ruuderie-ai");
@@ -79,7 +80,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_ansi(true)
         .with_thread_names(false)
         .with_thread_ids(false);
-    
+
     tracing_subscriber::registry()
         .with(EnvFilter::from_default_env())
         .with(fmt_layer)
@@ -101,6 +102,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let leptos_options = conf.leptos_options;
     let addr = leptos_options.site_addr;
+
     // Setup database
     let db_conf = DBConfig::figment().extract::<DBConfig>()?;
     let db = DB::connect(&db_conf).await?;
@@ -118,6 +120,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = Router::new()
         .route("/api/*fn_name", post(server_fn_handler))
         .leptos_routes_with_handler(routes, get(leptos_routes_handler))
+        .nest_service("/", ServeDir::new(&leptos_options.site_root))
         .fallback(file_and_error_handler)
         .layer(SetSensitiveRequestHeadersLayer::new(vec![
             header::AUTHORIZATION,
