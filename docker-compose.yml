@@ -9,6 +9,8 @@ services:
       - "3000:3000"
     environment:
       - DATABASE_URL=postgres://ruud_admin:R3sUm3_S3cUr3@db:5432/ruuderie_ai
+      - RP_ORIGIN=${RP_ORIGIN:-http://localhost:3000}
+      - RP_ID=${RP_ID:-localhost}
     depends_on:
       - db
     restart: unless-stopped

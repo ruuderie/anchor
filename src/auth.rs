@@ -7,8 +7,10 @@ pub mod ssr {
     pub use webauthn_rs::prelude::*;
     
     pub fn get_webauthn() -> Webauthn {
-        let rp_origin = Url::parse("https://app.ruuderie-ai.orb.local").unwrap();
-        let builder = WebauthnBuilder::new("app.ruuderie-ai.orb.local", &rp_origin).unwrap()
+        let origin_str = std::env::var("RP_ORIGIN").unwrap_or_else(|_| "http://localhost:3000".to_string());
+        let id_str = std::env::var("RP_ID").unwrap_or_else(|_| "localhost".to_string());
+        let rp_origin = Url::parse(&origin_str).expect("Invalid RP_ORIGIN URL");
+        let builder = WebauthnBuilder::new(&id_str, &rp_origin).expect("Invalid RP_ID or RP_ORIGIN configuration")
             .rp_name("RuudErie_ai");
         builder.build().unwrap()
     }
