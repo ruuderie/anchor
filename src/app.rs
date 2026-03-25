@@ -49,7 +49,7 @@ pub fn shell(_options: leptos::LeptosOptions) -> impl IntoView {
                 <script type="module">
                     r#"
                     import init from '/pkg/ruuderie_ai.js';
-                    init();
+                    init('/pkg/ruuderie_ai.wasm');
                     "#
                 </script>
             </body>
