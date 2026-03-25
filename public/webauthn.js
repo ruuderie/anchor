@@ -12,7 +12,10 @@ export function bufferToBase64url(buffer) {
 }
 
 export function base64urlToBuffer(base64url) {
-    const b64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+    let b64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4 !== 0) {
+        b64 += '=';
+    }
     const binStr = window.atob(b64);
     const len = binStr.length;
     const bytes = new Uint8Array(len);
