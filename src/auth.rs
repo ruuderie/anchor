@@ -279,3 +279,38 @@ pub async fn check_session() -> Result<bool, ServerFnError> {
         Ok(false)
     }
 }
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct UserRecord {
+    pub id: i32,
+    pub username: String,
+    pub created_at: String,
+}
+
+#[server(GetUsers, "/api")]
+pub async fn get_users() -> Result<Vec<UserRecord>, ServerFnError> {
+    use axum::Extension;
+    use leptos_axum::extract;
+    use sqlx::Row;
+    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    let rows = sqlx::query("SELECT id, username, to_char(created_at, 'YYYY.MM.DD HH24:MI:SS') as created_at FROM users ORDER BY id ASC")
+        .fetch_all(&state.pool)
+        .await?;
+    let users = rows.into_iter().map(|row| UserRecord {
+        id: row.get("id"),
+        username: row.get("username"),
+        created_at: row.get("created_at"),
+    }).collect();
+    Ok(users)
+}
+
+#[server(DeleteUser, "/api")]
+pub async fn delete_user(id: i32) -> Result<(), ServerFnError> {
+    use axum::Extension;
+    use leptos_axum::extract;
+    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    sqlx::query("DELETE FROM users WHERE id = $1").bind(id).execute(&state.pool).await?;
+    Ok(())
+}

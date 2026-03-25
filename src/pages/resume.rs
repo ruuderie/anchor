@@ -9,6 +9,8 @@ pub struct JobRecord {
     pub company: String,
     pub bullets: Vec<String>,
     pub is_client_project: bool,
+    pub tags: Vec<String>,
+    pub hide_date: bool,
 }
 
 #[server(GetJobs, "/api")]
@@ -18,7 +20,7 @@ pub async fn get_jobs() -> Result<Vec<JobRecord>, ServerFnError> {
     use sqlx::Row;
     
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    let rows = sqlx::query("SELECT id, date_range, role, company, bullets, is_client_project FROM jobs ORDER BY id ASC")
+    let rows = sqlx::query("SELECT id, date_range, role, company, bullets, is_client_project, tags, hide_date FROM jobs ORDER BY id ASC")
         .fetch_all(&state.pool)
         .await?;
         
@@ -29,9 +31,44 @@ pub async fn get_jobs() -> Result<Vec<JobRecord>, ServerFnError> {
         company: row.get("company"),
         bullets: row.get::<Vec<String>, _>("bullets"),
         is_client_project: row.get("is_client_project"),
+        tags: row.get::<Vec<String>, _>("tags"),
+        hide_date: row.get("hide_date"),
     }).collect();
     
     Ok(jobs)
+}
+
+#[server(AddJob, "/api")]
+pub async fn add_job(date_range: String, role: String, company: String, bullets: Vec<String>, is_client_project: bool, tags: Vec<String>, hide_date: bool) -> Result<(), ServerFnError> {
+    use crate::auth::check_session;
+    use axum::Extension;
+    use leptos_axum::extract;
+    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    sqlx::query("INSERT INTO jobs (date_range, role, company, bullets, is_client_project, tags, hide_date) VALUES ($1, $2, $3, $4, $5, $6, $7)").bind(date_range).bind(role).bind(company).bind(bullets).bind(is_client_project).bind(tags).bind(hide_date).execute(&state.pool).await?;
+    Ok(())
+}
+
+#[server(UpdateJob, "/api")]
+pub async fn update_job(id: i32, date_range: String, role: String, company: String, bullets: Vec<String>, is_client_project: bool, tags: Vec<String>, hide_date: bool) -> Result<(), ServerFnError> {
+    use crate::auth::check_session;
+    use axum::Extension;
+    use leptos_axum::extract;
+    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    sqlx::query("UPDATE jobs SET date_range = $1, role = $2, company = $3, bullets = $4, is_client_project = $5, tags = $6, hide_date = $7 WHERE id = $8").bind(date_range).bind(role).bind(company).bind(bullets).bind(is_client_project).bind(tags).bind(hide_date).bind(id).execute(&state.pool).await?;
+    Ok(())
+}
+
+#[server(DeleteJob, "/api")]
+pub async fn delete_job(id: i32) -> Result<(), ServerFnError> {
+    use crate::auth::check_session;
+    use axum::Extension;
+    use leptos_axum::extract;
+    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    sqlx::query("DELETE FROM jobs WHERE id = $1").bind(id).execute(&state.pool).await?;
+    Ok(())
 }
 
 #[component]
@@ -39,7 +76,20 @@ pub fn Resume() -> impl IntoView {
     let download_pdf = create_action(|_: &()| {
         use crate::resume_engine::download_resume;
         async move {
-            let _res = download_resume().await;
+            if let Ok(bytes) = download_resume(0).await.map_err(|e| format!("{:?}", e)) {
+                use base64::{Engine as _, engine::general_purpose::STANDARD};
+                let b64 = STANDARD.encode(&bytes);
+                let url = format!("data:application/pdf;base64,{}", b64);
+                
+                let document = leptos::document();
+                if let Ok(a) = document.create_element("a") {
+                    let _ = a.set_attribute("href", &url);
+                    let _ = a.set_attribute("download", "ruuderie_cv.pdf");
+                    use web_sys::wasm_bindgen::JsCast;
+                    let html_a = a.unchecked_into::<web_sys::HtmlElement>();
+                    html_a.click();
+                }
+            }
         }
     });
 
@@ -51,10 +101,10 @@ pub fn Resume() -> impl IntoView {
         <main class="pt-32 pb-24 px-6 md:px-[8.5rem] bg-surface-container-low min-h-screen">
             <header class="mb-24 flex flex-col md:flex-row justify-between md:items-end max-w-4xl border-b-2 border-outline-variant/30 pb-8">
                 <div>
-                    <div class="inline-block bg-secondary-container/20 px-3 py-1 mb-6">
-                        <span class="font-label text-[0.6875rem] text-secondary font-bold tracking-tighter">"INDEX_REF_04 // CV"</span>
+                    <div class="inline-block bg-secondary-container/20 px-3 py-1 mb-6 uppercase">
+                        <span class="font-label text-[0.6875rem] text-secondary font-bold tracking-tighter">"CAREER TRAJECTORY & CLIENTS"</span>
                     </div>
-                    <h1 class="text-5xl md:text-7xl font-extrabold text-primary tracking-[-0.02em] leading-none mb-4">
+                    <h1 class="text-5xl md:text-7xl font-extrabold text-primary tracking-[-0.02em] leading-none mb-4 uppercase">
                         "EXPERIENCE LOG"
                     </h1>
                 </div>

@@ -3,12 +3,27 @@ use leptos_meta::*;
 use leptos_router::*;
 
 use crate::components::nav::Nav;
+use crate::components::footer::Footer;
 use crate::pages::admin::Admin;
 use crate::pages::blog::Blog;
 use crate::pages::certifications::Certifications;
 use crate::pages::landing::Landing;
 use crate::pages::projects::Projects;
 use crate::pages::resume::Resume;
+use crate::pages::real_estate::RealEstate;
+
+#[server(RecordPageView, "/api")]
+pub async fn record_page_view(path: String) -> Result<(), ServerFnError> {
+    use axum::Extension;
+    use leptos_axum::extract;
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    
+    let _ = sqlx::query("INSERT INTO page_views (path) VALUES ($1)")
+        .bind(path)
+        .execute(&state.pool)
+        .await;
+    Ok(())
+}
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -20,17 +35,34 @@ pub fn App() -> impl IntoView {
 
         <Router>
             <Nav />
+            {
+                view! { <PageViewTracker /> }
+            }
             <Routes>
                 <Route path="/" view=Landing/>
                 <Route path="/resume" view=Resume/>
                 <Route path="/projects" view=Projects/>
                 <Route path="/blog" view=Blog/>
                 <Route path="/certifications" view=Certifications/>
+                <Route path="/real-estate" view=RealEstate/>
                 <Route path="/admin" view=Admin/>
                 <Route path="/*any" view=|| view! { <div class="pt-32 px-[8.5rem]">"Not Found"</div> }/>
             </Routes>
+            <Footer />
         </Router>
     }
+}
+
+#[component]
+pub fn PageViewTracker() -> impl IntoView {
+    let location = use_location();
+    create_effect(move |_| {
+        let path = location.pathname.get();
+        spawn_local(async move {
+            let _ = record_page_view(path).await;
+        });
+    });
+    view! { <div class="hidden"></div> }
 }
 
 pub fn shell(_options: leptos::LeptosOptions) -> impl IntoView {

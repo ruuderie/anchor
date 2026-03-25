@@ -30,6 +30,39 @@ pub async fn get_certifications() -> Result<Vec<CertRecord>, ServerFnError> {
     Ok(certs)
 }
 
+#[server(AddCertification, "/api")]
+pub async fn add_certification(date_range: String, title: String, is_training: bool) -> Result<(), ServerFnError> {
+    use crate::auth::check_session;
+    use axum::Extension;
+    use leptos_axum::extract;
+    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    sqlx::query("INSERT INTO certifications (date_range, title, is_training) VALUES ($1, $2, $3)").bind(date_range).bind(title).bind(is_training).execute(&state.pool).await?;
+    Ok(())
+}
+
+#[server(UpdateCertification, "/api")]
+pub async fn update_certification(id: i32, date_range: String, title: String, is_training: bool) -> Result<(), ServerFnError> {
+    use crate::auth::check_session;
+    use axum::Extension;
+    use leptos_axum::extract;
+    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    sqlx::query("UPDATE certifications SET date_range = $1, title = $2, is_training = $3 WHERE id = $4").bind(date_range).bind(title).bind(is_training).bind(id).execute(&state.pool).await?;
+    Ok(())
+}
+
+#[server(DeleteCertification, "/api")]
+pub async fn delete_certification(id: i32) -> Result<(), ServerFnError> {
+    use crate::auth::check_session;
+    use axum::Extension;
+    use leptos_axum::extract;
+    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    sqlx::query("DELETE FROM certifications WHERE id = $1").bind(id).execute(&state.pool).await?;
+    Ok(())
+}
+
 #[component]
 pub fn Certifications() -> impl IntoView {
     let certs_resource = create_resource(|| (), |_| async move {

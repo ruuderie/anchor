@@ -1,0 +1,12 @@
+CREATE TABLE IF NOT EXISTS resume_profiles (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    biography TEXT NOT NULL,
+    excluded_tags JSONB NOT NULL DEFAULT '[]',
+    anonymous_companies JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE projects ADD COLUMN date_range VARCHAR(255) DEFAULT '';
+ALTER TABLE jobs ADD COLUMN tags TEXT[] DEFAULT '{}';
+ALTER TABLE jobs ADD COLUMN hide_date BOOLEAN DEFAULT FALSE;

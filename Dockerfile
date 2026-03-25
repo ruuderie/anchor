@@ -40,7 +40,11 @@ FROM debian:bullseye-slim as runner
 
 # Install OpenSSL for reqwest and sqlx
 RUN apt-get update -y \
-  && apt-get install -y --no-install-recommends openssl ca-certificates libc-bin \
+  && apt-get install -y --no-install-recommends openssl ca-certificates libc-bin wget tar \
+  && wget https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.15.0/tectonic-0.15.0-x86_64-unknown-linux-musl.tar.gz \
+  && tar -xzf tectonic-0.15.0-x86_64-unknown-linux-musl.tar.gz \
+  && mv tectonic /usr/local/bin/ \
+  && rm tectonic-0.15.0-x86_64-unknown-linux-musl.tar.gz \
   && apt-get clean \
   && rm -f /var/lib/apt/lists/*_*
 

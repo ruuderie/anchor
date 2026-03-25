@@ -4,3 +4,4 @@ pub mod certifications;
 pub mod landing;
 pub mod projects;
 pub mod resume;
+pub mod real_estate;

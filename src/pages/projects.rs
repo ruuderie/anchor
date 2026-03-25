@@ -9,6 +9,8 @@ pub struct ProjectRecord {
     pub impact: String,
     pub tags: Vec<String>,
     pub bullets: Vec<String>,
+    pub status: String,
+    pub date_range: String,
 }
 
 #[server(GetProjects, "/api")]
@@ -18,7 +20,7 @@ pub async fn get_projects() -> Result<Vec<ProjectRecord>, ServerFnError> {
     use sqlx::Row;
     
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    let rows = sqlx::query("SELECT id, title, slug, impact, tags, bullets FROM projects ORDER BY id ASC")
+    let rows = sqlx::query("SELECT id, title, slug, impact, tags, bullets, COALESCE(status, 'Completed') as status, COALESCE(date_range, '') as date_range FROM projects ORDER BY id ASC")
         .fetch_all(&state.pool)
         .await?;
         
@@ -29,9 +31,44 @@ pub async fn get_projects() -> Result<Vec<ProjectRecord>, ServerFnError> {
         impact: row.get("impact"),
         tags: row.get::<Vec<String>, _>("tags"),
         bullets: row.get::<Vec<String>, _>("bullets"),
+        status: row.get("status"),
+        date_range: row.get("date_range"),
     }).collect();
     
     Ok(projs)
+}
+
+#[server(AddProject, "/api")]
+pub async fn add_project(title: String, slug: String, impact: String, tags: Vec<String>, bullets: Vec<String>, status: String, date_range: String) -> Result<(), ServerFnError> {
+    use crate::auth::check_session;
+    use axum::Extension;
+    use leptos_axum::extract;
+    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    sqlx::query("INSERT INTO projects (title, slug, impact, tags, bullets, status, date_range) VALUES ($1, $2, $3, $4, $5, $6, $7)").bind(title).bind(slug).bind(impact).bind(tags).bind(bullets).bind(status).bind(date_range).execute(&state.pool).await?;
+    Ok(())
+}
+
+#[server(UpdateProject, "/api")]
+pub async fn update_project(id: i32, title: String, slug: String, impact: String, tags: Vec<String>, bullets: Vec<String>, status: String, date_range: String) -> Result<(), ServerFnError> {
+    use crate::auth::check_session;
+    use axum::Extension;
+    use leptos_axum::extract;
+    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    sqlx::query("UPDATE projects SET title = $1, slug = $2, impact = $3, tags = $4, bullets = $5, status = $6, date_range = $7 WHERE id = $8").bind(title).bind(slug).bind(impact).bind(tags).bind(bullets).bind(status).bind(date_range).bind(id).execute(&state.pool).await?;
+    Ok(())
+}
+
+#[server(DeleteProject, "/api")]
+pub async fn delete_project(id: i32) -> Result<(), ServerFnError> {
+    use crate::auth::check_session;
+    use axum::Extension;
+    use leptos_axum::extract;
+    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    sqlx::query("DELETE FROM projects WHERE id = $1").bind(id).execute(&state.pool).await?;
+    Ok(())
 }
 
 #[component]
@@ -43,11 +80,11 @@ pub fn Projects() -> impl IntoView {
     view! {
         <main class="pt-32 pb-24 px-6 md:px-[8.5rem] bg-surface min-h-screen">
             <header class="mb-24 flex flex-col items-start max-w-4xl border-b-2 border-outline-variant/30 pb-8">
-                <div class="inline-block bg-primary-container/20 px-3 py-1 mb-6">
-                    <span class="font-label text-[0.6875rem] text-primary font-bold tracking-tighter">"INDEX_REF_05 // ACTIVE REPOS"</span>
+                <div class="inline-block bg-primary-container/20 px-3 py-1 mb-6 uppercase">
+                    <span class="font-label text-[0.6875rem] text-primary font-bold tracking-tighter">"CLIENT AND PERSONAL REPOSITORIES"</span>
                 </div>
-                <h1 class="text-5xl md:text-7xl font-extrabold text-on-surface tracking-[-0.02em] leading-none mb-4">
-                    "SYSTEMS BUILD LOG"
+                <h1 class="text-5xl md:text-7xl font-extrabold text-on-surface tracking-[-0.02em] leading-none mb-4 uppercase">
+                    "TECHNICAL PORTFOLIO"
                 </h1>
                 <p class="text-xl text-on-surface-variant font-medium mt-4 max-w-2xl">
                     "Engineering resilient infrastructures across blockchains, decentralized cloud, and sub-millisecond Rust backends."
@@ -60,10 +97,12 @@ pub fn Projects() -> impl IntoView {
                         let projects = projs_resource.get().unwrap_or_default();
                         projects.into_iter().map(|proj| {
                             let repo_link = format!("https://github.com/ruuderie/{}", proj.slug);
+                            let is_in_progress = proj.status.to_uppercase() == "IN PROGRESS";
+                            let status_color = if is_in_progress { "bg-[#f7931a] text-black" } else { "bg-surface-container-highest text-on-surface" };
                             view! {
                                 <article class="bg-surface-container-low p-8 md:p-12 relative border-l-4 border-secondary shadow-none ring-0">
-                                    <div class="absolute top-0 right-0 bg-secondary px-3 py-1 text-xs font-bold text-on-primary jetbrains uppercase tracking-widest hidden md:block">
-                                        "DEPLOY_ACTIVE"
+                                    <div class=format!("absolute top-0 right-0 {} px-3 py-1 text-xs font-bold jetbrains uppercase tracking-widest hidden md:block", status_color)>
+                                        {proj.status.to_uppercase()}
                                     </div>
                                     <h2 class="text-3xl font-extrabold text-primary mb-2">{proj.title}</h2>
                                     <a href=repo_link.clone() target="_blank" rel="noopener noreferrer" class="text-sm font-label text-outline hover:text-secondary hover:underline transition-colors flex items-center gap-2 mb-6 w-fit cursor-pointer">

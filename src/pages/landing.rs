@@ -1,64 +1,272 @@
 use leptos::*;
 
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct SiteSettings {
+    pub current_focus: String,
+    pub status: String,
+    pub hero_quote: String,
+    pub hero_subtitle: String,
+    pub site_title: String,
+    pub lc_title: String,
+    pub lc_desc: String,
+    pub lc_label: String,
+    pub lc_placeholder: String,
+    pub lc_btn: String,
+    pub lc_footer: String,
+    pub lc_endpoint: String,
+    pub status_color: String,
+    pub webhook_url: String,
+    pub admin_email: String,
+    pub landing_options_json: String,
+    pub real_estate_title: String,
+    pub real_estate_desc: String,
+    pub re_lc_title: String,
+    pub re_lc_desc: String,
+    pub re_lc_label: String,
+    pub re_lc_placeholder: String,
+    pub re_lc_btn: String,
+    pub re_options_json: String,
+}
+
+impl Default for SiteSettings {
+    fn default() -> Self {
+        Self {
+            current_focus: "AI Agent Swarms (Agentforce / CrewAI)".into(),
+            status: "Available for Critical Ops".into(),
+            hero_quote: "Vires in Numeris. Systems architecture is not defined by lines, but by cryptographic proofs and immutable data flows.".into(),
+            hero_subtitle: "SALESFORCE TECHNICAL ARCHITECT // SPECIALIZING IN ENTERPRISE CLOUD SOLUTIONS, LWC, APEX, AND RUST EXTERNAL MICROSERVICES.".into(),
+            site_title: "RUUDERIE_AI".into(),
+            lc_title: "Request Tailored CV".into(),
+            lc_desc: "Input your protocol for a mission-specific credentials package.".into(),
+            lc_label: "Registry Email Address".into(),
+            lc_placeholder: "user@organization.domain".into(),
+            lc_btn: "Initialize Retrieval".into(),
+            lc_footer: "* Check your email to confirm the request parameters.".into(),
+            lc_endpoint: "/api/DownloadResume".into(),
+            status_color: "#ff5449".into(),
+            webhook_url: "".into(),
+            admin_email: "".into(),
+            landing_options_json: r#"{"resume": "Request Tailored CV", "mailing_list": "Join Mailing List"}"#.into(),
+            real_estate_title: "Real Estate Ventures.".into(),
+            real_estate_desc: "I am an active real estate investor and landlord always looking for the next deal or strategic partnership. Beyond acquiring properties, I leverage my network as a loan broker to structure investment capital.".into(),
+            re_lc_title: "Let's Connect".into(),
+            re_lc_desc: "Join the deal flow or request financing. Select your areas of interest below.".into(),
+            re_lc_label: "Registry Email Address".into(),
+            re_lc_placeholder: "investor@domain.com".into(),
+            re_lc_btn: "SUBMIT INQUIRY".into(),
+            re_options_json: r#"{"buying": "Buying a Home", "selling": "Selling a Home", "loan": "Getting a real estate investment loan", "networking": "Connecting with other investors"}"#.into(),
+        }
+    }
+}
+
+#[server(GetSiteSettings, "/api")]
+pub async fn get_site_settings() -> Result<SiteSettings, ServerFnError> {
+    use axum::Extension;
+    use leptos_axum::extract;
+    use sqlx::Row;
+
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    
+    let mut settings = SiteSettings::default();
+
+    let rows = sqlx::query("SELECT key, value FROM site_settings").fetch_all(&state.pool).await?;
+    for row in rows {
+        let key: String = row.get("key");
+        let value: String = row.get("value");
+        if key == "current_focus" { settings.current_focus = value.clone(); }
+        if key == "status" { settings.status = value.clone(); }
+        if key == "hero_quote" { settings.hero_quote = value.clone(); }
+        if key == "hero_subtitle" { settings.hero_subtitle = value.clone(); }
+        if key == "site_title" { settings.site_title = value.clone(); }
+        if key == "lead_capture_title" { settings.lc_title = value.clone(); }
+        if key == "lead_capture_desc" { settings.lc_desc = value.clone(); }
+        if key == "lead_capture_label" { settings.lc_label = value.clone(); }
+        if key == "lead_capture_placeholder" { settings.lc_placeholder = value.clone(); }
+        if key == "lead_capture_btn" { settings.lc_btn = value.clone(); }
+        if key == "lead_capture_footer" { settings.lc_footer = value.clone(); }
+        if key == "lead_capture_endpoint" { settings.lc_endpoint = value.clone(); }
+        if key == "status_color" { settings.status_color = value.clone(); }
+        if key == "webhook_url" { settings.webhook_url = value.clone(); }
+        if key == "admin_email" { settings.admin_email = value.clone(); }
+        if key == "landing_options_json" { settings.landing_options_json = value.clone(); }
+        if key == "real_estate_title" { settings.real_estate_title = value.clone(); }
+        if key == "real_estate_desc" { settings.real_estate_desc = value.clone(); }
+        if key == "re_lc_title" { settings.re_lc_title = value.clone(); }
+        if key == "re_lc_desc" { settings.re_lc_desc = value.clone(); }
+        if key == "re_lc_label" { settings.re_lc_label = value.clone(); }
+        if key == "re_lc_placeholder" { settings.re_lc_placeholder = value.clone(); }
+        if key == "re_lc_btn" { settings.re_lc_btn = value.clone(); }
+        if key == "re_options_json" { settings.re_options_json = value.clone(); }
+    }
+
+    Ok(settings)
+}
+
+#[server(UpdateSiteSettings, "/api")]
+pub async fn update_site_settings(
+    current_focus: String, status: String, hero_quote: String, hero_subtitle: String, site_title: String, lc_title: String, lc_desc: String, lc_label: String, lc_placeholder: String, lc_btn: String, lc_footer: String, lc_endpoint: String, status_color: String, webhook_url: String, admin_email: String, landing_options_json: String, real_estate_title: String, real_estate_desc: String, re_lc_title: String, re_lc_desc: String, re_lc_label: String, re_lc_placeholder: String, re_lc_btn: String, re_options_json: String
+) -> Result<(), ServerFnError> {
+    use crate::auth::check_session;
+    use axum::Extension;
+    use leptos_axum::extract;
+    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'current_focus'").bind(current_focus).execute(&state.pool).await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'status'").bind(status).execute(&state.pool).await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'hero_quote'").bind(hero_quote).execute(&state.pool).await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'hero_subtitle'").bind(hero_subtitle).execute(&state.pool).await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'site_title'").bind(site_title).execute(&state.pool).await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'lead_capture_title'").bind(lc_title).execute(&state.pool).await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'lead_capture_desc'").bind(lc_desc).execute(&state.pool).await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'lead_capture_label'").bind(lc_label).execute(&state.pool).await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'lead_capture_placeholder'").bind(lc_placeholder).execute(&state.pool).await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'lead_capture_btn'").bind(lc_btn).execute(&state.pool).await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'lead_capture_footer'").bind(lc_footer).execute(&state.pool).await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'lead_capture_endpoint'").bind(lc_endpoint).execute(&state.pool).await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'status_color'").bind(status_color).execute(&state.pool).await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'webhook_url'").bind(webhook_url).execute(&state.pool).await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'admin_email'").bind(admin_email).execute(&state.pool).await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'landing_options_json'").bind(landing_options_json).execute(&state.pool).await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'real_estate_title'").bind(real_estate_title).execute(&state.pool).await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'real_estate_desc'").bind(real_estate_desc).execute(&state.pool).await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 're_lc_title'").bind(re_lc_title).execute(&state.pool).await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 're_lc_desc'").bind(re_lc_desc).execute(&state.pool).await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 're_lc_label'").bind(re_lc_label).execute(&state.pool).await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 're_lc_placeholder'").bind(re_lc_placeholder).execute(&state.pool).await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 're_lc_btn'").bind(re_lc_btn).execute(&state.pool).await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 're_options_json'").bind(re_options_json).execute(&state.pool).await?;
+    
+    Ok(())
+}
+
+#[server(HandleLeadCapture, "/api")]
+pub async fn handle_lead_capture(email: String, options: Vec<String>) -> Result<(), ServerFnError> {
+    use axum::Extension;
+    use leptos_axum::extract;
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    
+    let settings = get_site_settings().await.unwrap_or_default();
+    
+    let prefs_json = serde_json::to_value(&options).unwrap_or(serde_json::json!([]));
+    
+    let _ = sqlx::query("INSERT INTO mailing_list (email, list_type, preferences) VALUES ($1, $2, $3) ON CONFLICT (email) DO UPDATE SET preferences = $3")
+        .bind(&email)
+        .bind("general")
+        .bind(&prefs_json)
+        .execute(&state.pool)
+        .await;
+        
+    // Log to console per user request (webhook/email pending)
+    if !settings.webhook_url.is_empty() {
+        println!("TRIGGER WEBHOOK to {}: Lead capture for {} with options {:?}", settings.webhook_url, email, options);
+    } else {
+        println!("NEW LEAD CAPTURE: {} requested {:?}", email, options);
+    }
+
+    Ok(())
+}
+
 #[component]
 pub fn Landing() -> impl IntoView {
+    let settings_resource = create_resource(|| (), |_| get_site_settings());
+    let stats_resource = create_resource(|| (), |_| crate::components::nav::get_bitcoin_stats());
+
+    let (email, set_email) = create_signal(String::new());
+    let (selected_options, set_selected_options) = create_signal(std::collections::HashSet::<String>::new());
+    let (submitted, set_submitted) = create_signal(false);
+
+    let submit_action = create_action(move |_: &()| {
+        let e = email.get_untracked();
+        let opts: Vec<String> = selected_options.get_untracked().into_iter().collect();
+        async move {
+            let _ = handle_lead_capture(e, opts).await;
+            set_submitted.set(true);
+        }
+    });
+
     view! {
         <main class="pt-32 pb-24 px-6 md:px-[8.5rem]">
             // Hero Section
             <section class="grid grid-cols-1 md:grid-cols-12 gap-12 min-h-[716px] items-start">
                 <div class="md:col-span-12 lg:col-span-8 flex flex-col items-start">
-                    <div class="inline-block bg-surface-container-high px-3 py-1 jetbrains text-[0.625rem] font-medium tracking-widest text-on-surface-variant mb-8">
-                        "VER: v1.0.4 // KERNEL_ACTIVE"
+                    <div class="inline-block bg-surface-container-high px-3 py-1 jetbrains text-[0.625rem] font-medium tracking-widest text-on-surface-variant mb-8 uppercase">
+                        "RUST SYSTEMS ENGINEER // BITCOIN ENTHUSIAST"
                     </div>
                     <h1 class="text-6xl md:text-[6rem] leading-[0.9] font-extrabold tracking-[-0.04em] text-primary mb-12 uppercase">
                         "Ruud Salym"<br/>"Erie."
                     </h1>
-                    <p class="text-xl md:text-2xl font-medium tracking-tight text-on-surface-variant max-w-2xl leading-relaxed">
-                        "SALESFORCE TECHNICAL ARCHITECT // SPECIALIZING IN "<span class="text-secondary">"ENTERPRISE CLOUD SOLUTIONS"</span>", LWC, APEX, AND RUST EXTERNAL MICROSERVICES."
+                    <p class="text-xl md::text-2xl font-medium tracking-tight text-on-surface-variant max-w-2xl leading-relaxed uppercase">
+                        <Suspense fallback=move || view! { <span>"..."</span> }>
+                            {move || settings_resource.get().unwrap_or(Ok(SiteSettings::default())).unwrap_or(SiteSettings::default()).hero_subtitle}
+                        </Suspense>
                     </p>
                     <div class="mt-20 flex space-x-12 items-end">
-                        <div class="flex flex-col">
-                            <span class="jetbrains text-[0.65rem] text-outline mb-2 uppercase">"Current focus"</span>
-                            <span class="text-sm font-bold text-on-surface">"AI Agent Swarms (Agentforce / CrewAI)"</span>
-                        </div>
-                        <div class="flex flex-col">
-                            <span class="jetbrains text-[0.65rem] text-outline mb-2 uppercase">"Status"</span>
-                            <div class="flex items-center space-x-2">
-                                <div class="w-1.5 h-1.5 bg-secondary"></div>
-                                <span class="text-sm font-bold text-on-surface uppercase tracking-wider">"Available for Critical Ops"</span>
-                            </div>
-                        </div>
+                        <Suspense fallback=move || view! { <div class="jetbrains text-xs">"Loading..."</div> }>
+                            {move || {
+                                let settings = settings_resource.get().unwrap_or(Ok(SiteSettings::default())).unwrap_or(SiteSettings::default());
+                                view! {
+                                    <div class="flex space-x-12 items-end">
+                                        <div class="flex flex-col">
+                                            <span class="jetbrains text-[0.65rem] uppercase text-outline mb-2 uppercase">"Current focus"</span>
+                                            <span class="text-sm font-bold text-on-surface">{settings.current_focus}</span>
+                                        </div>
+                                        <div class="flex flex-col">
+                                            <span class="jetbrains text-[0.65rem] uppercase tracking-[0.2em] text-outline mb-3 inline-flex items-center">
+                                                <span class="w-1.5 h-1.5 rounded-full mr-2" style=format!("background-color: {}; box-shadow: 0 0 8px {};", settings.status_color, settings.status_color)></span>
+                                                "STATUS"
+                                            </span>
+                                            <span class="text-on-surface font-bold tracking-tight text-lg">
+                                                {settings.status}
+                                            </span>
+                                        </div>
+                                    </div>
+                                }
+                            }}
+                        </Suspense>
                     </div>
                 </div>
 
                 <div class="col-span-12 lg:col-span-4 space-y-8 mt-12 lg:mt-0">
                     <div class="bg-surface-container-low p-8 border-l-4 border-secondary flex flex-col justify-between aspect-square lg:aspect-auto lg:min-h-[400px]">
                         <div>
-                            <span class="material-symbols-outlined text-secondary text-4xl mb-6">"format_quote"</span>
+                            <span class="material-symbols-outlined text-[#f7931a] text-4xl mb-6">"format_quote"</span>
                             <p class="text-lg italic font-medium text-on-surface leading-snug">
-                                "\"Architecture is not about drawing boxes; it's about defining the physics of the data flow.\""
+                                <Suspense fallback=move || view! { <span>"..."</span> }>
+                                    {move || format!("\"{}\"", settings_resource.get().unwrap_or(Ok(SiteSettings::default())).unwrap_or(SiteSettings::default()).hero_quote)}
+                                </Suspense>
                             </p>
                         </div>
-                        <div class="mt-8 space-y-6">
-                            <div class="space-y-2">
-                                <div class="flex justify-between items-end">
-                                    <span class="jetbrains text-[0.65rem] uppercase text-outline">"Architectural Delivery"</span>
-                                    <span class="jetbrains text-[0.65rem] text-secondary">"100%"</span>
-                                </div>
-                                <div class="h-1 bg-surface-container-highest w-full overflow-hidden">
-                                    <div class="h-full bg-secondary w-full"></div>
-                                </div>
-                            </div>
-                            <div class="space-y-2">
-                                <div class="flex justify-between items-end">
-                                    <span class="jetbrains text-[0.65rem] uppercase text-outline">"Resource Overhead"</span>
-                                    <span class="jetbrains text-[0.65rem] text-primary">"2.4%"</span>
-                                </div>
-                                <div class="h-1 bg-surface-container-highest w-full overflow-hidden">
-                                    <div class="h-full bg-primary w-[2.4%]"></div>
-                                </div>
-                            </div>
-                        </div>
+                        <Suspense fallback=move || view! { <div class="mt-8">"Hydrating Network Stats..."</div> }>
+                            {move || {
+                                let stats = stats_resource.get()
+                                    .unwrap_or_else(|| Ok(crate::components::nav::BitcoinStats { difficulty: 0.0, tx_count: 0, size: 0, weight: 0 }))
+                                    .unwrap_or(crate::components::nav::BitcoinStats { difficulty: 0.0, tx_count: 0, size: 0, weight: 0 });
+                                view! {
+                                    <div class="mt-8 space-y-6">
+                                        <div class="space-y-2">
+                                            <div class="flex justify-between items-end">
+                                                <span class="jetbrains text-[0.65rem] uppercase text-outline">"Latest Block Weight"</span>
+                                                <span class="jetbrains text-[0.65rem] text-[#f7931a]">{format!("{:.2}%", (stats.weight as f64 / 4_000_000.0) * 100.0)}</span>
+                                            </div>
+                                            <div class="h-1 bg-surface-container-highest w-full overflow-hidden">
+                                                <div class="h-full bg-[#f7931a]" style=format!("width: {:.2}%", (stats.weight as f64 / 4_000_000.0) * 100.0)></div>
+                                            </div>
+                                            <div class="jetbrains text-[0.55rem] text-outline-variant uppercase">{format!("{} / 4,000,000 WU", stats.weight)}</div>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <div class="flex justify-between items-end">
+                                                <span class="jetbrains text-[0.65rem] uppercase text-outline">"Recent Mempool Transactions"</span>
+                                                <span class="jetbrains text-[0.65rem] text-primary">{stats.tx_count.to_string()}</span>
+                                            </div>
+                                            <div class="h-1 bg-surface-container-highest w-full overflow-hidden">
+                                                <div class="h-full bg-primary w-[33%]"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }}
+                        </Suspense>
                     </div>
                 </div>
             </section>
@@ -66,25 +274,82 @@ pub fn Landing() -> impl IntoView {
             // Lead Capture Section
             <section class="mt-32 flex flex-col items-center justify-center py-32 bg-surface-container-low relative">
                 <div class="absolute top-0 left-0 w-full h-px bg-outline-variant/30"></div>
-                <div class="max-w-xl w-full text-center space-y-12 px-6 shadow-none">
-                    <div class="space-y-4">
-                        <h2 class="text-4xl font-extrabold tracking-tight text-primary">"Request Tailored CV"</h2>
-                        <p class="text-on-surface-variant font-medium">"Input your protocol for a mission-specific credentials package."</p>
-                    </div>
-                    <form class="space-y-8 w-full bg-transparent border-0 outline-none">
-                        <div class="relative w-full group">
-                            <label class="jetbrains text-[0.65rem] uppercase tracking-[0.1em] text-outline text-left block mb-2">"Registry Email Address"</label>
-                            <input type="email" placeholder="user@organization.domain" class="w-full bg-transparent border-none border-b-2 border-outline-variant focus:border-primary focus:ring-0 px-0 py-4 jetbrains text-lg text-on-surface placeholder:text-outline-variant/50 transition-all rounded-none" />
-                        </div>
-                        <div class="space-y-4">
-                            <button type="submit" class="w-full bg-secondary text-on-primary py-6 jetbrains font-bold text-sm tracking-[0.2em] uppercase hover:bg-on-secondary-fixed-variant transition-colors rounded-none outline-none border-none shadow-none">
-                                "Initialize Retrieval"
-                            </button>
-                            <p class="jetbrains text-[0.625rem] text-outline uppercase tracking-widest">
-                                "* Check your email to confirm the request parameters."
-                            </p>
-                        </div>
-                    </form>
+                <div class="max-w-xl w-full space-y-12 px-6 shadow-none">
+                    {move || if submitted.get() {
+                        view! {
+                            <div class="text-center space-y-6">
+                                <span class="material-symbols-outlined text-secondary text-5xl">"check_circle"</span>
+                                <h2 class="text-3xl font-extrabold tracking-tight text-primary">"REQUEST LOGGED"</h2>
+                                <p class="text-on-surface-variant font-medium">"Your selections have been securely transmitted."</p>
+                            </div>
+                        }.into_view()
+                    } else {
+                        view! {
+                            <div class="text-center space-y-4">
+                                <h2 class="text-4xl font-extrabold tracking-tight text-primary">
+                                    <Suspense fallback=move || view! { <span>"..."</span> }>
+                                        {move || settings_resource.get().unwrap_or(Ok(SiteSettings::default())).unwrap_or(SiteSettings::default()).lc_title}
+                                    </Suspense>
+                                </h2>
+                                <p class="text-on-surface-variant font-medium">
+                                    <Suspense fallback=move || view! { <span>"..."</span> }>
+                                        {move || settings_resource.get().unwrap_or(Ok(SiteSettings::default())).unwrap_or(SiteSettings::default()).lc_desc}
+                                    </Suspense>
+                                </p>
+                            </div>
+                            <div class="space-y-8 w-full bg-transparent border-0 outline-none">
+                                <div class="relative w-full group">
+                                    <label class="jetbrains text-[0.65rem] uppercase tracking-[0.1em] text-outline text-left block mb-2">
+                                        <Suspense fallback=move || view! { <span>"..."</span> }>
+                                            {move || settings_resource.get().unwrap_or(Ok(SiteSettings::default())).unwrap_or(SiteSettings::default()).lc_label}
+                                        </Suspense>
+                                    </label>
+                                    <input type="email" prop:value=email on:input=move |ev| set_email.set(event_target_value(&ev)) placeholder="user@organization.domain" class="w-full bg-transparent border-none border-b-2 border-outline-variant focus:border-primary focus:ring-0 px-0 py-4 jetbrains text-lg text-on-surface placeholder:text-outline-variant/50 transition-all rounded-none" />
+                                </div>
+                                <Suspense fallback=move || view! { <div class="jetbrains text-xs">"Loading options..."</div> }>
+                                    {move || {
+                                        let settings = settings_resource.get().unwrap_or(Ok(SiteSettings::default())).unwrap_or(SiteSettings::default());
+                                        let parsed_opts: std::collections::HashMap<String, String> = serde_json::from_str(&settings.landing_options_json).unwrap_or_default();
+                                        
+                                        view! {
+                                            <div class="space-y-4 text-left border border-outline-variant/30 p-6 bg-surface-container-lowest/50">
+                                                {parsed_opts.into_iter().map(|(key, label)| {
+                                                    let k = key.clone();
+                                                    view! {
+                                                    <label class="flex items-center space-x-3 cursor-pointer group">
+                                                        <input type="checkbox" 
+                                                            class="w-5 h-5 bg-transparent border-2 border-outline-variant text-primary focus:ring-primary focus:ring-offset-surface-container-low" 
+                                                            on:change=move |ev| {
+                                                                if event_target_checked(&ev) {
+                                                                    set_selected_options.update(|set| { set.insert(k.clone()); });
+                                                                } else {
+                                                                    set_selected_options.update(|set| { set.remove(&k); });
+                                                                }
+                                                            }
+                                                        />
+                                                        <span class="jetbrains text-sm text-on-surface group-hover:text-primary transition-colors">{label}</span>
+                                                    </label>
+                                                    }
+                                                }).collect_view()}
+                                            </div>
+                                        }
+                                    }}
+                                </Suspense>
+                                <div class="space-y-4">
+                                    <button on:click=move |_| submit_action.dispatch(()) class="w-full bg-secondary text-on-primary py-6 jetbrains font-bold text-sm tracking-[0.2em] uppercase hover:bg-on-secondary-fixed-variant transition-colors rounded-none outline-none border-none shadow-none">
+                                        <Suspense fallback=move || view! { <span>"EXECUTE..."</span> }>
+                                            {move || settings_resource.get().unwrap_or(Ok(SiteSettings::default())).unwrap_or(SiteSettings::default()).lc_btn}
+                                        </Suspense>
+                                    </button>
+                                    <p class="jetbrains text-[0.625rem] text-outline uppercase tracking-widest text-center">
+                                        <Suspense fallback=move || view! { <span>"*"</span> }>
+                                            {move || settings_resource.get().unwrap_or(Ok(SiteSettings::default())).unwrap_or(SiteSettings::default()).lc_footer}
+                                        </Suspense>
+                                    </p>
+                                </div>
+                            </div>
+                        }.into_view()
+                    }}
                 </div>
             </section>
         </main>
