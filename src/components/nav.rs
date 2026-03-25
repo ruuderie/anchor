@@ -3,9 +3,11 @@ use std::time::Duration;
 
 #[server(GetBlockHeight, "/api")]
 pub async fn get_block_height() -> Result<u64, ServerFnError> {
-    let res = reqwest::get("https://mempool.space/api/blocks/tip/height").await?;
-    let text = res.text().await?;
-    let height = text.parse::<u64>().unwrap_or(842391);
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+    let url = format!("https://mempool.space/api/v1/mining/blocks/timestamp/{}", now);
+    let res = reqwest::get(&url).await?;
+    let json: serde_json::Value = res.json().await?;
+    let height = json["height"].as_u64().ok_or_else(|| ServerFnError::ServerError("Missing height".into()))?;
     Ok(height)
 }
 
@@ -27,7 +29,7 @@ pub fn Nav() -> impl IntoView {
     });
 
     let height_resource = create_resource(move || tick.get(), |_| get_block_height());
-    let block_height = move || height_resource.get().unwrap_or(Ok(842391)).unwrap_or(842391);
+    let block_height = move || height_resource.get().unwrap_or(Ok(0)).unwrap_or(0);
 
     view! {
         <nav class="fixed top-0 left-0 w-full flex justify-between items-center px-[8.5rem] py-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-[20px] z-50">
