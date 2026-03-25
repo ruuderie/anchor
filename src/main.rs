@@ -28,6 +28,7 @@ async fn main() {
     let site_root = &leptos_options.site_root;
 
     let app = Router::new()
+        .route("/api/*fn_name", axum::routing::get(leptos_axum::handle_server_fns).post(leptos_axum::handle_server_fns))
         .nest_service("/pkg", ServeDir::new(format!("{}/pkg", site_root)))
         .leptos_routes_with_context(
             &app_state,
