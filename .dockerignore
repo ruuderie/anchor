@@ -3,3 +3,5 @@
 **/*.rs.bk
 Dockerfile
 docker-compose.yml
+node_modules/
+.idea/

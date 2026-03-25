@@ -1,41 +1,37 @@
+version: "3.9"
 services:
   app:
-    container_name: "leptos-app"
+    container_name: "ruuderie_app"
     build:
       context: .
-      dockerfile: ./ruuderie_ai_app/Dockerfile
-      args:
-        - USERNAME=${USERNAME:-user}
-        - USER_ID=${USER_ID:-1000}
-        - USER_GID=${USER_GID:-1000}
-    working_dir: "/app"
-    volumes:
-      - ./ruuderie_ai_app:/app:cached
+      dockerfile: Dockerfile
     ports:
       - "3000:3000"
-      - "3001:3001"
-    networks:
-      - app-network
+    environment:
+      - DATABASE_URL=postgres://ruud_admin:R3sUm3_S3cUr3@db:5432/ruuderie_ai
     depends_on:
       - db
-    env_file:
-      - .env
+    restart: unless-stopped
+    networks:
+      - ruuderie_net
 
   db:
-    image: postgres:14.1
-    container_name: "postgres-db"
+    container_name: "ruuderie_db"
+    image: postgres:14-alpine
     restart: unless-stopped
     volumes:
       - postgres-data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=postgres
+      - POSTGRES_USER=ruud_admin
+      - POSTGRES_PASSWORD=R3sUm3_S3cUr3
+      - POSTGRES_DB=ruuderie_ai
+    ports:
+      - "5432:5432"
     networks:
-      - app-network
-
-networks:
-  app-network:
+      - ruuderie_net
 
 volumes:
   postgres-data:
+
+networks:
+  ruuderie_net:
