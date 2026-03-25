@@ -6,7 +6,6 @@ pub async fn get_block_height() -> Result<u64, ServerFnError> {
     let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
     let url = format!("https://mempool.space/api/v1/mining/blocks/timestamp/{}", now);
     let res = reqwest::get(&url).await?;
-    println!("{:?}", res);
     let json: serde_json::Value = res.json().await?;
     let height = match json["height"].as_u64() {
         Some(h) => h,
