@@ -7,8 +7,8 @@ pub mod ssr {
     pub use webauthn_rs::prelude::*;
     
     pub fn get_webauthn() -> Webauthn {
-        let rp_origin = Url::parse("http://localhost:3000").unwrap();
-        let builder = WebauthnBuilder::new("localhost", &rp_origin).unwrap()
+        let rp_origin = Url::parse("https://app.ruuderie-ai.orb.local").unwrap();
+        let builder = WebauthnBuilder::new("app.ruuderie-ai.orb.local", &rp_origin).unwrap()
             .rp_name("RuudErie_ai");
         builder.build().unwrap()
     }
