@@ -36,6 +36,8 @@ url = "2.5.8"
 [features]
 hydrate = [
     "leptos/hydrate",
+    "leptos_meta/hydrate",
+    "leptos_router/hydrate",
     "dep:console_error_panic_hook",
     "dep:wasm-bindgen",
     "dep:wasm-bindgen-futures",
