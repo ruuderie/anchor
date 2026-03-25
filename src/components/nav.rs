@@ -7,7 +7,10 @@ pub async fn get_block_height() -> Result<u64, ServerFnError> {
     let url = format!("https://mempool.space/api/v1/mining/blocks/timestamp/{}", now);
     let res = reqwest::get(&url).await?;
     let json: serde_json::Value = res.json().await?;
-    let height = json["height"].as_u64().ok_or_else(|| ServerFnError::ServerError("Missing height".into()))?;
+    let height = match json["height"].as_u64() {
+        Some(h) => h,
+        None => return Err(ServerFnError::ServerError("Missing height".into())),
+    };
     Ok(height)
 }
 

@@ -1,8 +1,8 @@
 use leptos::*;
 
-use crate::pages::certifications::{get_certifications, GetCertifications};
-use crate::pages::projects::{get_projects, GetProjects};
-use crate::pages::resume::{get_jobs, GetJobs};
+use crate::pages::certifications::get_certifications;
+use crate::pages::projects::get_projects;
+use crate::pages::resume::get_jobs;
 use crate::auth::*;
 
 #[cfg(target_arch = "wasm32")]

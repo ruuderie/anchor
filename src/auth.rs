@@ -3,7 +3,6 @@ use uuid::Uuid;
 
 #[cfg(feature = "ssr")]
 pub mod ssr {
-    use url::Url;
     pub use webauthn_rs::prelude::*;
     
     pub fn get_webauthn() -> Webauthn {
@@ -199,7 +198,7 @@ pub async fn login_finish(username: String, challenge_id: Uuid, auth_json: Strin
         Err(e) => return Err(ServerFnError::ServerError(e.to_string())),
     };
     
-    let user_row: (serde_json::Value,) = match sqlx::query_as("SELECT passkey FROM users WHERE username = $1")
+    let _user_row: (serde_json::Value,) = match sqlx::query_as("SELECT passkey FROM users WHERE username = $1")
         .bind(&username)
         .fetch_one(&app_state.pool)
         .await
