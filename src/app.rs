@@ -18,9 +18,8 @@ pub fn App() -> impl IntoView {
         <Stylesheet id="leptos" href="/pkg/ruuderie_ai.css"/>
         <Title text="Ruud Salym Erie - Systems Architect"/>
 
-        <Nav />
-
         <Router>
+            <Nav />
             <Routes>
                 <Route path="/" view=Landing/>
                 <Route path="/resume" view=Resume/>
