@@ -5,16 +5,57 @@ use serde::{Deserialize, Serialize};
 pub struct ResumeProfile {
     pub id: i32,
     pub name: String,
-    pub biography: String,
+    pub objective: Option<String>,
     pub is_public: bool,
+    pub target_role: Option<String>,
+    pub contact_email: Option<String>,
+    pub contact_phone: Option<String>,
+    pub contact_location: Option<String>,
+    pub contact_link: Option<String>,
+    pub category_visibility: serde_json::Value,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct ResumeProfileItem {
+#[cfg_attr(feature = "ssr", derive(sqlx::Type))]
+#[cfg_attr(feature = "ssr", sqlx(type_name = "resume_category_enum", rename_all = "lowercase"))]
+pub enum ResumeCategory {
+    Work,
+    Education,
+    Skill,
+    Project,
+    Language,
+    Volunteer,
+    Extracurricular,
+    Hobby,
+}
+
+impl std::fmt::Display for ResumeCategory {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let text = match self {
+            Self::Work => "work",
+            Self::Education => "education",
+            Self::Skill => "skill",
+            Self::Project => "project",
+            Self::Language => "language",
+            Self::Volunteer => "volunteer",
+            Self::Extracurricular => "extracurricular",
+            Self::Hobby => "hobby",
+        };
+        write!(f, "{}", text)
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct ResumeEntry {
+    pub id: i32,
     pub profile_id: i32,
-    pub item_type: String, // 'job', 'project', 'cert'
-    pub item_id: i32,
-    pub custom_name: Option<String>,
+    pub category: ResumeCategory,
+    pub title: String,
+    pub subtitle: Option<String>,
+    pub date_range: Option<String>,
+    pub bullets: Vec<String>,
+    pub display_order: i32,
+    pub is_visible: bool,
 }
 
 #[server(GetResumeProfiles, "/api")]
@@ -23,7 +64,7 @@ pub async fn get_resume_profiles() -> Result<Vec<ResumeProfile>, ServerFnError> 
     use leptos_axum::extract;
     use sqlx::Row;
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    let rows = sqlx::query("SELECT id, name, biography, is_public FROM resume_profiles ORDER BY id ASC")
+    let rows = sqlx::query("SELECT id, name, objective, is_public, target_role, contact_email, contact_phone, contact_location, contact_link, category_visibility FROM resume_profiles ORDER BY id ASC")
         .fetch_all(&state.pool)
         .await?;
         
@@ -31,31 +72,44 @@ pub async fn get_resume_profiles() -> Result<Vec<ResumeProfile>, ServerFnError> 
         ResumeProfile {
             id: row.get("id"),
             name: row.get("name"),
-            biography: row.get("biography"),
+            objective: row.get("objective"),
             is_public: row.try_get("is_public").unwrap_or(false),
+            target_role: row.get("target_role"),
+            contact_email: row.get("contact_email"),
+            contact_phone: row.get("contact_phone"),
+            contact_location: row.get("contact_location"),
+            contact_link: row.get("contact_link"),
+            category_visibility: row.get("category_visibility"),
         }
     }).collect();
     
     Ok(profiles)
 }
 
-#[server(GetResumeProfileItems, "/api")]
-pub async fn get_resume_profile_items(profile_id: i32) -> Result<Vec<ResumeProfileItem>, ServerFnError> {
+#[server(GetResumeEntries, "/api")]
+pub async fn get_resume_entries(profile_id: i32) -> Result<Vec<ResumeEntry>, ServerFnError> {
     use axum::Extension;
     use leptos_axum::extract;
     use sqlx::Row;
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    let rows = sqlx::query("SELECT profile_id, item_type, item_id, custom_name FROM resume_profile_items WHERE profile_id = $1")
+    let rows = sqlx::query("SELECT id, profile_id, category, title, subtitle, date_range, bullets, display_order, is_visible FROM resume_entries WHERE profile_id = $1 ORDER BY display_order ASC")
         .bind(profile_id)
         .fetch_all(&state.pool)
         .await?;
         
     let items = rows.into_iter().map(|row| {
-        ResumeProfileItem {
+        let bullets_val: serde_json::Value = row.get("bullets");
+        let bullets: Vec<String> = serde_json::from_value(bullets_val).unwrap_or_default();
+        ResumeEntry {
+            id: row.get("id"),
             profile_id: row.get("profile_id"),
-            item_type: row.get("item_type"),
-            item_id: row.get("item_id"),
-            custom_name: row.get("custom_name"),
+            category: row.get("category"),
+            title: row.get("title"),
+            subtitle: row.get("subtitle"),
+            date_range: row.get("date_range"),
+            bullets,
+            display_order: row.get("display_order"),
+            is_visible: row.get("is_visible"),
         }
     }).collect();
     
@@ -63,52 +117,42 @@ pub async fn get_resume_profile_items(profile_id: i32) -> Result<Vec<ResumeProfi
 }
 
 #[server(AddResumeProfile, "/api")]
-pub async fn add_resume_profile(name: String, biography: String, is_public: bool, items: Vec<ResumeProfileItem>) -> Result<(), ServerFnError> {
+pub async fn add_resume_profile(
+    name: String, objective: Option<String>, is_public: bool, target_role: Option<String>,
+    contact_email: Option<String>, contact_phone: Option<String>, contact_location: Option<String>,
+    contact_link: Option<String>, category_visibility: serde_json::Value
+) -> Result<(), ServerFnError> {
     use crate::auth::check_session;
     use axum::Extension;
     use leptos_axum::extract;
     if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
 
-    let mut tx = state.pool.begin().await?;
-
-    let row = sqlx::query("INSERT INTO resume_profiles (name, biography, is_public) VALUES ($1, $2, $3) RETURNING id")
-        .bind(&name).bind(&biography).bind(is_public).fetch_one(&mut *tx).await?;
-    let new_id: i32 = sqlx::Row::get(&row, "id");
-
-    for item in items {
-        sqlx::query("INSERT INTO resume_profile_items (profile_id, item_type, item_id, custom_name) VALUES ($1, $2, $3, $4)")
-            .bind(new_id).bind(&item.item_type).bind(item.item_id).bind(&item.custom_name)
-            .execute(&mut *tx).await?;
-    }
-
-    tx.commit().await?;
+    sqlx::query("INSERT INTO resume_profiles (name, objective, is_public, target_role, contact_email, contact_phone, contact_location, contact_link, category_visibility) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)")
+        .bind(name).bind(objective).bind(is_public).bind(target_role)
+        .bind(contact_email).bind(contact_phone).bind(contact_location).bind(contact_link).bind(category_visibility)
+        .execute(&state.pool).await?;
+        
     Ok(())
 }
 
 #[server(UpdateResumeProfile, "/api")]
-pub async fn update_resume_profile(id: i32, name: String, biography: String, is_public: bool, items: Vec<ResumeProfileItem>) -> Result<(), ServerFnError> {
+pub async fn update_resume_profile(
+    id: i32, name: String, objective: Option<String>, is_public: bool, target_role: Option<String>,
+    contact_email: Option<String>, contact_phone: Option<String>, contact_location: Option<String>,
+    contact_link: Option<String>, category_visibility: serde_json::Value
+) -> Result<(), ServerFnError> {
     use crate::auth::check_session;
     use axum::Extension;
     use leptos_axum::extract;
     if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
 
-    let mut tx = state.pool.begin().await?;
-
-    sqlx::query("UPDATE resume_profiles SET name = $1, biography = $2, is_public = $3 WHERE id = $4")
-        .bind(&name).bind(&biography).bind(is_public).bind(id).execute(&mut *tx).await?;
-
-    sqlx::query("DELETE FROM resume_profile_items WHERE profile_id = $1")
-        .bind(id).execute(&mut *tx).await?;
-
-    for item in items {
-        sqlx::query("INSERT INTO resume_profile_items (profile_id, item_type, item_id, custom_name) VALUES ($1, $2, $3, $4)")
-            .bind(id).bind(&item.item_type).bind(item.item_id).bind(&item.custom_name)
-            .execute(&mut *tx).await?;
-    }
-
-    tx.commit().await?;
+    sqlx::query("UPDATE resume_profiles SET name = $1, objective = $2, is_public = $3, target_role = $4, contact_email = $5, contact_phone = $6, contact_location = $7, contact_link = $8, category_visibility = $9 WHERE id = $10")
+        .bind(name).bind(objective).bind(is_public).bind(target_role)
+        .bind(contact_email).bind(contact_phone).bind(contact_location).bind(contact_link).bind(category_visibility).bind(id)
+        .execute(&state.pool).await?;
+        
     Ok(())
 }
 
@@ -120,6 +164,57 @@ pub async fn delete_resume_profile(id: i32) -> Result<(), ServerFnError> {
     if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
     sqlx::query("DELETE FROM resume_profiles WHERE id = $1").bind(id).execute(&state.pool).await?;
+    Ok(())
+}
+
+#[server(AddResumeEntry, "/api")]
+pub async fn add_resume_entry(
+    profile_id: i32, category: ResumeCategory, title: String, subtitle: Option<String>,
+    date_range: Option<String>, bullets: Vec<String>, display_order: i32, is_visible: bool
+) -> Result<(), ServerFnError> {
+    use crate::auth::check_session;
+    use axum::Extension;
+    use leptos_axum::extract;
+    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    let bullets_json = serde_json::to_value(&bullets).unwrap_or(serde_json::json!([]));
+    
+    sqlx::query("INSERT INTO resume_entries (profile_id, category, title, subtitle, date_range, bullets, display_order, is_visible) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)")
+        .bind(profile_id).bind(category).bind(title).bind(subtitle).bind(date_range)
+        .bind(bullets_json).bind(display_order).bind(is_visible)
+        .execute(&state.pool).await?;
+        
+    Ok(())
+}
+
+#[server(UpdateResumeEntry, "/api")]
+pub async fn update_resume_entry(
+    id: i32, category: ResumeCategory, title: String, subtitle: Option<String>,
+    date_range: Option<String>, bullets: Vec<String>, display_order: i32, is_visible: bool
+) -> Result<(), ServerFnError> {
+    use crate::auth::check_session;
+    use axum::Extension;
+    use leptos_axum::extract;
+    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    let bullets_json = serde_json::to_value(&bullets).unwrap_or(serde_json::json!([]));
+    
+    sqlx::query("UPDATE resume_entries SET category = $1, title = $2, subtitle = $3, date_range = $4, bullets = $5, display_order = $6, is_visible = $7 WHERE id = $8")
+        .bind(category).bind(title).bind(subtitle).bind(date_range)
+        .bind(bullets_json).bind(display_order).bind(is_visible).bind(id)
+        .execute(&state.pool).await?;
+        
+    Ok(())
+}
+
+#[server(DeleteResumeEntry, "/api")]
+pub async fn delete_resume_entry(id: i32) -> Result<(), ServerFnError> {
+    use crate::auth::check_session;
+    use axum::Extension;
+    use leptos_axum::extract;
+    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    sqlx::query("DELETE FROM resume_entries WHERE id = $1").bind(id).execute(&state.pool).await?;
     Ok(())
 }
 
@@ -136,14 +231,19 @@ pub fn latex_escape(s: &str) -> String {
 }
 
 pub fn generate_latex_string(
-    settings_site_title: &str,
-    settings_hero_subtitle: &str,
-    settings_hero_quote: &str,
-    bio: &str,
-    jobs: &[crate::pages::resume::JobRecord],
-    projects: &[crate::pages::projects::ProjectRecord],
-    profile_items: &[ResumeProfileItem]
+    profile: &ResumeProfile,
+    entries: &[ResumeEntry]
 ) -> String {
+    let target_role_str = profile.target_role.clone().unwrap_or_default();
+    let objective_str = profile.objective.clone().unwrap_or_default();
+    
+    let mut contact_parts = Vec::new();
+    if let Some(ref email) = profile.contact_email { if !email.is_empty() { contact_parts.push(latex_escape(email)); } }
+    if let Some(ref phone) = profile.contact_phone { if !phone.is_empty() { contact_parts.push(latex_escape(phone)); } }
+    if let Some(ref loc) = profile.contact_location { if !loc.is_empty() { contact_parts.push(latex_escape(loc)); } }
+    if let Some(ref link) = profile.contact_link { if !link.is_empty() { contact_parts.push(latex_escape(link)); } }
+    let contact_str = contact_parts.join(" \\textbar{} ");
+
     let mut tex_content = format!(
         r#"
 \documentclass[11pt,letterpaper]{{article}}
@@ -169,131 +269,69 @@ pub fn generate_latex_string(
     {{\normalsize \texttt{{{}}}}}
 \end{{center}}
 \vspace{{0.1in}}
-
-\section*{{Executive Summary}}
-\noindent {}
-
 "#,
-        latex_escape(settings_site_title),
-        latex_escape(settings_hero_subtitle),
-        latex_escape(settings_hero_quote),
-        latex_escape(bio)
+        latex_escape(&profile.name),
+        latex_escape(&target_role_str),
+        contact_str
     );
 
-    // Render Jobs
-    let profile_has_jobs = profile_items.iter().any(|i| i.item_type == "job") || profile_items.is_empty();
-    if profile_has_jobs && !jobs.is_empty() {
-        let mut standard_jobs = Vec::new();
-        // Use a vector of tuples to maintain deterministic insertion order instead of a random Hashmap
-        let mut c2c_groups: Vec<(String, Vec<&crate::pages::resume::JobRecord>)> = Vec::new();
-
-        for job in jobs.iter().rev() {
-            let item_cfg = if profile_items.is_empty() { None } else { profile_items.iter().find(|i| i.item_type == "job" && i.item_id == job.id) };
-            if profile_items.is_empty() || item_cfg.is_some() {
-                if job.employment_type == crate::pages::resume::JobType::CorpToCorp {
-                    let parent = job.parent_company.clone().unwrap_or_else(|| "Independent Consulting".to_string());
-                    if let Some(group) = c2c_groups.iter_mut().find(|(p, _)| p == &parent) {
-                        group.1.push(job);
-                    } else {
-                        c2c_groups.push((parent, vec![job]));
-                    }
-                } else {
-                    standard_jobs.push((job, item_cfg));
-                }
-            }
-        }
-
-        if !standard_jobs.is_empty() {
-            tex_content.push_str("\\section*{Experience}\n");
-            for (job, item_cfg) in standard_jobs {
-                let mut company_name = job.company.clone();
-                if let Some(cfg) = item_cfg {
-                    if let Some(ref custom) = cfg.custom_name {
-                        if !custom.is_empty() {
-                            company_name = custom.clone();
-                        }
-                    }
-                }
-                
-                let date_str = if job.hide_date { String::new() } else { job.date_range.clone() };
-
-                tex_content.push_str(&format!(
-                    "\\noindent \\textbf{{{}}} \\hfill {} \\\\\n\\textit{{{}}} \\vspace{{0.05in}}\n",
-                    latex_escape(&company_name),
-                    latex_escape(&date_str),
-                    latex_escape(&job.role)
-                ));
-
-                tex_content.push_str("\\begin{itemize}[leftmargin=*,noitemsep,topsep=0pt,parsep=0pt,partopsep=0pt]\n");
-                for bullet in &job.bullets {
-                    tex_content.push_str(&format!("\\item {}\n", latex_escape(bullet)));
-                }
-                tex_content.push_str("\\end{itemize}\n\\vspace{0.15in}\n\n");
-            }
-        }
-
-        if !c2c_groups.is_empty() {
-            tex_content.push_str("\\section*{Consulting Experience}\n");
-            for (parent_company, c2c_list) in c2c_groups {
-                tex_content.push_str(&format!("\\noindent {{\\Large \\textbf{{{}}}}} \\vspace{{0.08in}}\n\n", latex_escape(&parent_company)));
-                
-                for job in c2c_list {
-                    let mut company_name = job.company.clone();
-                    let item_cfg = if profile_items.is_empty() { None } else { profile_items.iter().find(|i| i.item_type == "job" && i.item_id == job.id) };
-                    if let Some(cfg) = item_cfg {
-                        if let Some(ref custom) = cfg.custom_name {
-                            if !custom.is_empty() { company_name = custom.clone(); }
-                        }
-                    }
-                    
-                    let date_str = if job.hide_date { String::new() } else { job.date_range.clone() };
-
-                    tex_content.push_str(&format!(
-                        "\\noindent \\textbf{{Client: {}}} \\hfill {} \\\\\n\\textit{{{}}} \\vspace{{0.05in}}\n",
-                        latex_escape(&company_name),
-                        latex_escape(&date_str),
-                        latex_escape(&job.role)
-                    ));
-
-                    tex_content.push_str("\\begin{itemize}[leftmargin=*,noitemsep,topsep=0pt,parsep=0pt,partopsep=0pt]\n");
-                    for bullet in &job.bullets {
-                        tex_content.push_str(&format!("\\item {}\n", latex_escape(bullet)));
-                    }
-                    tex_content.push_str("\\end{itemize}\n\\vspace{0.1in}\n\n");
-                }
-                tex_content.push_str("\\vspace{0.1in}\n\n");
-            }
-        }
+    if !objective_str.is_empty() {
+        tex_content.push_str(&format!(
+            "\\section*{{Executive Summary}}\n\\noindent {}\n\n",
+            latex_escape(&objective_str)
+        ));
     }
 
-    // Render Projects
-    let profile_has_projects = profile_items.iter().any(|i| i.item_type == "project") || profile_items.is_empty();
-    if profile_has_projects && !projects.is_empty() {
-        tex_content.push_str("\\section*{Projects}\n");
-        for proj in projects.iter().rev() {
-            let item_cfg = if profile_items.is_empty() { None } else { profile_items.iter().find(|i| i.item_type == "project" && i.item_id == proj.id) };
-            if profile_items.is_empty() || item_cfg.is_some() {
-                let mut title_name = proj.title.clone();
-                if let Some(cfg) = item_cfg {
-                    if let Some(ref custom) = cfg.custom_name {
-                        if !custom.is_empty() {
-                            title_name = custom.clone();
-                        }
-                    }
-                }
+    let is_cat_visible = |cat: &ResumeCategory| -> bool {
+        profile.category_visibility.get(cat.to_string())
+            .and_then(|v| v.as_bool()).unwrap_or(true)
+    };
 
-                tex_content.push_str(&format!(
-                    "\\noindent \\textbf{{{}}} \\hfill {} \\vspace{{0.05in}}\n",
-                    latex_escape(&title_name),
-                    latex_escape(&proj.date_range)
-                ));
+    let categories_to_render = vec![
+        (ResumeCategory::Work, "Experience"),
+        (ResumeCategory::Education, "Education"),
+        (ResumeCategory::Skill, "Skills"),
+        (ResumeCategory::Project, "Projects"),
+        (ResumeCategory::Language, "Languages"),
+        (ResumeCategory::Volunteer, "Volunteering"),
+        (ResumeCategory::Extracurricular, "Extracurriculars"),
+        (ResumeCategory::Hobby, "Hobbies"),
+    ];
 
+    for (cat_enum, section_title) in categories_to_render {
+        if !is_cat_visible(&cat_enum) { continue; }
+        
+        let cat_entries: Vec<_> = entries.iter()
+            .filter(|e| e.category == cat_enum && e.is_visible)
+            .collect();
+            
+        if cat_entries.is_empty() { continue; }
+
+        tex_content.push_str(&format!("\\section*{{{}}}\n", section_title));
+
+        for entry in cat_entries {
+            let title = latex_escape(&entry.title);
+            let date = latex_escape(&entry.date_range.clone().unwrap_or_default());
+            let subtitle = latex_escape(&entry.subtitle.clone().unwrap_or_default());
+
+            tex_content.push_str(&format!(
+                "\\noindent \\textbf{{{}}} \\hfill {} \\\\\n", title, date
+            ));
+            
+            if !subtitle.is_empty() {
+                tex_content.push_str(&format!("\\textit{{{}}} \\vspace{{0.05in}}\n", subtitle));
+            } else {
+                tex_content.push_str("\\vspace{0.05in}\n");
+            }
+
+            if !entry.bullets.is_empty() {
                 tex_content.push_str("\\begin{itemize}[leftmargin=*,noitemsep,topsep=0pt,parsep=0pt,partopsep=0pt]\n");
-                for bullet in &proj.bullets {
+                for bullet in &entry.bullets {
                     tex_content.push_str(&format!("\\item {}\n", latex_escape(bullet)));
                 }
-                tex_content.push_str("\\end{itemize}\n\\vspace{0.15in}\n\n");
+                tex_content.push_str("\\end{itemize}\n");
             }
+            tex_content.push_str("\\vspace{0.15in}\n\n");
         }
     }
 
@@ -308,35 +346,49 @@ pub async fn download_resume(profile_id: i32) -> Result<Vec<u8>, ServerFnError> 
     use sqlx::Row;
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
 
-    let settings = crate::pages::landing::get_site_settings().await.unwrap_or_default();
-
-    let mut bio = "Specializing in Enterprise Cloud Solutions, APEX, and Rust External Microservices. Dedicated to translating complex systems into immutable data flows.".to_string();
-    let mut profile_items = Vec::new();
-
-    if profile_id > 0 {
-        let profile_row = sqlx::query("SELECT biography FROM resume_profiles WHERE id = $1")
-            .bind(profile_id)
-            .fetch_one(&state.pool)
-            .await
-            .map_err(|_| -> ServerFnError { ServerFnError::ServerError("Profile not found".into()) })?;
-
-        bio = profile_row.get("biography");
-
-        let items_rows = sqlx::query("SELECT profile_id, item_type, item_id, custom_name FROM resume_profile_items WHERE profile_id = $1")
-            .bind(profile_id).fetch_all(&state.pool).await?;
-
-        profile_items = items_rows.into_iter().map(|row| ResumeProfileItem {
-            profile_id: row.get("profile_id"),
-            item_type: row.get("item_type"),
-            item_id: row.get("item_id"),
-            custom_name: row.get("custom_name"),
-        }).collect();
+    if profile_id <= 0 {
+        return Err(ServerFnError::ServerError("Invalid Profile ID".into()));
     }
 
-    let jobs = crate::pages::resume::get_jobs().await.unwrap_or_default();
-    let projects = crate::pages::projects::get_projects().await.unwrap_or_default();
-    
-    let tex_content = generate_latex_string(&settings.site_title, &settings.hero_subtitle, &settings.hero_quote, &bio, &jobs, &projects, &profile_items);
+    let profile_row = sqlx::query("SELECT id, name, objective, is_public, target_role, contact_email, contact_phone, contact_location, contact_link, category_visibility FROM resume_profiles WHERE id = $1")
+        .bind(profile_id)
+        .fetch_one(&state.pool)
+        .await
+        .map_err(|_| -> ServerFnError { ServerFnError::ServerError("Profile not found".into()) })?;
+
+    let profile = ResumeProfile {
+        id: profile_row.get("id"),
+        name: profile_row.get("name"),
+        objective: profile_row.get("objective"),
+        is_public: profile_row.try_get("is_public").unwrap_or(false),
+        target_role: profile_row.get("target_role"),
+        contact_email: profile_row.get("contact_email"),
+        contact_phone: profile_row.get("contact_phone"),
+        contact_location: profile_row.get("contact_location"),
+        contact_link: profile_row.get("contact_link"),
+        category_visibility: profile_row.get("category_visibility"),
+    };
+
+    let entries_rows = sqlx::query("SELECT id, profile_id, category, title, subtitle, date_range, bullets, display_order, is_visible FROM resume_entries WHERE profile_id = $1 ORDER BY display_order ASC")
+        .bind(profile_id).fetch_all(&state.pool).await?;
+
+    let entries: Vec<ResumeEntry> = entries_rows.into_iter().map(|row| {
+        let bullets_val: serde_json::Value = row.get("bullets");
+        let bullets: Vec<String> = serde_json::from_value(bullets_val).unwrap_or_default();
+        ResumeEntry {
+            id: row.get("id"),
+            profile_id: row.get("profile_id"),
+            category: row.get("category"),
+            title: row.get("title"),
+            subtitle: row.get("subtitle"),
+            date_range: row.get("date_range"),
+            bullets,
+            display_order: row.get("display_order"),
+            is_visible: row.get("is_visible"),
+        }
+    }).collect();
+
+    let tex_content = generate_latex_string(&profile, &entries);
 
     let tex_path = format!("/tmp/resume_output_{}.tex", uuid::Uuid::new_v4());
     let pdf_path = tex_path.replace(".tex", ".pdf");
@@ -385,21 +437,33 @@ mod tests {
 
     #[test]
     fn test_generate_latex_string_formats_correctly() {
-        let bio = "Test bio";
-        let jobs = vec![crate::pages::resume::JobRecord {
+        let profile = ResumeProfile {
             id: 1,
-            date_range: "2020-2022".into(),
-            role: "Developer".into(),
-            company: "Tech Corp".into(),
+            name: "John Doe".into(),
+            objective: Some("Software Dev".into()),
+            is_public: true,
+            target_role: Some("Engineer".into()),
+            contact_email: Some("john@test.com".into()),
+            contact_phone: None,
+            contact_location: None,
+            contact_link: None,
+            category_visibility: serde_json::json!({"work": true, "education": true}),
+        };
+        let entries = vec![ResumeEntry {
+            id: 1,
+            profile_id: 1,
+            category: ResumeCategory::Work,
+            title: "Developer".into(),
+            subtitle: Some("Tech Corp".into()),
+            date_range: Some("2020-2022".into()),
             bullets: vec!["Did things & stuff".into()],
-            is_client_project: false,
-            tags: vec![],
-            hide_date: false,
+            display_order: 0,
+            is_visible: true,
         }];
         
-        let tex = generate_latex_string("John", "Dev", "Quote", bio, &jobs, &[], &[]);
+        let tex = generate_latex_string(&profile, &entries);
         
-        assert!(tex.contains("Test bio"));
+        assert!(tex.contains("Software Dev"));
         assert!(tex.contains("Tech Corp"));
         assert!(tex.contains("Did things \\& stuff"));
         assert!(tex.contains("\\section*{Experience}"));
@@ -407,43 +471,46 @@ mod tests {
 
     #[test]
     fn test_generate_latex_string_filters_and_masks() {
-        let bio = "Test bio";
-        let jobs = vec![
-            crate::pages::resume::JobRecord {
+        let profile = ResumeProfile {
+            id: 1,
+            name: "Jane Doe".into(),
+            objective: Some("Hidden Test".into()),
+            is_public: true,
+            target_role: None,
+            contact_email: None,
+            contact_phone: None,
+            contact_location: None,
+            contact_link: None,
+            category_visibility: serde_json::json!({"work": true, "education": false}),
+        };
+        let entries = vec![
+            ResumeEntry {
                 id: 1,
-                date_range: "2020-2022".into(),
-                role: "Developer".into(),
-                company: "Tech Corp".into(),
-                bullets: vec![],
-                is_client_project: false,
-                tags: vec![],
-                hide_date: false,
-            },
-            crate::pages::resume::JobRecord {
-                id: 2,
-                date_range: "2018-2020".into(),
-                role: "Engineer".into(),
-                company: "Hidden Corp".into(),
-                bullets: vec![],
-                is_client_project: false,
-                tags: vec![],
-                hide_date: false,
-            }
-        ];
-        
-        let profile_items = vec![
-            ResumeProfileItem {
                 profile_id: 1,
-                item_type: "job".into(),
-                item_id: 2,
-                custom_name: Some("Anonymous Financial Client".into()),
+                category: ResumeCategory::Work,
+                title: "Hidden Job".into(),
+                subtitle: None,
+                date_range: None,
+                bullets: vec![],
+                display_order: 0,
+                is_visible: false, // Target should hide inherently
+            },
+            ResumeEntry {
+                id: 2,
+                profile_id: 1,
+                category: ResumeCategory::Education,
+                title: "Hidden Education".into(),
+                subtitle: None,
+                date_range: None,
+                bullets: vec![],
+                display_order: 1,
+                is_visible: true, // Should hide because master JSON hides Education
             }
         ];
         
-        let tex = generate_latex_string("Jane", "Lead", "Hello", bio, &jobs, &[], &profile_items);
+        let tex = generate_latex_string(&profile, &entries);
         
-        assert!(!tex.contains("Tech Corp"));
-        assert!(!tex.contains("Hidden Corp"));
-        assert!(tex.contains("Anonymous Financial Client"));
+        assert!(!tex.contains("Hidden Job"));
+        assert!(!tex.contains("Hidden Education"));
     }
 }

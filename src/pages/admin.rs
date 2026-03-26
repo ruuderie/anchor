@@ -195,7 +195,7 @@ pub fn Admin() -> impl IntoView {
                         <aside class="w-full md:w-64 shrink-0 space-y-2">
                             <div class="mb-12">
                                 <span class="font-label text-[0.6875rem] text-outline font-bold tracking-widest uppercase block mb-4">"Navigation"</span>
-                            {["DASHBOARD", "MAILING LIST", "SETTINGS", "JOBS", "PROJECTS", "CERTIFICATIONS", "BLOG", "RESUME ENGINE", "LANDING PAGES", "SECURITY"].iter().map(|&t| {
+                            {["DASHBOARD", "MAILING LIST", "SETTINGS", "NAVIGATION", "FOOTER", "JOBS", "PROJECTS", "CERTIFICATIONS", "BLOG", "RESUME ENGINE", "LANDING PAGES", "SECURITY"].iter().map(|&t| {
                                             let tab = t; // Capture `t` for the closure
                                             view! {
                                                 <button 
@@ -247,6 +247,8 @@ pub fn Admin() -> impl IntoView {
                                                 "BLOG" => ModalState::Post(None),
                                                 "RESUME ENGINE" => ModalState::Profile(None),
                                                 "LANDING PAGES" => ModalState::LandingPage(None),
+                                                "NAVIGATION" => ModalState::NavItem(None),
+                                                "FOOTER" => ModalState::FooterItem(None),
                                                 "MAILING LIST" => ModalState::MailingList(None),
                                                 "SECURITY" => ModalState::Passkey,
                                                 _ => ModalState::None,
@@ -264,6 +266,8 @@ pub fn Admin() -> impl IntoView {
                                     {move || match active_tab.get() {
                                         "DASHBOARD" => view! { <DashboardView /> }.into_view(),
                                         "MAILING LIST" => view! { <MailingListTable /> }.into_view(),
+                                        "NAVIGATION" => view! { <NavTable /> }.into_view(),
+                                        "FOOTER" => view! { <FooterTable /> }.into_view(),
                                         "SETTINGS" => view! { <SettingsReadView /> }.into_view(),
                                         "JOBS" => view! { <JobTable /> }.into_view(),
                                         "PROJECTS" => view! { <ProjectTable /> }.into_view(),
@@ -999,3 +1003,130 @@ pub fn LandingPageTable() -> impl IntoView {
         </Transition>
     }
 }
+
+#[component]
+pub fn NavTable() -> impl IntoView {
+    use crate::components::nav::{get_all_nav_items, delete_nav_item};
+    let refresh = expect_context::<ReadSignal<i32>>();
+    let set_refresh = expect_context::<WriteSignal<i32>>();
+    let set_modal_state = expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
+    let nav_resource = create_resource(move || refresh.get(), |_| get_all_nav_items());
+    
+    view! {
+        <Transition fallback=move || view! { <div class="jetbrains text-sm text-outline">"QUERYING_DB..."</div> }>
+            <table class="w-full text-left jetbrains text-sm">
+                <thead>
+                    <tr class="text-outline border-b border-outline-variant/30">
+                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Weight"</th>
+                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Label"</th>
+                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Binding"</th>
+                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Actions"</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-outline-variant/20">
+                    {move || match nav_resource.get() {
+                        Some(Ok(items)) => items.into_iter().map(|n| {
+                            let n_clone = n.clone();
+                            view! {
+                            <tr class="hover:bg-surface-container-high transition-colors group">
+                                <td class="py-4 px-4 text-outline-variant">{n.display_order}</td>
+                                <td class="py-4 px-4 font-bold text-primary">
+                                    {if let Some(pid) = n.parent_id { format!("↳ {}", n.label) } else { n.label.clone() }}
+                                </td>
+                                <td class="py-4 px-4 text-outline">{n.href.unwrap_or_else(|| "DROPDOWN [null]".to_string())}</td>
+                                <td class="py-4 px-4">
+                                    <div class="flex space-x-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button 
+                                            on:click=move |_| set_modal_state.set(crate::components::admin_modal::ModalState::NavItem(Some(n_clone.clone())))
+                                            class="text-secondary hover:underline uppercase text-xs"
+                                        >
+                                            "Edit"
+                                        </button>
+                                        <button 
+                                            on:click=move |_| {
+                                                let id = n.id;
+                                                spawn_local(async move {
+                                                    if let Ok(_) = delete_nav_item(id).await {
+                                                        set_refresh.set(refresh.get_untracked() + 1);
+                                                    }
+                                                });
+                                            }
+                                            class="text-error hover:underline uppercase text-xs"
+                                        >
+                                            "Drop"
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }}).collect_view(),
+                        _ => view! { <tr><td colspan="4" class="py-8 text-center text-error">"ERR_NO_DATA"</td></tr> }.into_view(),
+                    }}
+                </tbody>
+            </table>
+        </Transition>
+    }
+}
+
+#[component]
+pub fn FooterTable() -> impl IntoView {
+    use crate::components::footer::{get_all_footer_items, delete_footer_item};
+    let refresh = expect_context::<ReadSignal<i32>>();
+    let set_refresh = expect_context::<WriteSignal<i32>>();
+    let set_modal_state = expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
+    let footer_resource = create_resource(move || refresh.get(), |_| get_all_footer_items());
+    
+    view! {
+        <Transition fallback=move || view! { <div class="jetbrains text-sm text-outline">"QUERYING_DB..."</div> }>
+            <table class="w-full text-left jetbrains text-sm">
+                <thead>
+                    <tr class="text-outline border-b border-outline-variant/30">
+                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Weight"</th>
+                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Label"</th>
+                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Binding"</th>
+                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Actions"</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-outline-variant/20">
+                    {move || match footer_resource.get() {
+                        Some(Ok(items)) => items.into_iter().map(|n| {
+                            let n_clone = n.clone();
+                            view! {
+                            <tr class="hover:bg-surface-container-high transition-colors group">
+                                <td class="py-4 px-4 text-outline-variant">{n.display_order}</td>
+                                <td class="py-4 px-4 font-bold text-primary">
+                                    {n.label.clone()}
+                                </td>
+                                <td class="py-4 px-4 text-outline">{n.href.unwrap_or_else(|| "DROPDOWN [null]".to_string())}</td>
+                                <td class="py-4 px-4">
+                                    <div class="flex space-x-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button 
+                                            on:click=move |_| set_modal_state.set(crate::components::admin_modal::ModalState::FooterItem(Some(n_clone.clone())))
+                                            class="text-secondary hover:underline uppercase text-xs"
+                                        >
+                                            "Edit"
+                                        </button>
+                                        <button 
+                                            on:click=move |_| {
+                                                let id = n.id;
+                                                spawn_local(async move {
+                                                    if let Ok(_) = delete_footer_item(id).await {
+                                                        set_refresh.set(refresh.get_untracked() + 1);
+                                                    }
+                                                });
+                                            }
+                                            class="text-error hover:underline uppercase text-xs"
+                                        >
+                                            "Drop"
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }}).collect_view(),
+                        _ => view! { <tr><td colspan="4" class="py-8 text-center text-error">"ERR_NO_DATA"</td></tr> }.into_view(),
+                    }}
+                </tbody>
+            </table>
+        </Transition>
+    }
+}
+

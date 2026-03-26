@@ -119,6 +119,99 @@ pub async fn get_bitcoin_stats() -> Result<BitcoinStats, ServerFnError> {
     }
 }
 
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct NavItemRecord {
+    pub id: i32,
+    pub label: String,
+    pub href: Option<String>,
+    pub parent_id: Option<i32>,
+    pub display_order: i32,
+    pub is_visible: bool,
+}
+
+#[server(GetNavItems, "/api")]
+pub async fn get_nav_items() -> Result<Vec<NavItemRecord>, ServerFnError> {
+    use axum::Extension;
+    use leptos_axum::extract;
+    use sqlx::Row;
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    let rows = sqlx::query("SELECT * FROM nav_items WHERE is_visible = true ORDER BY parent_id NULLS FIRST, display_order ASC")
+        .fetch_all(&state.pool).await?;
+    let mut items = Vec::new();
+    for row in rows {
+        items.push(NavItemRecord {
+            id: row.get("id"),
+            label: row.get("label"),
+            href: row.get("href"),
+            parent_id: row.get("parent_id"),
+            display_order: row.get("display_order"),
+            is_visible: row.get("is_visible"),
+        });
+    }
+    Ok(items)
+}
+
+#[server(GetAllNavItems, "/api")]
+pub async fn get_all_nav_items() -> Result<Vec<NavItemRecord>, ServerFnError> {
+    use axum::Extension;
+    use leptos_axum::extract;
+    use sqlx::Row;
+    use crate::auth::check_session;
+    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    let rows = sqlx::query("SELECT * FROM nav_items ORDER BY parent_id NULLS FIRST, display_order ASC")
+        .fetch_all(&state.pool).await?;
+    let mut items = Vec::new();
+    for row in rows {
+        items.push(NavItemRecord {
+            id: row.get("id"),
+            label: row.get("label"),
+            href: row.get("href"),
+            parent_id: row.get("parent_id"),
+            display_order: row.get("display_order"),
+            is_visible: row.get("is_visible"),
+        });
+    }
+    Ok(items)
+}
+
+#[server(AddNavItem, "/api")]
+pub async fn add_nav_item(label: String, href: Option<String>, parent_id: Option<i32>, display_order: i32, is_visible: bool) -> Result<(), ServerFnError> {
+    use crate::auth::check_session;
+    use axum::Extension;
+    use leptos_axum::extract;
+    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    sqlx::query("INSERT INTO nav_items (label, href, parent_id, display_order, is_visible) VALUES ($1, $2, $3, $4, $5)")
+        .bind(label).bind(href).bind(parent_id).bind(display_order).bind(is_visible)
+        .execute(&state.pool).await?;
+    Ok(())
+}
+
+#[server(UpdateNavItem, "/api")]
+pub async fn update_nav_item(id: i32, label: String, href: Option<String>, parent_id: Option<i32>, display_order: i32, is_visible: bool) -> Result<(), ServerFnError> {
+    use crate::auth::check_session;
+    use axum::Extension;
+    use leptos_axum::extract;
+    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    sqlx::query("UPDATE nav_items SET label = $1, href = $2, parent_id = $3, display_order = $4, is_visible = $5 WHERE id = $6")
+        .bind(label).bind(href).bind(parent_id).bind(display_order).bind(is_visible).bind(id)
+        .execute(&state.pool).await?;
+    Ok(())
+}
+
+#[server(DeleteNavItem, "/api")]
+pub async fn delete_nav_item(id: i32) -> Result<(), ServerFnError> {
+    use crate::auth::check_session;
+    use axum::Extension;
+    use leptos_axum::extract;
+    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    sqlx::query("DELETE FROM nav_items WHERE id = $1").bind(id).execute(&state.pool).await?;
+    Ok(())
+}
+
 #[component]
 pub fn Nav() -> impl IntoView {
     let (tick, set_tick) = create_signal(0);
@@ -138,6 +231,7 @@ pub fn Nav() -> impl IntoView {
 
     let height_resource = create_resource(move || tick.get(), |_| get_block_height());
     let settings_resource = create_resource(|| (), |_| crate::pages::landing::get_site_settings());
+    let nav_resource = create_resource(|| (), |_| get_nav_items());
 
     view! {
         <nav class="fixed top-0 left-0 w-full flex justify-between items-center px-4 md:px-[8.5rem] py-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-[20px] z-50">
@@ -147,10 +241,44 @@ pub fn Nav() -> impl IntoView {
                 </Suspense>
             </a>
             <div class="hidden md:flex items-center space-x-8">
-                <a href="/resume" class="text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors">"EXPERIENCE"</a>
-                <a href="/projects" class="text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors">"WORK"</a>
-                <a href="/blog" class="text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors">"PROJECTS"</a>
-                <a href="/real-estate" class="text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors">"REAL ESTATE"</a>
+                <Suspense fallback=move || view! { <div class="w-24 h-4 bg-slate-200 dark:bg-slate-700 animate-pulse rounded"></div> }>
+                    {move || {
+                        let items = nav_resource.get().unwrap_or(Ok(vec![])).unwrap_or_default();
+                        
+                        let root_items: Vec<_> = items.iter().filter(|i| i.parent_id.is_none()).collect();
+                        
+                        root_items.into_iter().map(|root| {
+                            let children: Vec<_> = items.iter().filter(|i| i.parent_id == Some(root.id)).collect();
+                            
+                            if children.is_empty() {
+                                view! {
+                                    <a href=root.href.clone().unwrap_or_else(|| "#".to_string()) class="text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors uppercase">
+                                        {root.label.clone()}
+                                    </a>
+                                }.into_view()
+                            } else {
+                                view! {
+                                    <div class="relative group cursor-pointer text-slate-600 dark:text-slate-400 font-medium transition-colors uppercase flex items-center gap-1 z-50">
+                                        <a href=root.href.clone().unwrap_or_else(|| "#".to_string()) class="hover:bg-slate-100/50 dark:hover:bg-slate-800/50 block py-2 select-none">
+                                            {root.label.clone()}
+                                        </a>
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 group-hover:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                        
+                                        <div class="absolute top-full left-0 mt-0 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl opacity-0 invisible group-hover:visible group-hover:opacity-100 transition-all flex flex-col pointer-events-none group-hover:pointer-events-auto">
+                                            {children.into_iter().map(|child| {
+                                                view! {
+                                                    <a href=child.href.clone().unwrap_or_else(|| "#".to_string()) class="block px-4 py-3 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:text-primary transition-colors border-b border-slate-100 dark:border-slate-800/50 last:border-0 uppercase font-medium">
+                                                        {child.label.clone()}
+                                                    </a>
+                                                }
+                                            }).collect_view()}
+                                        </div>
+                                    </div>
+                                }.into_view()
+                            }
+                        }).collect_view()
+                    }}
+                </Suspense>
             </div>
             <div class="flex items-center space-x-6">
                 <a href="/admin" class="material-symbols-outlined text-primary cursor-pointer hover:opacity-80 transition-opacity block">"terminal"</a>

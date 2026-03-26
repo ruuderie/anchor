@@ -164,11 +164,9 @@ pub fn Resume() -> impl IntoView {
         move || active_profile_id.get(),
         |id_opt| async move {
             if let Some(id) = id_opt {
-                let jobs = get_jobs().await.unwrap_or_default();
-                let items = crate::resume_engine::get_resume_profile_items(id).await.unwrap_or_default();
-                (jobs, items)
+                crate::resume_engine::get_resume_entries(id).await.unwrap_or_default()
             } else {
-                (vec![], vec![])
+                vec![]
             }
         }
     );
@@ -298,89 +296,61 @@ pub fn Resume() -> impl IntoView {
 
             <Suspense fallback=move || view! { <div class="text-on-surface-variant font-bold jetbrains uppercase h-64 flex items-center justify-center">"Hydrating systems database..."</div> }>
                 {move || {
-                    let (all_jobs, items) = profile_data_resource.get().unwrap_or_default();
+                    let entries = profile_data_resource.get().unwrap_or_default();
                     
-                    let jobs: Vec<_> = all_jobs.into_iter().filter(|j| {
-                        items.is_empty() || items.iter().any(|i| i.item_type == "job" && i.item_id == j.id)
-                    }).collect();
-
-                    let mut c2c_groups: Vec<(String, Vec<JobRecord>)> = Vec::new();
-                    let mut standard_jobs: Vec<JobRecord> = Vec::new();
-
-                    for mut job in jobs {
-                        if let Some(override_item) = items.iter().find(|i| i.item_type == "job" && i.item_id == job.id) {
-                            if let Some(custom_name) = &override_item.custom_name {
-                                job.company = custom_name.clone();
-                            }
-                        }
-
-                        if job.employment_type == JobType::CorpToCorp {
-                            let parent = job.parent_company.clone().unwrap_or_else(|| "Independent Consulting".to_string());
-                            if let Some(group) = c2c_groups.iter_mut().find(|(p, _)| p == &parent) {
-                                group.1.push(job);
-                            } else {
-                                c2c_groups.push((parent, vec![job]));
-                            }
-                        } else {
-                            standard_jobs.push(job);
-                        }
-                    }
+                    let categories_to_render = vec![
+                        (crate::resume_engine::ResumeCategory::Work, "Experience"),
+                        (crate::resume_engine::ResumeCategory::Education, "Education"),
+                        (crate::resume_engine::ResumeCategory::Skill, "Skills"),
+                        (crate::resume_engine::ResumeCategory::Project, "Projects"),
+                        (crate::resume_engine::ResumeCategory::Language, "Languages"),
+                        (crate::resume_engine::ResumeCategory::Volunteer, "Volunteering"),
+                        (crate::resume_engine::ResumeCategory::Extracurricular, "Extracurriculars"),
+                        (crate::resume_engine::ResumeCategory::Hobby, "Hobbies"),
+                    ];
 
                     view! {
                         <div class="max-w-4xl space-y-24">
-                            <div class={if c2c_groups.is_empty() { "hidden" } else { "block" }}>
-                                <h2 class="text-3xl font-extrabold text-on-surface mb-12 border-l-4 border-secondary pl-4 uppercase">"Consulting Experience"</h2>
-                                <div class="space-y-16">
-                                    {c2c_groups.into_iter().map(|(parent_company, jobs)| view! {
-                                        <div class="space-y-8">
-                                            <div class="font-label text-sm text-secondary font-bold uppercase tracking-widest border-b-2 border-outline-variant/30 pb-2">
-                                                {parent_company}
+                            {categories_to_render.into_iter().map(|(cat_enum, section_title)| {
+                                let cat_entries: Vec<_> = entries.iter()
+                                    .filter(|e| e.category == cat_enum && e.is_visible)
+                                    .cloned()
+                                    .collect();
+                                    
+                                if cat_entries.is_empty() {
+                                    view! { <div class="hidden"></div> }.into_view()
+                                } else {
+                                    view! {
+                                        <div class="block">
+                                            <h2 class="text-3xl font-extrabold text-on-surface mb-12 border-l-4 border-secondary pl-4 uppercase">{section_title}</h2>
+                                            <div class="space-y-16">
+                                                {cat_entries.into_iter().map(|entry| view! {
+                                                    <section class="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-8 border-l border-outline-variant/30 pl-4 md:pl-0 md:border-l-0">
+                                                        <div class="md:col-span-3 font-label text-xs sm:text-sm text-outline font-bold pt-1 uppercase tracking-widest">
+                                                            <span class="md:hidden text-secondary mr-2">"↳"</span>
+                                                            {entry.date_range.unwrap_or_default()}
+                                                        </div>
+                                                        <div class="md:col-span-9 bg-surface-container p-6 md:p-8 blueprint-overlay shadow-none border-0 ring-0 hover:bg-surface-container-high transition-colors">
+                                                            <h3 class="text-xl md:text-2xl font-bold text-primary mb-1">{entry.title}</h3>
+                                                            {match entry.subtitle {
+                                                                Some(sub) => view! { <div class="text-secondary font-medium mb-6">{sub}</div> }.into_view(),
+                                                                None => view! { <div class="mb-6"></div> }.into_view()
+                                                            }}
+                                                            <ul class="text-on-surface-variant leading-relaxed text-sm space-y-3 list-none p-0 m-0">
+                                                                {entry.bullets.into_iter().map(|b| view! {
+                                                                    <li class="relative pl-4 before:content-['>'] before:absolute before:-left-1 before:text-secondary before:font-bold">
+                                                                        {b}
+                                                                    </li>
+                                                                }).collect_view()}
+                                                            </ul>
+                                                        </div>
+                                                    </section>
+                                                }).collect_view()}
                                             </div>
-                                            {jobs.into_iter().map(|job| view! {
-                                                <section class="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-8 border-l border-outline-variant/30 pl-4 md:pl-0 md:border-l-0">
-                                                    <div class="md:col-span-3 font-label text-xs sm:text-sm text-outline font-bold pt-1 uppercase tracking-widest">
-                                                        <span class="md:hidden text-secondary mr-2">"↳"</span>
-                                                        {job.date_range}
-                                                    </div>
-                                                    <div class="md:col-span-9 bg-surface-container p-6 md:p-8 blueprint-overlay shadow-none border-0 ring-0 hover:bg-surface-container-high transition-colors">
-                                                        <h3 class="text-xl md:text-2xl font-bold text-primary mb-1">{job.role}</h3>
-                                                        <div class="text-secondary font-medium mb-6">"Client: " {job.company}</div>
-                                                        <ul class="text-on-surface-variant leading-relaxed text-sm space-y-3 list-none p-0 m-0">
-                                                            {job.bullets.into_iter().map(|b| view! {
-                                                                <li class="relative pl-4 before:content-['>'] before:absolute before:-left-1 before:text-secondary before:font-bold">
-                                                                    {b}
-                                                                </li>
-                                                            }).collect_view()}
-                                                        </ul>
-                                                    </div>
-                                                </section>
-                                            }).collect_view()}
                                         </div>
-                                    }).collect_view()}
-                                </div>
-                            </div>
-
-                            <div class={if standard_jobs.is_empty() { "hidden" } else { "block" }}>
-                                <h2 class="text-3xl font-extrabold text-on-surface mb-12 border-l-4 border-secondary pl-4 uppercase">"Employment History"</h2>
-                                <div class="space-y-16">
-                                    {standard_jobs.into_iter().map(|job| view! {
-                                        <section class="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-8">
-                                            <div class="md:col-span-3 font-label text-xs sm:text-sm text-outline font-bold pt-1 uppercase tracking-widest">{job.date_range}</div>
-                                            <div class="md:col-span-9 bg-surface-container p-6 md:p-8 blueprint-overlay shadow-none border-0 ring-0 hover:bg-surface-container-high transition-colors">
-                                                <h3 class="text-xl md:text-2xl font-bold text-primary mb-1">{job.role}</h3>
-                                                <div class="text-secondary font-medium mb-6">{job.company}</div>
-                                                <ul class="text-on-surface-variant leading-relaxed text-sm space-y-3 list-none p-0 m-0">
-                                                    {job.bullets.into_iter().map(|b| view! {
-                                                        <li class="relative pl-4 before:content-['>'] before:absolute before:-left-1 before:text-secondary before:font-bold">
-                                                            {b}
-                                                        </li>
-                                                    }).collect_view()}
-                                                </ul>
-                                            </div>
-                                        </section>
-                                    }).collect_view()}
-                                </div>
-                            </div>
+                                    }.into_view()
+                                }
+                            }).collect_view()}
                         </div>
                     }
                 }}

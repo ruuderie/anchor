@@ -10,6 +10,8 @@ pub enum ModalState {
     Profile(Option<crate::resume_engine::ResumeProfile>),
     LandingPage(Option<crate::pages::dynamic_landing::LandingPageRecord>),
     MailingList(Option<crate::pages::admin::MailingListRecord>),
+    NavItem(Option<crate::components::nav::NavItemRecord>),
+    FooterItem(Option<crate::components::footer::FooterItemRecord>),
     Passkey,
     Settings,
 }
@@ -51,6 +53,10 @@ pub fn AdminEditorModal() -> impl IntoView {
                                     ModalState::LandingPage(Some(_)) => "EDIT LANDING PAGE",
                                     ModalState::MailingList(None) => "ADD MAILING LIST MEMBER",
                                     ModalState::MailingList(Some(_)) => "EDIT MAILING LIST MEMBER",
+                                    ModalState::NavItem(None) => "NEW NAVIGATION NODE",
+                                    ModalState::NavItem(Some(_)) => "EDIT NAVIGATION NODE",
+                                    ModalState::FooterItem(None) => "NEW FOOTER NODE",
+                                    ModalState::FooterItem(Some(_)) => "EDIT FOOTER NODE",
                                     ModalState::Passkey => "REGISTER NEW PASSKEY",
                                     ModalState::Settings => "EDIT SITE SETTINGS",
                                     ModalState::None => "",
@@ -68,6 +74,8 @@ pub fn AdminEditorModal() -> impl IntoView {
                                 ModalState::Profile(p) => view! { <ResumeProfileForm initial_profile=p /> }.into_view(),
                                 ModalState::LandingPage(p) => view! { <LandingPageForm initial_page=p /> }.into_view(),
                                 ModalState::MailingList(r) => view! { <MailingListForm initial_record=r /> }.into_view(),
+                                ModalState::NavItem(n) => view! { <NavItemForm initial_item=n /> }.into_view(),
+                                ModalState::FooterItem(f) => view! { <FooterItemForm initial_item=f /> }.into_view(),
                                 ModalState::Passkey => view! { <PasskeyForm /> }.into_view(),
                                 ModalState::Settings => view! { <SettingsForm /> }.into_view(),
                                 ModalState::None => view! { <div/> }.into_view(),
@@ -741,40 +749,41 @@ pub fn ResumeProfileForm(initial_profile: Option<crate::resume_engine::ResumePro
     let id_val = initial_profile.as_ref().map(|p| p.id).unwrap_or(0);
 
     let (name, set_name) = create_signal(initial_profile.as_ref().map(|p| p.name.clone()).unwrap_or_default());
-    let (biography, set_biography) = create_signal(initial_profile.as_ref().map(|p| p.biography.clone()).unwrap_or_else(|| "Specializing in Enterprise Cloud Solutions, APEX, and Rust External Microservices. Dedicated to translating complex systems into immutable data flows.".to_string()));
+    let (objective, set_objective) = create_signal(initial_profile.as_ref().and_then(|p| p.objective.clone()).unwrap_or_default());
     let (is_public, set_is_public) = create_signal(initial_profile.as_ref().map(|p| p.is_public).unwrap_or(false));
+    
+    let (target_role, set_target_role) = create_signal(initial_profile.as_ref().and_then(|p| p.target_role.clone()).unwrap_or_default());
+    let (contact_email, set_contact_email) = create_signal(initial_profile.as_ref().and_then(|p| p.contact_email.clone()).unwrap_or_default());
+    let (contact_phone, set_contact_phone) = create_signal(initial_profile.as_ref().and_then(|p| p.contact_phone.clone()).unwrap_or_default());
+    let (contact_location, set_contact_location) = create_signal(initial_profile.as_ref().and_then(|p| p.contact_location.clone()).unwrap_or_default());
+    let (contact_link, set_contact_link) = create_signal(initial_profile.as_ref().and_then(|p| p.contact_link.clone()).unwrap_or_default());
 
-    let items_signal = create_rw_signal(Vec::<crate::resume_engine::ResumeProfileItem>::new());
+    let (cat_vis_str, set_cat_vis_str) = create_signal(
+        initial_profile.as_ref()
+            .map(|p| p.category_visibility.to_string())
+            .unwrap_or_else(|| "{\n  \"work\": true,\n  \"education\": true\n}".to_string())
+    );
 
-    let data_res = create_resource(|| (), move |_| async move {
-        let jobs = crate::pages::resume::get_jobs().await.unwrap_or_default();
-        let projects = crate::pages::projects::get_projects().await.unwrap_or_default();
-        let certs = crate::pages::certifications::get_certifications().await.unwrap_or_default();
-        let items = if is_edit {
-            crate::resume_engine::get_resume_profile_items(id_val).await.unwrap_or_default()
-        } else {
-            vec![]
-        };
-        (jobs, projects, certs, items)
-    });
-
-    create_effect(move |_| {
-        if let Some((_, _, _, items)) = data_res.get() {
-            items_signal.set(items);
-        }
-    });
+    let placeholder_text = "{\n  \"work\": true,\n  \"education\": false\n}";
 
     let save = move |_| {
         let n = name.get_untracked();
-        let b = biography.get_untracked();
+        let obj = if objective.get_untracked().is_empty() { None } else { Some(objective.get_untracked()) };
         let p_pub = is_public.get_untracked();
-        let final_items = items_signal.get_untracked();
+        
+        let tr = if target_role.get_untracked().is_empty() { None } else { Some(target_role.get_untracked()) };
+        let ce = if contact_email.get_untracked().is_empty() { None } else { Some(contact_email.get_untracked()) };
+        let cp = if contact_phone.get_untracked().is_empty() { None } else { Some(contact_phone.get_untracked()) };
+        let clo = if contact_location.get_untracked().is_empty() { None } else { Some(contact_location.get_untracked()) };
+        let cli = if contact_link.get_untracked().is_empty() { None } else { Some(contact_link.get_untracked()) };
+        
+        let cv: serde_json::Value = serde_json::from_str(&cat_vis_str.get_untracked()).unwrap_or_else(|_| serde_json::json!({}));
 
         spawn_local(async move {
             if is_edit {
-                let _ = crate::resume_engine::update_resume_profile(id_val, n, b, p_pub, final_items).await;
+                let _ = crate::resume_engine::update_resume_profile(id_val, n, obj, p_pub, tr, ce, cp, clo, cli, cv).await;
             } else {
-                let _ = crate::resume_engine::add_resume_profile(n, b, p_pub, final_items).await;
+                let _ = crate::resume_engine::add_resume_profile(n, obj, p_pub, tr, ce, cp, clo, cli, cv).await;
             }
             set_refresh.set(refresh.get_untracked() + 1);
             set_modal_state.set(ModalState::None);
@@ -783,15 +792,6 @@ pub fn ResumeProfileForm(initial_profile: Option<crate::resume_engine::ResumePro
 
     view! {
         <div class="space-y-6">
-            <div class="flex flex-col gap-2">
-                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Profile Name"</label>
-                <input type="text" prop:value=name on:input=move |ev| set_name.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" placeholder="e.g. CyberSecurity Spec" />
-            </div>
-            <div class="flex flex-col gap-2">
-                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Custom Biography"</label>
-                <textarea prop:value=biography on:input=move |ev| set_biography.set(event_target_value(&ev)) rows="3" class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains resize-y"></textarea>
-            </div>
-            
             <div class="flex items-center gap-3 bg-surface-container-high p-4 border border-outline-variant/30">
                 <input 
                     type="checkbox" 
@@ -801,142 +801,51 @@ pub fn ResumeProfileForm(initial_profile: Option<crate::resume_engine::ResumePro
                 />
                 <div>
                     <div class="font-bold text-sm text-on-surface uppercase tracking-widest">"Public Profile"</div>
-                    <div class="text-xs text-outline leading-tight">"If enabled, this profile will be available to visitors on the frontend /resume path."</div>
+                    <div class="text-xs text-outline leading-tight">"If enabled, this profile will be available to visitors on the frontend /resume component."</div>
                 </div>
             </div>
 
-            <div class="border-t border-outline-variant/30 pt-6 mt-4">
-                <h3 class="font-label text-sm font-bold text-primary tracking-widest uppercase mb-4">"Include Experience & Projects"</h3>
-                <p class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider leading-relaxed mb-6">
-                    "Select items to explicitly link. Leave everything unchecked to include ALL items."
-                </p>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Profile Name (Internal)"</label>
+                    <input type="text" prop:value=name on:input=move |ev| set_name.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" placeholder="e.g. Architect Profile" />
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Target Role Headline"</label>
+                    <input type="text" prop:value=target_role on:input=move |ev| set_target_role.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" placeholder="e.g. Cloud Engineer" />
+                </div>
+            </div>
 
-                <Suspense fallback=move || view! { <div class="jetbrains text-sm">"Loading items..."</div> }>
-                    {move || match data_res.get() {
-                        Some((jobs, projects, _certs, _)) => {
-                            view! {
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    // JOBS
-                                    <div class="space-y-4">
-                                        <h4 class="font-label text-xs font-bold text-secondary tracking-widest uppercase border-b border-outline-variant/30 pb-2">"Jobs"</h4>
-                                        {jobs.into_iter().map(|job| {
-                                            let j_id = job.id;
-                                            let is_checked = move || items_signal.with(|i| i.iter().any(|x| x.item_type == "job" && x.item_id == j_id));
+            <div class="flex flex-col gap-2">
+                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Executive Objective / Summary"</label>
+                <textarea prop:value=objective on:input=move |ev| set_objective.set(event_target_value(&ev)) rows="3" class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains resize-y"></textarea>
+            </div>
 
-                                            view! {
-                                                <div class="bg-surface p-3 border border-outline-variant/50 hover:border-outline-variant transition-colors flex flex-col gap-2">
-                                                    <div class="flex items-start gap-3">
-                                                        <input 
-                                                            type="checkbox" 
-                                                            prop:checked=is_checked
-                                                            on:change=move |ev| {
-                                                                let checked = event_target_checked(&ev);
-                                                                items_signal.update(|list| {
-                                                                    if checked {
-                                                                        if !list.iter().any(|x| x.item_type == "job" && x.item_id == j_id) {
-                                                                            list.push(crate::resume_engine::ResumeProfileItem {
-                                                                                profile_id: id_val,
-                                                                                item_type: "job".to_string(),
-                                                                                item_id: j_id,
-                                                                                custom_name: None,
-                                                                            });
-                                                                        }
-                                                                    } else {
-                                                                        list.retain(|x| !(x.item_type == "job" && x.item_id == j_id));
-                                                                    }
-                                                                })
-                                                            }
-                                                            class="mt-1 w-4 h-4 text-primary bg-surface border-outline-variant focus:ring-primary focus:ring-2" 
-                                                        />
-                                                        <div class="flex-1">
-                                                            <div class="font-bold text-sm text-on-surface truncate" title={&job.company}>{&job.company}</div>
-                                                            <div class="text-xs text-outline-variant">{&job.role}</div>
-                                                        </div>
-                                                    </div>
-                                                    <Show when=is_checked>
-                                                        <input 
-                                                            type="text" 
-                                                            prop:value=move || items_signal.with(|i| i.iter().find(|x| x.item_type == "job" && x.item_id == j_id).and_then(|x| x.custom_name.clone()).unwrap_or_default())
-                                                            on:input=move |ev| {
-                                                                let val = event_target_value(&ev);
-                                                                items_signal.update(|list| {
-                                                                    if let Some(item) = list.iter_mut().find(|x| x.item_type == "job" && x.item_id == j_id) {
-                                                                        item.custom_name = if val.is_empty() { None } else { Some(val) };
-                                                                    }
-                                                                });
-                                                            }
-                                                            placeholder="Override Company Name (e.g. Confidential Bank)"
-                                                            class="mt-2 w-full bg-surface-container-highest p-2 border border-outline-variant focus:border-primary focus:ring-0 text-xs jetbrains text-secondary"
-                                                        />
-                                                    </Show>
-                                                </div>
-                                            }
-                                        }).collect_view()}
-                                    </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Contact Email"</label>
+                    <input type="email" prop:value=contact_email on:input=move |ev| set_contact_email.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" />
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Contact Phone"</label>
+                    <input type="text" prop:value=contact_phone on:input=move |ev| set_contact_phone.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" />
+                </div>
+            </div>
 
-                                    // PROJECTS
-                                    <div class="space-y-4">
-                                        <h4 class="font-label text-xs font-bold text-secondary tracking-widest uppercase border-b border-outline-variant/30 pb-2">"Projects"</h4>
-                                        {projects.into_iter().map(|proj| {
-                                            let p_id = proj.id;
-                                            let is_checked = move || items_signal.with(|i| i.iter().any(|x| x.item_type == "project" && x.item_id == p_id));
+            <div class="grid grid-cols-2 gap-4">
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Location (City, State)"</label>
+                    <input type="text" prop:value=contact_location on:input=move |ev| set_contact_location.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" />
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"LinkedIn / Website"</label>
+                    <input type="text" prop:value=contact_link on:input=move |ev| set_contact_link.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" />
+                </div>
+            </div>
 
-                                            view! {
-                                                <div class="bg-surface p-3 border border-outline-variant/50 hover:border-outline-variant transition-colors flex flex-col gap-2">
-                                                    <div class="flex items-start gap-3">
-                                                        <input 
-                                                            type="checkbox" 
-                                                            prop:checked=is_checked
-                                                            on:change=move |ev| {
-                                                                let checked = event_target_checked(&ev);
-                                                                items_signal.update(|list| {
-                                                                    if checked {
-                                                                        if !list.iter().any(|x| x.item_type == "project" && x.item_id == p_id) {
-                                                                            list.push(crate::resume_engine::ResumeProfileItem {
-                                                                                profile_id: id_val,
-                                                                                item_type: "project".to_string(),
-                                                                                item_id: p_id,
-                                                                                custom_name: None,
-                                                                            });
-                                                                        }
-                                                                    } else {
-                                                                        list.retain(|x| !(x.item_type == "project" && x.item_id == p_id));
-                                                                    }
-                                                                })
-                                                            }
-                                                            class="mt-1 w-4 h-4 text-primary bg-surface border-outline-variant focus:ring-primary focus:ring-2" 
-                                                        />
-                                                        <div class="flex-1">
-                                                            <div class="font-bold text-sm text-on-surface truncate" title={&proj.title}>{&proj.title}</div>
-                                                            <div class="text-xs text-outline-variant">{&proj.impact}</div>
-                                                        </div>
-                                                    </div>
-                                                    <Show when=is_checked>
-                                                        <input 
-                                                            type="text" 
-                                                            prop:value=move || items_signal.with(|i| i.iter().find(|x| x.item_type == "project" && x.item_id == p_id).and_then(|x| x.custom_name.clone()).unwrap_or_default())
-                                                            on:input=move |ev| {
-                                                                let val = event_target_value(&ev);
-                                                                items_signal.update(|list| {
-                                                                    if let Some(item) = list.iter_mut().find(|x| x.item_type == "project" && x.item_id == p_id) {
-                                                                        item.custom_name = if val.is_empty() { None } else { Some(val) };
-                                                                    }
-                                                                });
-                                                            }
-                                                            placeholder="Override Project Name"
-                                                            class="mt-2 w-full bg-surface-container-highest p-2 border border-outline-variant focus:border-primary focus:ring-0 text-xs jetbrains text-secondary"
-                                                        />
-                                                    </Show>
-                                                </div>
-                                            }
-                                        }).collect_view()}
-                                    </div>
-                                </div>
-                            }.into_view()
-                        },
-                        None => view! { <div/> }.into_view()
-                    }}
-                </Suspense>
+            <div class="flex flex-col gap-2 border-t border-outline-variant/30 pt-6">
+                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Category Visibility Configuration JSON (Enum Keys: work, education, skill, project, language, volunteer, extracurricular, hobby)"</label>
+                <textarea prop:value=cat_vis_str on:input=move |ev| set_cat_vis_str.set(event_target_value(&ev)) rows="3" class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains font-mono resize-y text-secondary text-xs" placeholder=placeholder_text></textarea>
             </div>
 
             <button on:click=save class="mt-8 bg-primary text-on-primary font-bold jetbrains uppercase w-full py-4 tracking-widest hover:bg-primary-container transition-colors">
@@ -1087,3 +996,263 @@ pub fn MailingListForm(initial_record: Option<crate::pages::admin::MailingListRe
     }
 }
 
+// -----------------------------------------
+// Navigation Item Form
+// -----------------------------------------
+#[component]
+pub fn NavItemForm(initial_item: Option<crate::components::nav::NavItemRecord>) -> impl IntoView {
+    use crate::components::nav::*;
+    let set_modal_state = expect_context::<WriteSignal<ModalState>>();
+    let set_refresh = expect_context::<WriteSignal<i32>>();
+    let refresh = expect_context::<ReadSignal<i32>>();
+
+    let is_edit = initial_item.is_some();
+    let id_val = initial_item.as_ref().map(|p| p.id).unwrap_or(0);
+
+    let (label, set_label) = create_signal(initial_item.as_ref().map(|p| p.label.clone()).unwrap_or_default());
+    let (href, set_href) = create_signal(initial_item.as_ref().and_then(|p| p.href.clone()).unwrap_or_default());
+    let (parent_id_str, set_parent_id_str) = create_signal(initial_item.as_ref().and_then(|p| p.parent_id).map(|id| id.to_string()).unwrap_or_default());
+    let (display_order, set_display_order) = create_signal(initial_item.as_ref().map(|p| p.display_order.to_string()).unwrap_or_else(|| "0".to_string()));
+    let (is_visible, set_is_visible) = create_signal(initial_item.as_ref().map(|p| p.is_visible).unwrap_or(true));
+
+    let (loading, set_loading) = create_signal(false);
+    
+    // Quick dropdown loader for parent
+    let parents_resource = create_resource(move || refresh.get(), |_| get_all_nav_items());
+
+    let save_action = create_action(move |_: &()| {
+        let lbl = label.get_untracked();
+        let hr = href.get_untracked();
+        let pid_str = parent_id_str.get_untracked();
+        let ord_str = display_order.get_untracked();
+        let vis = is_visible.get_untracked();
+        
+        let hr_opt = if hr.is_empty() { None } else { Some(hr) };
+        let pid_opt = if pid_str.is_empty() { None } else { pid_str.parse::<i32>().ok() };
+        let ord = ord_str.parse::<i32>().unwrap_or(0);
+
+        async move {
+            set_loading.set(true);
+            if is_edit {
+                let _ = update_nav_item(id_val, lbl, hr_opt, pid_opt, ord, vis).await;
+            } else {
+                let _ = add_nav_item(lbl, hr_opt, pid_opt, ord, vis).await;
+            }
+            set_loading.set(false);
+            set_refresh.set(refresh.get_untracked() + 1);
+            set_modal_state.set(ModalState::None);
+        }
+    });
+
+    view! {
+        <div class="space-y-6">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase tracking-[0.1em] text-outline">"Display Label"</label>
+                    <input 
+                        type="text" 
+                        prop:value=label 
+                        on:input=move |ev| set_label.set(event_target_value(&ev))
+                        class="w-full bg-transparent border-none border-b-2 border-outline-variant focus:border-primary focus:ring-0 px-0 py-2 jetbrains text-sm text-on-surface transition-all placeholder:text-outline-variant/30" 
+                        placeholder="e.g. BLOG"
+                    />
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase tracking-[0.1em] text-outline">"Weight (Order)"</label>
+                    <input 
+                        type="number" 
+                        prop:value=display_order 
+                        on:input=move |ev| set_display_order.set(event_target_value(&ev))
+                        class="w-full bg-transparent border-none border-b-2 border-outline-variant focus:border-primary focus:ring-0 px-0 py-2 jetbrains text-sm text-on-surface transition-all" 
+                    />
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <label class="jetbrains text-[0.65rem] uppercase tracking-[0.1em] text-outline">"Target URL (Href)"</label>
+                <input 
+                    type="text" 
+                    prop:value=href 
+                    on:input=move |ev| set_href.set(event_target_value(&ev))
+                    class="w-full bg-transparent border-none border-b-2 border-outline-variant focus:border-primary focus:ring-0 px-0 py-2 jetbrains text-sm text-on-surface transition-all placeholder:text-outline-variant/30" 
+                    placeholder="e.g. /blog or leave empty for Dropdown Header"
+                />
+                <span class="text-xs text-outline-variant jetbrains">"If left blank, this item acts as a dropdown menu parent."</span>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <label class="jetbrains text-[0.65rem] uppercase tracking-[0.1em] text-outline">"Dropdown Parent Binding"</label>
+                <select 
+                    on:change=move |ev| set_parent_id_str.set(event_target_value(&ev))
+                    class="w-full bg-surface-container-high border-none focus:ring-primary px-4 py-3 jetbrains text-sm text-on-surface outline-none cursor-pointer"
+                >
+                    <option value="" selected=move || parent_id_str.get().is_empty()>"-- NONE (TOP LEVEL) --"</option>
+                    <Suspense fallback=move || view! { <option>"Loading..."</option> }>
+                        {move || match parents_resource.get() {
+                            Some(Ok(items)) => items.into_iter()
+                                .filter(|i| i.href.is_none() || i.href.as_deref() == Some(""))
+                                .map(|i| {
+                                    let id_s = i.id.to_string();
+                                    view! {
+                                        <option value=id_s.clone() selected=move || parent_id_str.get() == id_s>
+                                            {format!("{} (ID: {})", i.label, i.id)}
+                                        </option>
+                                    }
+                            }).collect_view(),
+                            _ => view! { <option disabled=true>"ERROR"</option> }.into_view()
+                        }}
+                    </Suspense>
+                </select>
+                <span class="text-xs text-outline-variant jetbrains">"Select a parent item to nest this link inside a dropdown."</span>
+            </div>
+
+            <div class="flex items-center gap-3 bg-surface-container/50 p-4 border border-outline-variant/20">
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" 
+                        class="sr-only peer" 
+                        prop:checked=is_visible 
+                        on:change=move |ev| set_is_visible.set(event_target_checked(&ev))
+                    />
+                    <div class="w-9 h-5 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface after:border-outline-variant after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                    <span class="ml-3 text-xs jetbrains font-bold uppercase tracking-widest text-primary">
+                        {move || if is_visible.get() { "VISIBLE ON SITE" } else { "HIDDEN ENTIRELY" }}
+                    </span>
+                </label>
+            </div>
+
+            <div class="flex justify-end gap-4 pt-4 border-t-2 border-outline-variant/30">
+                <button 
+                    on:click=move |_| set_modal_state.set(ModalState::None)
+                    class="px-6 py-3 jetbrains text-xs font-bold tracking-widest uppercase text-outline hover:text-on-surface transition-colors"
+                    disabled=loading
+                >
+                    "Cancel"
+                </button>
+                <button 
+                    on:click=move |_| save_action.dispatch(())
+                    class="bg-primary text-on-primary px-8 py-3 jetbrains text-xs font-bold tracking-widest uppercase hover:bg-primary-container transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    disabled=loading
+                >
+                    <Show when=move || loading.get()>
+                        <span class="material-symbols-outlined animate-spin text-sm">"progress_activity"</span>
+                    </Show>
+                    {move || if is_edit { "COMMIT CHANGES" } else { "CREATE NODE" }}
+                </button>
+            </div>
+        </div>
+    }
+}
+
+// -----------------------------------------
+// Footer Item Form
+// -----------------------------------------
+#[component]
+pub fn FooterItemForm(initial_item: Option<crate::components::footer::FooterItemRecord>) -> impl IntoView {
+    use crate::components::footer::*;
+    let set_modal_state = expect_context::<WriteSignal<ModalState>>();
+    let set_refresh = expect_context::<WriteSignal<i32>>();
+    let refresh = expect_context::<ReadSignal<i32>>();
+
+    let is_edit = initial_item.is_some();
+    let id_val = initial_item.as_ref().map(|p| p.id).unwrap_or(0);
+
+    let (label, set_label) = create_signal(initial_item.as_ref().map(|p| p.label.clone()).unwrap_or_default());
+    let (href, set_href) = create_signal(initial_item.as_ref().and_then(|p| p.href.clone()).unwrap_or_default());
+    let (display_order, set_display_order) = create_signal(initial_item.as_ref().map(|p| p.display_order.to_string()).unwrap_or_else(|| "0".to_string()));
+    let (is_visible, set_is_visible) = create_signal(initial_item.as_ref().map(|p| p.is_visible).unwrap_or(true));
+
+    let (loading, set_loading) = create_signal(false);
+
+    let save_action = create_action(move |_: &()| {
+        let lbl = label.get_untracked();
+        let hr = href.get_untracked();
+        let ord_str = display_order.get_untracked();
+        let vis = is_visible.get_untracked();
+        
+        let hr_opt = if hr.is_empty() { None } else { Some(hr) };
+        let ord = ord_str.parse::<i32>().unwrap_or(0);
+
+        async move {
+            set_loading.set(true);
+            if is_edit {
+                let _ = update_footer_item(id_val, lbl, hr_opt, ord, vis).await;
+            } else {
+                let _ = add_footer_item(lbl, hr_opt, ord, vis).await;
+            }
+            set_loading.set(false);
+            set_refresh.set(refresh.get_untracked() + 1);
+            set_modal_state.set(ModalState::None);
+        }
+    });
+
+    view! {
+        <div class="space-y-6">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase tracking-[0.1em] text-outline">"Display Label"</label>
+                    <input 
+                        type="text" 
+                        prop:value=label 
+                        on:input=move |ev| set_label.set(event_target_value(&ev))
+                        class="w-full bg-transparent border-none border-b-2 border-outline-variant focus:border-primary focus:ring-0 px-0 py-2 jetbrains text-sm text-on-surface transition-all placeholder:text-outline-variant/30" 
+                        placeholder="e.g. TERMS OF SERVICE"
+                    />
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase tracking-[0.1em] text-outline">"Weight (Order)"</label>
+                    <input 
+                        type="number" 
+                        prop:value=display_order 
+                        on:input=move |ev| set_display_order.set(event_target_value(&ev))
+                        class="w-full bg-transparent border-none border-b-2 border-outline-variant focus:border-primary focus:ring-0 px-0 py-2 jetbrains text-sm text-on-surface transition-all" 
+                    />
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <label class="jetbrains text-[0.65rem] uppercase tracking-[0.1em] text-outline">"Target URL (Href)"</label>
+                <input 
+                    type="text" 
+                    prop:value=href 
+                    on:input=move |ev| set_href.set(event_target_value(&ev))
+                    class="w-full bg-transparent border-none border-b-2 border-outline-variant focus:border-primary focus:ring-0 px-0 py-2 jetbrains text-sm text-on-surface transition-all placeholder:text-outline-variant/30" 
+                    placeholder="e.g. /terms"
+                />
+            </div>
+
+            <div class="flex items-center gap-3 bg-surface-container/50 p-4 border border-outline-variant/20">
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" 
+                        class="sr-only peer" 
+                        prop:checked=is_visible 
+                        on:change=move |ev| set_is_visible.set(event_target_checked(&ev))
+                    />
+                    <div class="w-9 h-5 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface after:border-outline-variant after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                    <span class="ml-3 text-xs jetbrains font-bold uppercase tracking-widest text-primary">
+                        {move || if is_visible.get() { "VISIBLE ON SITE" } else { "HIDDEN ENTIRELY" }}
+                    </span>
+                </label>
+            </div>
+
+            <div class="flex justify-end gap-4 pt-4 border-t-2 border-outline-variant/30">
+                <button 
+                    on:click=move |_| set_modal_state.set(ModalState::None)
+                    class="px-6 py-3 jetbrains text-xs font-bold tracking-widest uppercase text-outline hover:text-on-surface transition-colors"
+                    disabled=loading
+                >
+                    "Cancel"
+                </button>
+                <button 
+                    on:click=move |_| save_action.dispatch(())
+                    class="bg-primary text-on-primary px-8 py-3 jetbrains text-xs font-bold tracking-widest uppercase hover:bg-primary-container transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    disabled=loading
+                >
+                    <Show when=move || loading.get()>
+                        <span class="material-symbols-outlined animate-spin text-sm">"progress_activity"</span>
+                    </Show>
+                    {move || if is_edit { "COMMIT CHANGES" } else { "CREATE NODE" }}
+                </button>
+            </div>
+        </div>
+    }
+}
