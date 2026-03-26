@@ -8,6 +8,8 @@ pub enum ModalState {
     Cert(Option<crate::pages::certifications::CertRecord>),
     Post(Option<crate::pages::blog::PostRecord>),
     Profile(Option<crate::resume_engine::ResumeProfile>),
+    LandingPage(Option<crate::pages::dynamic_landing::LandingPageRecord>),
+    MailingList(Option<crate::pages::admin::MailingListRecord>),
     Passkey,
     Settings,
 }
@@ -25,13 +27,14 @@ pub fn AdminEditorModal() -> impl IntoView {
         <Show when=move || modal_state.get() != ModalState::None>
             <div class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-6 overflow-y-auto">
                 <div class="relative w-full max-w-4xl bg-surface-container-highest p-1 blueprint-overlay max-h-[90vh] flex flex-col my-auto">
+                    <button on:click=move |_| close_modal() class="absolute -top-4 -right-4 p-3 z-50 bg-surface-container-high border border-outline-variant/30 rounded-full text-outline hover:text-error hover:border-error transition-all shadow-xl">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
                     <div class="bg-surface-container-lowest p-8 md:p-12 relative flex-1 overflow-y-auto">
                         
-                        <button on:click=move |_| close_modal() class="absolute top-8 right-8 text-outline hover:text-error transition-colors">
-                            <span class="material-symbols-outlined text-3xl">"close"</span>
-                        </button>
-                        
-                        <div class="mb-12 border-b-2 border-outline-variant/30 pb-6">
+                        <div class="mb-12 border-b-2 border-outline-variant/30 pb-6 mt-4">
                             <h2 class="text-3xl font-extrabold text-primary uppercase tracking-widest">
                                 {move || match modal_state.get() {
                                     ModalState::Job(None) => "NEW JOB",
@@ -44,6 +47,10 @@ pub fn AdminEditorModal() -> impl IntoView {
                                     ModalState::Post(Some(_)) => "EDIT BLOG POST",
                                     ModalState::Profile(None) => "NEW RESUME PROFILE",
                                     ModalState::Profile(Some(_)) => "EDIT RESUME PROFILE",
+                                    ModalState::LandingPage(None) => "NEW LANDING PAGE",
+                                    ModalState::LandingPage(Some(_)) => "EDIT LANDING PAGE",
+                                    ModalState::MailingList(None) => "ADD MAILING LIST MEMBER",
+                                    ModalState::MailingList(Some(_)) => "EDIT MAILING LIST MEMBER",
                                     ModalState::Passkey => "REGISTER NEW PASSKEY",
                                     ModalState::Settings => "EDIT SITE SETTINGS",
                                     ModalState::None => "",
@@ -59,6 +66,8 @@ pub fn AdminEditorModal() -> impl IntoView {
                                 ModalState::Cert(c) => view! { <CertForm initial_cert=c /> }.into_view(),
                                 ModalState::Post(p) => view! { <PostForm initial_post=p /> }.into_view(),
                                 ModalState::Profile(p) => view! { <ResumeProfileForm initial_profile=p /> }.into_view(),
+                                ModalState::LandingPage(p) => view! { <LandingPageForm initial_page=p /> }.into_view(),
+                                ModalState::MailingList(r) => view! { <MailingListForm initial_record=r /> }.into_view(),
                                 ModalState::Passkey => view! { <PasskeyForm /> }.into_view(),
                                 ModalState::Settings => view! { <SettingsForm /> }.into_view(),
                                 ModalState::None => view! { <div/> }.into_view(),
@@ -88,7 +97,8 @@ pub fn JobForm(initial_job: Option<crate::pages::resume::JobRecord>) -> impl Int
     let (role, set_role) = create_signal(initial_job.as_ref().map(|j| j.role.clone()).unwrap_or_default());
     let (company, set_company) = create_signal(initial_job.as_ref().map(|j| j.company.clone()).unwrap_or_default());
     let (bullets, set_bullets) = create_signal(initial_job.as_ref().map(|j| j.bullets.join("\n")).unwrap_or_default());
-    let (is_client, set_is_client) = create_signal(initial_job.as_ref().map(|j| j.is_client_project).unwrap_or(true));
+    let (employment_type, set_employment_type) = create_signal(initial_job.as_ref().map(|j| j.employment_type.clone()).unwrap_or_default());
+    let (parent_company, set_parent_company) = create_signal(initial_job.as_ref().and_then(|j| j.parent_company.clone()).unwrap_or_default());
     let (tags, set_tags) = create_signal(initial_job.as_ref().map(|j| j.tags.join(", ")).unwrap_or_default());
     let (hide_date, set_hide_date) = create_signal(initial_job.as_ref().map(|j| j.hide_date).unwrap_or(false));
 
@@ -97,15 +107,17 @@ pub fn JobForm(initial_job: Option<crate::pages::resume::JobRecord>) -> impl Int
         let r = role.get_untracked();
         let c = company.get_untracked();
         let b: Vec<String> = bullets.get_untracked().split('\n').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
-        let ic = is_client.get_untracked();
+        let et = employment_type.get_untracked();
+        let pc = parent_company.get_untracked();
+        let pc_opt = if et == crate::pages::resume::JobType::CorpToCorp && !pc.is_empty() { Some(pc) } else { None };
         let tg: Vec<String> = tags.get_untracked().split(',').map(|x| x.trim().to_string()).filter(|x| !x.is_empty()).collect();
         let hd = hide_date.get_untracked();
 
         spawn_local(async move {
             if is_edit {
-                let _ = crate::pages::resume::update_job(id_val, dr, r, c, b, ic, tg, hd).await;
+                let _ = crate::pages::resume::update_job(id_val, dr, r, c, b, et.clone(), pc_opt.clone(), tg, hd).await;
             } else {
-                let _ = crate::pages::resume::add_job(dr, r, c, b, ic, tg, hd).await;
+                let _ = crate::pages::resume::add_job(dr, r, c, b, et.clone(), pc_opt.clone(), tg, hd).await;
             }
             set_refresh.set(refresh.get_untracked() + 1);
             set_modal_state.set(ModalState::None);
@@ -136,11 +148,27 @@ pub fn JobForm(initial_job: Option<crate::pages::resume::JobRecord>) -> impl Int
                 <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Bullets (1 per line)"</label>
                 <textarea prop:value=bullets on:input=move |ev| set_bullets.set(event_target_value(&ev)) rows="5" class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains resize-y"></textarea>
             </div>
-            <div class="flex items-center gap-3">
-                <input type="checkbox" prop:checked=is_client on:change=move |ev| set_is_client.set(event_target_checked(&ev)) class="w-4 h-4 text-primary bg-surface border-outline-variant focus:ring-primary focus:ring-2" />
-                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Is Client Project (Displays on upper index)"</label>
+            <div class="flex flex-col gap-2">
+                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Employment Type"</label>
+                <select on:change=move |ev| set_employment_type.set(event_target_value(&ev).parse().unwrap_or_default()) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains outline-none">
+                    <option value="DirectHire" selected=move || employment_type.get() == crate::pages::resume::JobType::DirectHire>"Direct Hire (W2)"</option>
+                    <option value="Contract" selected=move || employment_type.get() == crate::pages::resume::JobType::Contract>"Contract / 1099"</option>
+                    <option value="CorpToCorp" selected=move || employment_type.get() == crate::pages::resume::JobType::CorpToCorp>"Corp-to-Corp (C2C)"</option>
+                </select>
             </div>
-            <div class="flex items-center gap-3">
+            
+            {move || {
+                if employment_type.get() == crate::pages::resume::JobType::CorpToCorp {
+                    view! {
+                        <div class="flex flex-col gap-2">
+                            <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider text-secondary">"Parent Company (C2C Entity)"</label>
+                            <input type="text" prop:value=parent_company on:input=move |ev| set_parent_company.set(event_target_value(&ev)) class="bg-surface p-3 border border-secondary/50 focus:border-secondary focus:ring-0 text-sm jetbrains" placeholder="e.g. Oplyst International, LLC" />
+                        </div>
+                    }.into_view()
+                } else {
+                    view! { <span class="hidden"></span> }.into_view()
+                }
+            }}            <div class="flex items-center gap-3">
                 <input type="checkbox" prop:checked=hide_date on:change=move |ev| set_hide_date.set(event_target_checked(&ev)) class="w-4 h-4 text-primary bg-surface border-outline-variant focus:ring-primary focus:ring-2" />
                 <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Hide Date Option (Resume Builder)"</label>
             </div>
@@ -375,31 +403,57 @@ pub fn PasskeyForm() -> impl IntoView {
     let refresh = expect_context::<ReadSignal<i32>>();
 
     let (username, set_username) = create_signal(String::new());
+    let (is_loading, set_is_loading) = create_signal(false);
+    let (auth_error, set_auth_error) = create_signal(String::new());
 
     let save = move |_| {
         let uname = username.get_untracked();
-        if uname.is_empty() { return; }
+        if uname.is_empty() { 
+            set_auth_error.set("Identity Hash (Username) required.".to_string());
+            return; 
+        }
+
+        set_is_loading.set(true);
+        set_auth_error.set(String::new());
 
         spawn_local(async move {
-            if let Ok(_payload) = crate::auth::register_start(uname.clone()).await {
-                #[cfg(target_arch = "wasm32")]
-                {
-                    if let Ok(val) = serde_json::from_str::<serde_json::Value>(&_payload) {
-                        if let (Some(c_str), Some(o_str)) = (val["challenge_id"].as_str(), val["options"].as_str()) {
-                            if let Ok(challenge_id) = uuid::Uuid::parse_str(c_str) {
-                                if let Ok(cred_js) = registerDevice(o_str).await {
-                                    if let Some(cred_str) = cred_js.as_string() {
-                                        if let Ok(_) = crate::auth::register_finish(uname, challenge_id, cred_str).await {
-                                            set_refresh.set(refresh.get_untracked() + 1);
-                                            set_modal_state.set(ModalState::None);
-                                        }
+            match crate::auth::register_start(uname.clone()).await {
+                Ok(_payload) => {
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        if let Ok(val) = serde_json::from_str::<serde_json::Value>(&_payload) {
+                            if let (Some(c_str), Some(o_str)) = (val["challenge_id"].as_str(), val["options"].as_str()) {
+                                if let Ok(challenge_id) = uuid::Uuid::parse_str(c_str) {
+                                    match registerDevice(o_str).await {
+                                        Ok(cred_js) => {
+                                            if let Some(cred_str) = cred_js.as_string() {
+                                                match crate::auth::register_finish(uname, challenge_id, cred_str).await {
+                                                    Ok(_) => {
+                                                        set_refresh.set(refresh.get_untracked() + 1);
+                                                        set_modal_state.set(ModalState::None);
+                                                    },
+                                                    Err(e) => set_auth_error.set(format!("Validation failed: {:?}", e)),
+                                                }
+                                            } else {
+                                                set_auth_error.set("Invalid browser credential.".to_string());
+                                            }
+                                        },
+                                        Err(_) => set_auth_error.set("Device rejected or cancelled.".to_string()),
                                     }
+                                } else {
+                                    set_auth_error.set("Bad challenge ID".to_string());
                                 }
+                            } else {
+                                set_auth_error.set("Malformed payload".to_string());
                             }
+                        } else {
+                            set_auth_error.set("JSON parse error".to_string());
                         }
                     }
-                }
+                },
+                Err(e) => set_auth_error.set(format!("Server error: {:?}", e)),
             }
+            set_is_loading.set(false);
         });
     };
 
@@ -410,12 +464,26 @@ pub fn PasskeyForm() -> impl IntoView {
                     "WebAuthn Passkeys register Native Device Keys (Secure Enclave, YubiKey) against a unique Identity Hash. Enter a new identity name below to trigger the system challenge."
                 </p>
             </div>
+            
+            <Show when=move || !auth_error.get().is_empty()>
+                <div class="bg-error/10 border-l-4 border-error p-4 text-error jetbrains text-sm font-medium">
+                    {move || auth_error.get()}
+                </div>
+            </Show>
+
             <div class="flex flex-col gap-2">
                 <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Identity Hash / Target Username"</label>
                 <input type="text" prop:value=username on:input=move |ev| set_username.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" placeholder="ex. admin_ipad" />
             </div>
-            <button on:click=save class="mt-8 bg-primary text-on-primary font-bold jetbrains uppercase w-full py-4 tracking-widest hover:bg-primary-container transition-colors">
-                "TRIGGER HARDWARE CHALLENGE"
+            <button 
+                on:click=save 
+                disabled=is_loading
+                class="mt-8 bg-primary text-on-primary font-bold jetbrains uppercase w-full py-4 tracking-widest hover:bg-primary-container disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex justify-center items-center gap-3"
+            >
+                <Show when=move || is_loading.get()>
+                    <span class="material-symbols-outlined animate-spin text-base">"progress_activity"</span>
+                </Show>
+                <span class="inline-block translate-y-[1px]">"TRIGGER HARDWARE CHALLENGE"</span>
             </button>
         </div>
     }
@@ -674,21 +742,39 @@ pub fn ResumeProfileForm(initial_profile: Option<crate::resume_engine::ResumePro
 
     let (name, set_name) = create_signal(initial_profile.as_ref().map(|p| p.name.clone()).unwrap_or_default());
     let (biography, set_biography) = create_signal(initial_profile.as_ref().map(|p| p.biography.clone()).unwrap_or_else(|| "Specializing in Enterprise Cloud Solutions, APEX, and Rust External Microservices. Dedicated to translating complex systems into immutable data flows.".to_string()));
-    let (excluded_tags, set_excluded_tags) = create_signal(initial_profile.as_ref().map(|p| p.excluded_tags.join(", ")).unwrap_or_default());
-    let (anon_json, set_anon_json) = create_signal(initial_profile.as_ref().map(|p| serde_json::to_string(&p.anonymous_companies).unwrap_or_else(|_| "{}".to_string())).unwrap_or_else(|| "{}".to_string()));
+    let (is_public, set_is_public) = create_signal(initial_profile.as_ref().map(|p| p.is_public).unwrap_or(false));
+
+    let items_signal = create_rw_signal(Vec::<crate::resume_engine::ResumeProfileItem>::new());
+
+    let data_res = create_resource(|| (), move |_| async move {
+        let jobs = crate::pages::resume::get_jobs().await.unwrap_or_default();
+        let projects = crate::pages::projects::get_projects().await.unwrap_or_default();
+        let certs = crate::pages::certifications::get_certifications().await.unwrap_or_default();
+        let items = if is_edit {
+            crate::resume_engine::get_resume_profile_items(id_val).await.unwrap_or_default()
+        } else {
+            vec![]
+        };
+        (jobs, projects, certs, items)
+    });
+
+    create_effect(move |_| {
+        if let Some((_, _, _, items)) = data_res.get() {
+            items_signal.set(items);
+        }
+    });
 
     let save = move |_| {
         let n = name.get_untracked();
         let b = biography.get_untracked();
-        let et: Vec<String> = excluded_tags.get_untracked().split(',').map(|x| x.trim().to_string()).filter(|x| !x.is_empty()).collect();
-        let aj = anon_json.get_untracked();
-        let anon: std::collections::HashMap<String, String> = serde_json::from_str(&aj).unwrap_or_default();
+        let p_pub = is_public.get_untracked();
+        let final_items = items_signal.get_untracked();
 
         spawn_local(async move {
             if is_edit {
-                let _ = crate::resume_engine::update_resume_profile(id_val, n, b, et, anon).await;
+                let _ = crate::resume_engine::update_resume_profile(id_val, n, b, p_pub, final_items).await;
             } else {
-                let _ = crate::resume_engine::add_resume_profile(n, b, et, anon).await;
+                let _ = crate::resume_engine::add_resume_profile(n, b, p_pub, final_items).await;
             }
             set_refresh.set(refresh.get_untracked() + 1);
             set_modal_state.set(ModalState::None);
@@ -703,19 +789,301 @@ pub fn ResumeProfileForm(initial_profile: Option<crate::resume_engine::ResumePro
             </div>
             <div class="flex flex-col gap-2">
                 <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Custom Biography"</label>
-                <textarea prop:value=biography on:input=move |ev| set_biography.set(event_target_value(&ev)) rows="5" class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains resize-y"></textarea>
+                <textarea prop:value=biography on:input=move |ev| set_biography.set(event_target_value(&ev)) rows="3" class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains resize-y"></textarea>
+            </div>
+            
+            <div class="flex items-center gap-3 bg-surface-container-high p-4 border border-outline-variant/30">
+                <input 
+                    type="checkbox" 
+                    prop:checked=is_public 
+                    on:change=move |ev| set_is_public.set(event_target_checked(&ev)) 
+                    class="w-5 h-5 text-primary bg-surface border-outline-variant focus:ring-primary focus:ring-2" 
+                />
+                <div>
+                    <div class="font-bold text-sm text-on-surface uppercase tracking-widest">"Public Profile"</div>
+                    <div class="text-xs text-outline leading-tight">"If enabled, this profile will be available to visitors on the frontend /resume path."</div>
+                </div>
+            </div>
+
+            <div class="border-t border-outline-variant/30 pt-6 mt-4">
+                <h3 class="font-label text-sm font-bold text-primary tracking-widest uppercase mb-4">"Include Experience & Projects"</h3>
+                <p class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider leading-relaxed mb-6">
+                    "Select items to explicitly link. Leave everything unchecked to include ALL items."
+                </p>
+
+                <Suspense fallback=move || view! { <div class="jetbrains text-sm">"Loading items..."</div> }>
+                    {move || match data_res.get() {
+                        Some((jobs, projects, _certs, _)) => {
+                            view! {
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    // JOBS
+                                    <div class="space-y-4">
+                                        <h4 class="font-label text-xs font-bold text-secondary tracking-widest uppercase border-b border-outline-variant/30 pb-2">"Jobs"</h4>
+                                        {jobs.into_iter().map(|job| {
+                                            let j_id = job.id;
+                                            let is_checked = move || items_signal.with(|i| i.iter().any(|x| x.item_type == "job" && x.item_id == j_id));
+
+                                            view! {
+                                                <div class="bg-surface p-3 border border-outline-variant/50 hover:border-outline-variant transition-colors flex flex-col gap-2">
+                                                    <div class="flex items-start gap-3">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            prop:checked=is_checked
+                                                            on:change=move |ev| {
+                                                                let checked = event_target_checked(&ev);
+                                                                items_signal.update(|list| {
+                                                                    if checked {
+                                                                        if !list.iter().any(|x| x.item_type == "job" && x.item_id == j_id) {
+                                                                            list.push(crate::resume_engine::ResumeProfileItem {
+                                                                                profile_id: id_val,
+                                                                                item_type: "job".to_string(),
+                                                                                item_id: j_id,
+                                                                                custom_name: None,
+                                                                            });
+                                                                        }
+                                                                    } else {
+                                                                        list.retain(|x| !(x.item_type == "job" && x.item_id == j_id));
+                                                                    }
+                                                                })
+                                                            }
+                                                            class="mt-1 w-4 h-4 text-primary bg-surface border-outline-variant focus:ring-primary focus:ring-2" 
+                                                        />
+                                                        <div class="flex-1">
+                                                            <div class="font-bold text-sm text-on-surface truncate" title={&job.company}>{&job.company}</div>
+                                                            <div class="text-xs text-outline-variant">{&job.role}</div>
+                                                        </div>
+                                                    </div>
+                                                    <Show when=is_checked>
+                                                        <input 
+                                                            type="text" 
+                                                            prop:value=move || items_signal.with(|i| i.iter().find(|x| x.item_type == "job" && x.item_id == j_id).and_then(|x| x.custom_name.clone()).unwrap_or_default())
+                                                            on:input=move |ev| {
+                                                                let val = event_target_value(&ev);
+                                                                items_signal.update(|list| {
+                                                                    if let Some(item) = list.iter_mut().find(|x| x.item_type == "job" && x.item_id == j_id) {
+                                                                        item.custom_name = if val.is_empty() { None } else { Some(val) };
+                                                                    }
+                                                                });
+                                                            }
+                                                            placeholder="Override Company Name (e.g. Confidential Bank)"
+                                                            class="mt-2 w-full bg-surface-container-highest p-2 border border-outline-variant focus:border-primary focus:ring-0 text-xs jetbrains text-secondary"
+                                                        />
+                                                    </Show>
+                                                </div>
+                                            }
+                                        }).collect_view()}
+                                    </div>
+
+                                    // PROJECTS
+                                    <div class="space-y-4">
+                                        <h4 class="font-label text-xs font-bold text-secondary tracking-widest uppercase border-b border-outline-variant/30 pb-2">"Projects"</h4>
+                                        {projects.into_iter().map(|proj| {
+                                            let p_id = proj.id;
+                                            let is_checked = move || items_signal.with(|i| i.iter().any(|x| x.item_type == "project" && x.item_id == p_id));
+
+                                            view! {
+                                                <div class="bg-surface p-3 border border-outline-variant/50 hover:border-outline-variant transition-colors flex flex-col gap-2">
+                                                    <div class="flex items-start gap-3">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            prop:checked=is_checked
+                                                            on:change=move |ev| {
+                                                                let checked = event_target_checked(&ev);
+                                                                items_signal.update(|list| {
+                                                                    if checked {
+                                                                        if !list.iter().any(|x| x.item_type == "project" && x.item_id == p_id) {
+                                                                            list.push(crate::resume_engine::ResumeProfileItem {
+                                                                                profile_id: id_val,
+                                                                                item_type: "project".to_string(),
+                                                                                item_id: p_id,
+                                                                                custom_name: None,
+                                                                            });
+                                                                        }
+                                                                    } else {
+                                                                        list.retain(|x| !(x.item_type == "project" && x.item_id == p_id));
+                                                                    }
+                                                                })
+                                                            }
+                                                            class="mt-1 w-4 h-4 text-primary bg-surface border-outline-variant focus:ring-primary focus:ring-2" 
+                                                        />
+                                                        <div class="flex-1">
+                                                            <div class="font-bold text-sm text-on-surface truncate" title={&proj.title}>{&proj.title}</div>
+                                                            <div class="text-xs text-outline-variant">{&proj.impact}</div>
+                                                        </div>
+                                                    </div>
+                                                    <Show when=is_checked>
+                                                        <input 
+                                                            type="text" 
+                                                            prop:value=move || items_signal.with(|i| i.iter().find(|x| x.item_type == "project" && x.item_id == p_id).and_then(|x| x.custom_name.clone()).unwrap_or_default())
+                                                            on:input=move |ev| {
+                                                                let val = event_target_value(&ev);
+                                                                items_signal.update(|list| {
+                                                                    if let Some(item) = list.iter_mut().find(|x| x.item_type == "project" && x.item_id == p_id) {
+                                                                        item.custom_name = if val.is_empty() { None } else { Some(val) };
+                                                                    }
+                                                                });
+                                                            }
+                                                            placeholder="Override Project Name"
+                                                            class="mt-2 w-full bg-surface-container-highest p-2 border border-outline-variant focus:border-primary focus:ring-0 text-xs jetbrains text-secondary"
+                                                        />
+                                                    </Show>
+                                                </div>
+                                            }
+                                        }).collect_view()}
+                                    </div>
+                                </div>
+                            }.into_view()
+                        },
+                        None => view! { <div/> }.into_view()
+                    }}
+                </Suspense>
+            </div>
+
+            <button on:click=save class="mt-8 bg-primary text-on-primary font-bold jetbrains uppercase w-full py-4 tracking-widest hover:bg-primary-container transition-colors">
+                "COMMIT PROFILE TO DATABASE"
+            </button>
+        </div>
+    }
+}
+
+// -----------------------------------------
+// Landing Page Form
+// -----------------------------------------
+#[component]
+pub fn LandingPageForm(initial_page: Option<crate::pages::dynamic_landing::LandingPageRecord>) -> impl IntoView {
+    let set_modal_state = expect_context::<WriteSignal<ModalState>>();
+    let set_refresh = expect_context::<WriteSignal<i32>>();
+    let refresh = expect_context::<ReadSignal<i32>>();
+
+    let is_edit = initial_page.is_some();
+    let id_val = initial_page.as_ref().map(|p| p.id).unwrap_or(0);
+
+    let (slug, set_slug) = create_signal(initial_page.as_ref().map(|p| p.slug.clone()).unwrap_or_default());
+    let (title, set_title) = create_signal(initial_page.as_ref().map(|p| p.title.clone()).unwrap_or_default());
+    let (description, set_description) = create_signal(initial_page.as_ref().map(|p| p.description.clone()).unwrap_or_default());
+    let (hero_title, set_hero_title) = create_signal(initial_page.as_ref().map(|p| p.hero_title.clone()).unwrap_or_default());
+    let (hero_subtitle, set_hero_subtitle) = create_signal(initial_page.as_ref().map(|p| p.hero_subtitle.clone()).unwrap_or_default());
+    let (lc_title, set_lc_title) = create_signal(initial_page.as_ref().map(|p| p.lead_capture_title.clone()).unwrap_or_default());
+    let (lc_desc, set_lc_desc) = create_signal(initial_page.as_ref().map(|p| p.lead_capture_desc.clone()).unwrap_or_default());
+    let (lc_btn, set_lc_btn) = create_signal(initial_page.as_ref().map(|p| p.lead_capture_btn.clone()).unwrap_or_default());
+    let (options_json, set_options_json) = create_signal(initial_page.as_ref().map(|p| p.options_json.clone()).unwrap_or_else(|| "{\n  \"opt1\": \"First Option\",\n  \"opt2\": \"Second Option\"\n}".to_string()));
+
+    let save = move |_| {
+        let s = slug.get_untracked();
+        let t = title.get_untracked();
+        let d = description.get_untracked();
+        let ht = hero_title.get_untracked();
+        let hs = hero_subtitle.get_untracked();
+        let lct = lc_title.get_untracked();
+        let lcd = lc_desc.get_untracked();
+        let lcb = lc_btn.get_untracked();
+        let oj = options_json.get_untracked();
+
+        spawn_local(async move {
+            if is_edit {
+                let _ = crate::pages::dynamic_landing::update_landing_page(id_val, s, t, d, ht, hs, lct, lcd, lcb, oj).await;
+            } else {
+                let _ = crate::pages::dynamic_landing::add_landing_page(s, t, d, ht, hs, lct, lcd, lcb, oj).await;
+            }
+            set_refresh.set(refresh.get_untracked() + 1);
+            set_modal_state.set(ModalState::None);
+        });
+    };
+
+    view! {
+        <div class="space-y-6">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Slug (URL path)"</label>
+                    <input type="text" prop:value=slug on:input=move |ev| set_slug.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" placeholder="e.g. real-estate" />
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Page Title (Tab Name)"</label>
+                    <input type="text" prop:value=title on:input=move |ev| set_title.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" />
+                </div>
+            </div>
+            
+            <div class="flex flex-col gap-2">
+                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Top Description (Small Text)"</label>
+                <textarea prop:value=description on:input=move |ev| set_description.set(event_target_value(&ev)) rows="2" class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains resize-y"></textarea>
+            </div>
+            
+            <div class="flex flex-col gap-2">
+                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Hero Main Header (Can include HTML)"</label>
+                <textarea prop:value=hero_title on:input=move |ev| set_hero_title.set(event_target_value(&ev)) rows="2" class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains resize-y"></textarea>
             </div>
             <div class="flex flex-col gap-2">
-                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Excluded Tags (CSV)"</label>
-                <input type="text" prop:value=excluded_tags on:input=move |ev| set_excluded_tags.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" placeholder="e.g. rust, legacy" />
+                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Hero Subtitle (Underneath header)"</label>
+                <textarea prop:value=hero_subtitle on:input=move |ev| set_hero_subtitle.set(event_target_value(&ev)) rows="2" class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains resize-y"></textarea>
             </div>
-            <div class="flex flex-col gap-2">
-                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Anonymous Companies (JSON Map)"</label>
-                <textarea prop:value=anon_json on:input=move |ev| set_anon_json.set(event_target_value(&ev)) rows="3" class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains font-mono resize-y text-secondary" placeholder="{{ \"Acme Corp\": \"Confidential FinTech Client\" }}"></textarea>
+
+            <div class="border-t border-outline-variant/30 pt-6 mt-4">
+                <h3 class="font-label text-sm font-bold text-primary tracking-widest uppercase mb-4">"Lead Capture Block"</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="flex flex-col gap-2">
+                        <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Lead Capture Title"</label>
+                        <input type="text" prop:value=lc_title on:input=move |ev| set_lc_title.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" />
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Submit Button Label"</label>
+                        <input type="text" prop:value=lc_btn on:input=move |ev| set_lc_btn.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" />
+                    </div>
+                </div>
+                <div class="flex flex-col gap-2 mt-4">
+                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Lead Capture Description"</label>
+                    <textarea prop:value=lc_desc on:input=move |ev| set_lc_desc.set(event_target_value(&ev)) rows="2" class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains resize-y"></textarea>
+                </div>
+                <div class="flex flex-col gap-2 mt-4">
+                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Checkboxes config (JSON Map)"</label>
+                    <textarea prop:value=options_json on:input=move |ev| set_options_json.set(event_target_value(&ev)) rows="5" class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm font-mono text-secondary resize-y" placeholder="{{ \"val_id\": \"User Facing Label\" }}"></textarea>
+                </div>
             </div>
+
             <button on:click=save class="mt-8 bg-primary text-on-primary font-bold jetbrains uppercase w-full py-4 tracking-widest hover:bg-primary-container transition-colors">
                 "COMMIT TO DATABASE"
             </button>
         </div>
     }
 }
+
+// -----------------------------------------
+// Mailing List Form
+// -----------------------------------------
+#[component]
+pub fn MailingListForm(initial_record: Option<crate::pages::admin::MailingListRecord>) -> impl IntoView {
+    let set_modal_state = expect_context::<WriteSignal<ModalState>>();
+    let set_refresh = expect_context::<WriteSignal<i32>>();
+    let refresh = expect_context::<ReadSignal<i32>>();
+
+    let (email, set_email) = create_signal(initial_record.as_ref().map(|r| r.email.clone()).unwrap_or_default());
+    let (list_type, set_list_type) = create_signal(initial_record.as_ref().map(|r| r.list_type.clone()).unwrap_or_else(|| "manual_override".to_string()));
+
+    let save = move |_| {
+        let e = email.get_untracked();
+        let lt = list_type.get_untracked();
+        
+        spawn_local(async move {
+            let _ = crate::pages::dynamic_landing::handle_dynamic_lead(lt, e, vec![]).await;
+            set_refresh.set(refresh.get_untracked() + 1);
+            set_modal_state.set(ModalState::None);
+        });
+    };
+
+    view! {
+        <div class="space-y-6">
+            <div class="flex flex-col gap-2">
+                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Lead Email"</label>
+                <input type="email" prop:value=email on:input=move |ev| set_email.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" placeholder="guest@example.com" />
+            </div>
+            <div class="flex flex-col gap-2">
+                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"List Identifier (Tags)"</label>
+                <input type="text" prop:value=list_type on:input=move |ev| set_list_type.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" />
+            </div>
+            
+            <button on:click=save class="w-full bg-primary text-on-primary py-4 mt-6 jetbrains text-xs font-bold tracking-[0.2em] uppercase hover:bg-primary-container transition-colors shadow-lg">
+                "SUBMIT LEAD"
+            </button>
+        </div>
+    }
+}
+

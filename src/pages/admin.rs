@@ -24,6 +24,8 @@ pub fn Admin() -> impl IntoView {
     let (is_authenticated, set_authenticated) = create_signal(false);
     let (active_tab, set_active_tab) = create_signal("DASHBOARD");
     let (username, set_username) = create_signal(String::new());
+    let (is_loading, set_is_loading) = create_signal(false);
+    let (auth_error, set_auth_error) = create_signal(String::new());
 
     let (modal_state, set_modal_state) = create_signal(ModalState::None);
     provide_context(modal_state);
@@ -43,50 +45,92 @@ pub fn Admin() -> impl IntoView {
 
     let login_action = create_action(move |_: &()| async move {
         let uname = username.get_untracked();
-        if uname.is_empty() { return; }
+        if uname.is_empty() { 
+            set_auth_error.set("Identity Hash (Username) is required.".to_string());
+            return; 
+        }
+        set_is_loading.set(true);
+        set_auth_error.set(String::new());
         
-        if let Ok(_payload) = login_start(uname.clone()).await {
-            #[cfg(target_arch = "wasm32")]
-            {
-                if let Ok(val) = serde_json::from_str::<serde_json::Value>(&_payload) {
-                    if let (Some(c_str), Some(o_str)) = (val["challenge_id"].as_str(), val["options"].as_str()) {
-                        if let Ok(challenge_id) = uuid::Uuid::parse_str(c_str) {
-                            if let Ok(cred_js) = authenticateDevice(o_str).await {
-                                if let Some(cred_str) = cred_js.as_string() {
-                                    if let Ok(_) = login_finish(uname, challenge_id, cred_str).await {
-                                        set_authenticated.set(true);
-                                    }
+        match login_start(uname.clone()).await {
+            Ok(_payload) => {
+                #[cfg(target_arch = "wasm32")]
+                {
+                    if let Ok(val) = serde_json::from_str::<serde_json::Value>(&_payload) {
+                        if let (Some(c_str), Some(o_str)) = (val["challenge_id"].as_str(), val["options"].as_str()) {
+                            if let Ok(challenge_id) = uuid::Uuid::parse_str(c_str) {
+                                match authenticateDevice(o_str).await {
+                                    Ok(cred_js) => {
+                                        if let Some(cred_str) = cred_js.as_string() {
+                                            match login_finish(uname, challenge_id, cred_str).await {
+                                                Ok(_) => set_authenticated.set(true),
+                                                Err(e) => set_auth_error.set(format!("Validation failed: {:?}", e)),
+                                            }
+                                        } else {
+                                            set_auth_error.set("Invalid credential format from browser.".to_string());
+                                        }
+                                    },
+                                    Err(_) => set_auth_error.set("Device challenge rejected. Cancelled or no matching passkey found.".to_string()),
                                 }
+                            } else {
+                                set_auth_error.set("Internal error: Bad challenge ID".to_string());
                             }
+                        } else {
+                            set_auth_error.set("Internal error: Malformed server payload".to_string());
                         }
+                    } else {
+                        set_auth_error.set("Internal error: JSON parse failed".to_string());
                     }
                 }
-            }
+            },
+            Err(e) => set_auth_error.set(format!("Identity not recognized: {:?}", e)),
         }
+        set_is_loading.set(false);
     });
 
     let register_action = create_action(move |_: &()| async move {
         let uname = username.get_untracked();
-        if uname.is_empty() { return; }
+        if uname.is_empty() { 
+            set_auth_error.set("Identity Hash (Username) is required.".to_string());
+            return; 
+        }
+        set_is_loading.set(true);
+        set_auth_error.set(String::new());
         
-        if let Ok(_payload) = register_start(uname.clone()).await {
-            #[cfg(target_arch = "wasm32")]
-            {
-                if let Ok(val) = serde_json::from_str::<serde_json::Value>(&_payload) {
-                    if let (Some(c_str), Some(o_str)) = (val["challenge_id"].as_str(), val["options"].as_str()) {
-                        if let Ok(challenge_id) = uuid::Uuid::parse_str(c_str) {
-                            if let Ok(cred_js) = registerDevice(o_str).await {
-                                if let Some(cred_str) = cred_js.as_string() {
-                                    if let Ok(_) = register_finish(uname, challenge_id, cred_str).await {
-                                        set_authenticated.set(true);
-                                    }
+        match register_start(uname.clone()).await {
+            Ok(_payload) => {
+                #[cfg(target_arch = "wasm32")]
+                {
+                    if let Ok(val) = serde_json::from_str::<serde_json::Value>(&_payload) {
+                        if let (Some(c_str), Some(o_str)) = (val["challenge_id"].as_str(), val["options"].as_str()) {
+                            if let Ok(challenge_id) = uuid::Uuid::parse_str(c_str) {
+                                match registerDevice(o_str).await {
+                                    Ok(cred_js) => {
+                                        if let Some(cred_str) = cred_js.as_string() {
+                                            match register_finish(uname, challenge_id, cred_str).await {
+                                                Ok(_) => set_authenticated.set(true),
+                                                Err(e) => set_auth_error.set(format!("Validation failed: {:?}", e)),
+                                            }
+                                        } else {
+                                            set_auth_error.set("Invalid credential format from browser.".to_string());
+                                        }
+                                    },
+                                    Err(_) => set_auth_error.set("Device setup rejected or cancelled.".to_string()),
                                 }
+                            } else {
+                                set_auth_error.set("Internal error: Bad challenge ID".to_string());
                             }
+                        } else {
+                            set_auth_error.set("Internal error: Malformed server payload".to_string());
                         }
+                    } else {
+                        set_auth_error.set("Internal error: JSON parse failed".to_string());
                     }
                 }
-            }
+            },
+            Err(e) => set_auth_error.set(format!("Server refused registration: {:?}", e)),
         }
+        set_is_loading.set(false);
     });
 
     view! {
@@ -114,16 +158,27 @@ pub fn Admin() -> impl IntoView {
                                     </div>
 
                                     <div class="space-y-4">
+                                        <Show when=move || !auth_error.get().is_empty()>
+                                            <div class="bg-error/10 border-l-4 border-error p-4 mb-4 text-error jetbrains text-sm font-medium">
+                                                {move || auth_error.get()}
+                                            </div>
+                                        </Show>
+                                        
                                         <button 
                                             on:click=move |_| login_action.dispatch(())
-                                            class="w-full bg-primary text-white py-6 jetbrains font-bold text-sm tracking-[0.2em] uppercase hover:bg-primary-container transition-colors"
+                                            disabled=is_loading
+                                            class="w-full bg-primary text-white py-6 jetbrains font-bold text-sm tracking-[0.2em] uppercase hover:bg-primary-container disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-3"
                                         >
-                                            "Authenticate // Passkey"
+                                            <Show when=move || is_loading.get()>
+                                                <span class="material-symbols-outlined animate-spin text-base">"progress_activity"</span>
+                                            </Show>
+                                            <span class="inline-block translate-y-[1px]">"Authenticate // Passkey"</span>
                                         </button>
 
                                         <button 
                                             on:click=move |_| register_action.dispatch(())
-                                            class="w-full border border-primary/20 text-primary py-4 jetbrains font-bold text-sm tracking-[0.2em] uppercase hover:bg-surface-container transition-colors"
+                                            disabled=is_loading
+                                            class="w-full border border-primary/20 text-primary py-4 jetbrains font-bold text-sm tracking-[0.2em] uppercase hover:bg-surface-container disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                         >
                                             "Register Device"
                                         </button>
@@ -140,9 +195,7 @@ pub fn Admin() -> impl IntoView {
                         <aside class="w-full md:w-64 shrink-0 space-y-2">
                             <div class="mb-12">
                                 <span class="font-label text-[0.6875rem] text-outline font-bold tracking-widest uppercase block mb-4">"Navigation"</span>
-                                <div class="space-y-1">
-                                    <div class="flex flex-col space-y-4">
-                            {["DASHBOARD", "MAILING LIST", "SETTINGS", "RESUME", "PROJECTS", "CERTIFICATIONS", "BLOG", "PROFILES", "SECURITY"].iter().map(|&t| {
+                            {["DASHBOARD", "MAILING LIST", "SETTINGS", "JOBS", "PROJECTS", "CERTIFICATIONS", "BLOG", "RESUME ENGINE", "LANDING PAGES", "SECURITY"].iter().map(|&t| {
                                             let tab = t; // Capture `t` for the closure
                                             view! {
                                                 <button 
@@ -162,8 +215,6 @@ pub fn Admin() -> impl IntoView {
                                         }
                                     ).collect_view()}
                                 </div>
-                            </div>
-                            </div>
                             
                             <button 
                                 on:click=move |_| set_authenticated.set(false)
@@ -190,11 +241,13 @@ pub fn Admin() -> impl IntoView {
                                         on:click=move |_| {
                                             let state = match active_tab.get() {
                                                 "SETTINGS" => ModalState::Settings,
-                                                "RESUME" => ModalState::Job(None),
+                                                "JOBS" => ModalState::Job(None),
                                                 "PROJECTS" => ModalState::Project(None),
                                                 "CERTIFICATIONS" => ModalState::Cert(None),
                                                 "BLOG" => ModalState::Post(None),
-                                                "PROFILES" => ModalState::Profile(None),
+                                                "RESUME ENGINE" => ModalState::Profile(None),
+                                                "LANDING PAGES" => ModalState::LandingPage(None),
+                                                "MAILING LIST" => ModalState::MailingList(None),
                                                 "SECURITY" => ModalState::Passkey,
                                                 _ => ModalState::None,
                                             };
@@ -202,7 +255,7 @@ pub fn Admin() -> impl IntoView {
                                         }
                                         class="bg-primary text-on-primary px-8 py-4 jetbrains text-xs font-bold tracking-[0.2em] uppercase hover:bg-primary-container transition-colors"
                                     >
-                                        {move || if active_tab.get() == "SETTINGS" { "EDIT VALUES" } else if active_tab.get() == "DASHBOARD" || active_tab.get() == "MAILING LIST" { "REFRESH" } else { "NEW ENTRY +" }}
+                                        {move || if active_tab.get() == "SETTINGS" { "EDIT VALUES" } else if active_tab.get() == "DASHBOARD" { "REFRESH" } else { "NEW ENTRY +" }}
                                     </button>
                                 </div>
 
@@ -212,11 +265,12 @@ pub fn Admin() -> impl IntoView {
                                         "DASHBOARD" => view! { <DashboardView /> }.into_view(),
                                         "MAILING LIST" => view! { <MailingListTable /> }.into_view(),
                                         "SETTINGS" => view! { <SettingsReadView /> }.into_view(),
-                                        "RESUME" => view! { <JobTable /> }.into_view(),
+                                        "JOBS" => view! { <JobTable /> }.into_view(),
                                         "PROJECTS" => view! { <ProjectTable /> }.into_view(),
                                         "CERTIFICATIONS" => view! { <CertTable /> }.into_view(),
                                         "BLOG" => view! { <PostTable /> }.into_view(),
-                                        "PROFILES" => view! { <ResumeProfileTable /> }.into_view(),
+                                        "RESUME ENGINE" => view! { <ResumeProfileTable /> }.into_view(),
+                                        "LANDING PAGES" => view! { <LandingPageTable /> }.into_view(),
                                         "SECURITY" => view! { <PasskeyTable /> }.into_view(),
                                         _ => view! { 
                                             <div class="h-64 flex items-center justify-center border-2 border-dashed border-outline-variant text-outline">
@@ -416,24 +470,60 @@ fn ResumeProfileTable() -> impl IntoView {
                                         <button 
                                             on:click=move |_| {
                                                 spawn_local(async move {
-                                                    if let Ok(bytes) = download_resume(id_val).await.map_err(|e| format!("{:?}", e)) {
-                                                        use base64::{Engine as _, engine::general_purpose::STANDARD};
-                                                        let b64 = STANDARD.encode(&bytes);
-                                                        let url = format!("data:application/pdf;base64,{}", b64);
+                                                    if let Ok(bytes) = download_resume(id_val).await {
+                                                        use web_sys::js_sys::{Array, Uint8Array};
+                                                        use web_sys::{Blob, BlobPropertyBag, Url};
                                                         
-                                                        let document = leptos::document();
-                                                        if let Ok(a) = document.create_element("a") {
-                                                            let _ = a.set_attribute("href", &url);
-                                                            let _ = a.set_attribute("download", &format!("ruuderie_resume_profile_{}.pdf", id_val));
-                                                            use web_sys::wasm_bindgen::JsCast;
-                                                            let html_a = a.unchecked_into::<web_sys::HtmlElement>();
-                                                            html_a.click();
+                                                        let uint8_arr = Uint8Array::from(bytes.as_slice());
+                                                        let parts = Array::new();
+                                                        parts.push(&uint8_arr);
+                                                        
+                                                        let mut props = BlobPropertyBag::new();
+                                                        props.set_type("application/pdf");
+                                                        
+                                                        if let Ok(blob) = Blob::new_with_u8_array_sequence_and_options(&parts, &props) {
+                                                            if let Ok(url) = Url::create_object_url_with_blob(&blob) {
+                                                                if let Some(window) = web_sys::window() {
+                                                                    let _ = window.open_with_url_and_target(&url, "_blank");
+                                                                }
+                                                            }
                                                         }
                                                     }
                                                 });
                                             }
                                             class="text-primary hover:text-primary-container font-medium tracking-wide"
-                                        >"[PDF]"</button>
+                                        >"[PREVIEW]"</button>
+                                        <button 
+                                            on:click=move |_| {
+                                                spawn_local(async move {
+                                                    if let Ok(bytes) = download_resume(id_val).await {
+                                                        use web_sys::js_sys::{Array, Uint8Array};
+                                                        use web_sys::{Blob, BlobPropertyBag, Url};
+                                                        
+                                                        let uint8_arr = Uint8Array::from(bytes.as_slice());
+                                                        let parts = Array::new();
+                                                        parts.push(&uint8_arr);
+                                                        
+                                                        let mut props = BlobPropertyBag::new();
+                                                        props.set_type("application/pdf");
+                                                        
+                                                        if let Ok(blob) = Blob::new_with_u8_array_sequence_and_options(&parts, &props) {
+                                                            if let Ok(url) = Url::create_object_url_with_blob(&blob) {
+                                                                let document = leptos::document();
+                                                                if let Ok(a) = document.create_element("a") {
+                                                                    let _ = a.set_attribute("href", &url);
+                                                                    let _ = a.set_attribute("download", &format!("Profile_{}_Resume.pdf", id_val));
+                                                                    use web_sys::wasm_bindgen::JsCast;
+                                                                    let html_a = a.unchecked_into::<web_sys::HtmlElement>();
+                                                                    html_a.click();
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                });
+                                            }
+                                            class="text-primary hover:text-primary-container font-medium tracking-wide"
+                                        >"[DOWNLOAD]"</button>
                                         <button on:click=move |_| set_modal_state.set(crate::components::admin_modal::ModalState::Profile(Some(clone_item.clone()))) class="text-secondary hover:text-on-secondary-fixed-variant font-medium tracking-wide">"[EDIT]"</button>
                                         <button 
                                             on:click=move |_| {
@@ -456,7 +546,7 @@ fn ResumeProfileTable() -> impl IntoView {
     }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct MailingListRecord {
     pub id: i32,
     pub email: String,
@@ -489,6 +579,17 @@ pub async fn get_mailing_list() -> Result<Vec<MailingListRecord>, ServerFnError>
     Ok(records)
 }
 
+#[server(DeleteMailingList, "/api")]
+pub async fn delete_mailing_list(id: i32) -> Result<(), ServerFnError> {
+    use crate::auth::check_session;
+    use axum::Extension;
+    use leptos_axum::extract;
+    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    sqlx::query("DELETE FROM mailing_list WHERE id = $1").bind(id).execute(&state.pool).await?;
+    Ok(())
+}
+
 #[component]
 fn MailingListTable() -> impl IntoView {
     let refresh = expect_context::<ReadSignal<i32>>();
@@ -503,6 +604,7 @@ fn MailingListTable() -> impl IntoView {
                         <th class="py-4 px-4 font-normal tracking-widest uppercase">"Type"</th>
                         <th class="py-4 px-4 font-normal tracking-widest uppercase">"Preferences"</th>
                         <th class="py-4 px-4 font-normal tracking-widest uppercase">"Timestamp"</th>
+                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Actions"</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-outline-variant/20">
@@ -513,9 +615,27 @@ fn MailingListTable() -> impl IntoView {
                                 <td class="py-4 px-4 text-on-surface">{i.list_type}</td>
                                 <td class="py-4 px-4 text-outline truncate max-w-[200px]" title=i.preferences.clone()>{i.preferences}</td>
                                 <td class="py-4 px-4 text-outline-variant">{i.created_at}</td>
+                                <td class="py-4 px-4">
+                                    <div class="flex space-x-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button 
+                                            on:click=move |_| {
+                                                let id = i.id;
+                                                let r = refresh;
+                                                spawn_local(async move {
+                                                    if let Ok(_) = delete_mailing_list(id).await {
+                                                        expect_context::<WriteSignal<i32>>().set(r.get_untracked() + 1);
+                                                    }
+                                                });
+                                            }
+                                            class="text-error hover:underline uppercase text-xs"
+                                        >
+                                            "Drop"
+                                        </button>
+                                    </div>
+                                </td>
                             </tr>
                         }).collect_view(),
-                        _ => view! { <tr><td colspan="4" class="py-8 text-center text-error">"ERR_NO_DATA"</td></tr> }.into_view(),
+                        _ => view! { <tr><td colspan="5" class="py-8 text-center text-error">"ERR_NO_DATA"</td></tr> }.into_view(),
                     }}
                 </tbody>
             </table>
@@ -814,6 +934,65 @@ fn PasskeyTable() -> impl IntoView {
                             </tr>
                         }).collect_view(),
                         _ => view! { <tr><td colspan="4" class="py-8 text-center text-error">"ERR_NO_DATA"</td></tr> }.into_view(),
+                    }}
+                </tbody>
+            </table>
+        </Transition>
+    }
+}
+
+#[component]
+pub fn LandingPageTable() -> impl IntoView {
+    use crate::pages::dynamic_landing::{get_all_landing_pages, delete_landing_page};
+    let refresh = expect_context::<ReadSignal<i32>>();
+    let set_refresh = expect_context::<WriteSignal<i32>>();
+    let set_modal_state = expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
+    let pages_resource = create_resource(move || refresh.get(), |_| get_all_landing_pages());
+    
+    view! {
+        <Transition fallback=move || view! { <div class="jetbrains text-sm text-outline">"QUERYING_DB..."</div> }>
+            <table class="w-full text-left jetbrains text-sm">
+                <thead>
+                    <tr class="text-outline border-b border-outline-variant/30">
+                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Slug"</th>
+                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Title"</th>
+                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Actions"</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-outline-variant/20">
+                    {move || match pages_resource.get() {
+                        Some(Ok(pages)) => pages.into_iter().map(|p| {
+                            let p_clone = p.clone();
+                            view! {
+                            <tr class="hover:bg-surface-container-high transition-colors group">
+                                <td class="py-4 px-4 font-bold text-primary">"/" {p.slug}</td>
+                                <td class="py-4 px-4 text-outline">{p.title}</td>
+                                <td class="py-4 px-4">
+                                    <div class="flex space-x-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button 
+                                            on:click=move |_| set_modal_state.set(crate::components::admin_modal::ModalState::LandingPage(Some(p_clone.clone())))
+                                            class="text-secondary hover:underline uppercase text-xs"
+                                        >
+                                            "Edit"
+                                        </button>
+                                        <button 
+                                            on:click=move |_| {
+                                                let id = p.id;
+                                                spawn_local(async move {
+                                                    if let Ok(_) = delete_landing_page(id).await {
+                                                        set_refresh.set(refresh.get_untracked() + 1);
+                                                    }
+                                                });
+                                            }
+                                            class="text-error hover:underline uppercase text-xs"
+                                        >
+                                            "Drop"
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }}).collect_view(),
+                        _ => view! { <tr><td colspan="3" class="py-8 text-center text-error">"ERR_NO_DATA"</td></tr> }.into_view(),
                     }}
                 </tbody>
             </table>

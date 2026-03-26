@@ -150,7 +150,6 @@ pub fn Nav() -> impl IntoView {
                 <a href="/resume" class="text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors">"EXPERIENCE"</a>
                 <a href="/projects" class="text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors">"WORK"</a>
                 <a href="/blog" class="text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors">"PROJECTS"</a>
-                <a href="/resume" class="text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors">"RESUME"</a>
                 <a href="/real-estate" class="text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors">"REAL ESTATE"</a>
             </div>
             <div class="flex items-center space-x-6">

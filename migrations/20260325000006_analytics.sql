@@ -1,11 +1,11 @@
-CREATE TABLE page_views (
+CREATE TABLE IF NOT EXISTS page_views (
     id SERIAL PRIMARY KEY,
     path TEXT NOT NULL,
     user_agent TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE api_requests_log (
+CREATE TABLE IF NOT EXISTS api_requests_log (
     id SERIAL PRIMARY KEY,
     endpoint TEXT NOT NULL,
     metadata JSONB DEFAULT '{}',

@@ -1,18 +1,18 @@
 -- modify jobs schema
-ALTER TABLE jobs DROP COLUMN description;
-ALTER TABLE jobs ADD COLUMN bullets TEXT[] NOT NULL DEFAULT '{}';
-ALTER TABLE jobs ADD COLUMN is_client_project BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE jobs DROP COLUMN IF EXISTS description;
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS bullets TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS is_client_project BOOLEAN NOT NULL DEFAULT true;
 
 -- modify projects schema
-ALTER TABLE projects DROP COLUMN description;
-ALTER TABLE projects ADD COLUMN bullets TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE projects DROP COLUMN IF EXISTS description;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS bullets TEXT[] NOT NULL DEFAULT '{}';
 
 -- modify certifications schema
-ALTER TABLE certifications DROP COLUMN description;
-ALTER TABLE certifications DROP COLUMN role;
-ALTER TABLE certifications DROP COLUMN company;
-ALTER TABLE certifications ADD COLUMN title TEXT NOT NULL DEFAULT '';
-ALTER TABLE certifications ADD COLUMN is_training BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE certifications DROP COLUMN IF EXISTS description;
+ALTER TABLE certifications DROP COLUMN IF EXISTS role;
+ALTER TABLE certifications DROP COLUMN IF EXISTS company;
+ALTER TABLE certifications ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
+ALTER TABLE certifications ADD COLUMN IF NOT EXISTS is_training BOOLEAN NOT NULL DEFAULT false;
 
 -- Insert Client Projects
 INSERT INTO jobs (date_range, role, company, bullets, is_client_project) VALUES
@@ -101,7 +101,8 @@ INSERT INTO projects (slug, title, impact, tags, bullets) VALUES
     'Created interactive data visualization components with Nuxt.js and D3.js, enabling users to explore property metrics intuitively.',
     'Designed a responsive frontend with Vue.js-based Nuxt.js, ensuring cross-platform compatibility and accessibility, validated through user testing.',
     'Architected a modular system separating frontend, backend, and data processing layers, enhancing maintainability and enabling independent scaling of services.'
-]);
+])
+ON CONFLICT (slug) DO NOTHING;
 
 -- Insert Certifications
 INSERT INTO certifications (date_range, title, is_training) VALUES

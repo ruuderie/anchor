@@ -11,6 +11,7 @@ use crate::pages::landing::Landing;
 use crate::pages::projects::Projects;
 use crate::pages::resume::Resume;
 use crate::pages::real_estate::RealEstate;
+use crate::pages::dynamic_landing::DynamicLanding;
 
 #[server(RecordPageView, "/api")]
 pub async fn record_page_view(path: String) -> Result<(), ServerFnError> {
@@ -45,6 +46,7 @@ pub fn App() -> impl IntoView {
                 <Route path="/blog" view=Blog/>
                 <Route path="/certifications" view=Certifications/>
                 <Route path="/real-estate" view=RealEstate/>
+                <Route path="/p/:slug" view=DynamicLanding/>
                 <Route path="/admin" view=Admin/>
                 <Route path="/*any" view=|| view! { <div class="pt-32 px-[8.5rem]">"Not Found"</div> }/>
             </Routes>

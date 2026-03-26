@@ -1,4 +1,4 @@
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   username TEXT UNIQUE NOT NULL,
   passkey JSONB NOT NULL,
@@ -6,13 +6,13 @@ CREATE TABLE users (
   session_token TEXT UNIQUE
 );
 
-CREATE TABLE auth_challenges (
+CREATE TABLE IF NOT EXISTS auth_challenges (
   id UUID PRIMARY KEY,
   challenge_data JSONB NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE jobs (
+CREATE TABLE IF NOT EXISTS jobs (
   id SERIAL PRIMARY KEY,
   date_range TEXT NOT NULL,
   role TEXT NOT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE jobs (
   tags TEXT[] NOT NULL DEFAULT '{}'
 );
 
-CREATE TABLE projects (
+CREATE TABLE IF NOT EXISTS projects (
   id SERIAL PRIMARY KEY,
   slug TEXT UNIQUE NOT NULL,
   title TEXT NOT NULL,
@@ -32,7 +32,7 @@ CREATE TABLE projects (
   tags TEXT[] NOT NULL DEFAULT '{}'
 );
 
-CREATE TABLE certifications (
+CREATE TABLE IF NOT EXISTS certifications (
   id SERIAL PRIMARY KEY,
   date_range TEXT NOT NULL,
   role TEXT NOT NULL,
@@ -41,7 +41,7 @@ CREATE TABLE certifications (
   tags TEXT[] NOT NULL DEFAULT '{}'
 );
 
-CREATE TABLE blog_posts (
+CREATE TABLE IF NOT EXISTS blog_posts (
   id SERIAL PRIMARY KEY,
   slug TEXT UNIQUE NOT NULL,
   title TEXT NOT NULL,

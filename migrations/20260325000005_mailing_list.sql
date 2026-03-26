@@ -1,4 +1,4 @@
-CREATE TABLE mailing_list (
+CREATE TABLE IF NOT EXISTS mailing_list (
     id SERIAL PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
     list_type TEXT NOT NULL,

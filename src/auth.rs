@@ -42,7 +42,9 @@ pub async fn register_start(username: String) -> Result<String, ServerFnError> {
         .unwrap_or(0);
     
     if count > 0 && !user_exists {
-        return Err(ServerFnError::ServerError("Registration locked. Admin already exists.".into()));
+        if !crate::auth::check_session().await.unwrap_or(false) {
+            return Err(ServerFnError::ServerError("Registration locked. Admin already exists.".into()));
+        }
     }
 
     let user_unique_id = Uuid::new_v4();
@@ -313,4 +315,26 @@ pub async fn delete_user(id: i32) -> Result<(), ServerFnError> {
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
     sqlx::query("DELETE FROM users WHERE id = $1").bind(id).execute(&state.pool).await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_webauthn_builder_initialization_defaults() {
+        std::env::remove_var("RP_ORIGIN");
+        std::env::remove_var("RP_ID");
+        let webauthn = ssr::get_webauthn();
+        // Fallbacks are localhost:3000
+        assert_eq!(webauthn.get_rp_id(), "localhost");
+    }
+
+    #[test]
+    fn test_webauthn_builder_initialization_env() {
+        std::env::set_var("RP_ORIGIN", "https://ruuderie.com");
+        std::env::set_var("RP_ID", "ruuderie.com");
+        let webauthn = ssr::get_webauthn();
+        assert_eq!(webauthn.get_rp_id(), "ruuderie.com");
+    }
 }
