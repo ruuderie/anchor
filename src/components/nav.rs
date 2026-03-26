@@ -5,7 +5,7 @@ use std::time::Duration;
 pub async fn get_block_height() -> Result<u64, ServerFnError> {
     use axum::Extension;
     use leptos_axum::extract;
-    use chrono::{Utc, TimeZone};
+    use chrono::Utc;
 
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
 

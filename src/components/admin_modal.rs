@@ -16,8 +16,8 @@ pub enum ModalState {
 pub fn AdminEditorModal() -> impl IntoView {
     let modal_state = expect_context::<ReadSignal<ModalState>>();
     let set_modal_state = expect_context::<WriteSignal<ModalState>>();
-    let set_refresh = expect_context::<WriteSignal<i32>>();
-    let refresh = expect_context::<ReadSignal<i32>>();
+    let _set_refresh = expect_context::<WriteSignal<i32>>();
+    let _refresh = expect_context::<ReadSignal<i32>>();
 
     let close_modal = move || set_modal_state.set(ModalState::None);
 
@@ -367,8 +367,11 @@ extern "C" {
 
 #[component]
 pub fn PasskeyForm() -> impl IntoView {
+    #[allow(unused_variables)]
     let set_modal_state = expect_context::<WriteSignal<ModalState>>();
+    #[allow(unused_variables)]
     let set_refresh = expect_context::<WriteSignal<i32>>();
+    #[allow(unused_variables)]
     let refresh = expect_context::<ReadSignal<i32>>();
 
     let (username, set_username) = create_signal(String::new());
@@ -423,7 +426,7 @@ pub fn PasskeyForm() -> impl IntoView {
 // -----------------------------------------
 #[component]
 pub fn SettingsForm() -> impl IntoView {
-    use crate::pages::landing::{UpdateSiteSettings, get_site_settings};
+    use crate::pages::landing::get_site_settings;
     let set_modal_state = expect_context::<WriteSignal<ModalState>>();
     
     let settings_res = create_resource(|| (), |_| get_site_settings());

@@ -709,7 +709,7 @@ fn CertTable() -> impl IntoView {
 
 #[component]
 fn PostTable() -> impl IntoView {
-    use crate::pages::blog::{get_posts, PostRecord};
+    use crate::pages::blog::get_posts;
     let refresh = expect_context::<ReadSignal<i32>>();
     let set_refresh = expect_context::<WriteSignal<i32>>();
     let set_modal_state = expect_context::<WriteSignal<ModalState>>();
@@ -771,7 +771,7 @@ fn PostTable() -> impl IntoView {
 
 #[component]
 fn PasskeyTable() -> impl IntoView {
-    use crate::auth::{get_users, UserRecord};
+    use crate::auth::get_users;
     let refresh = expect_context::<ReadSignal<i32>>();
     let set_refresh = expect_context::<WriteSignal<i32>>();
     let users_resource = create_resource(move || refresh.get(), |_| get_users());

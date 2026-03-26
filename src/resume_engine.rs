@@ -1,7 +1,4 @@
-use leptos::*;
-use std::process::Command;
-use std::fs;
-use serde::{Deserialize, Serialize};
+use leptos::*;use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct ResumeProfile {
@@ -104,7 +101,7 @@ pub async fn download_resume(profile_id: i32) -> Result<Vec<u8>, ServerFnError> 
             .bind(profile_id)
             .fetch_one(&state.pool)
             .await
-            .map_err(|_| ServerFnError::ServerError("Profile not found".into()))?;
+            .map_err(|_| -> ServerFnError { ServerFnError::ServerError("Profile not found".into()) })?;
 
         let bio: String = profile_row.get("biography");
         let excluded_json: serde_json::Value = profile_row.get("excluded_tags");
@@ -206,7 +203,7 @@ pub async fn download_resume(profile_id: i32) -> Result<Vec<u8>, ServerFnError> 
     command.current_dir("/tmp");
     command.arg("-X").arg("compile").arg("resume_output.tex");
 
-    let status = command.output().map_err(|e| ServerFnError::ServerError(format!("Failed to execute tectonic: {}", e).into()))?;
+    let status = command.output().map_err(|e| -> ServerFnError { ServerFnError::ServerError(format!("Failed to execute tectonic: {}", e).into()) })?;
 
     if !status.status.success() {
         let output2 = std::process::Command::new("pdflatex")
@@ -214,13 +211,13 @@ pub async fn download_resume(profile_id: i32) -> Result<Vec<u8>, ServerFnError> 
             .arg("-interaction=nonstopmode")
             .arg("resume_output.tex")
             .output()
-            .map_err(|e| ServerFnError::ServerError(format!("Failed to execute pdflatex compiler: {}", e).into()))?;
+            .map_err(|e| -> ServerFnError { ServerFnError::ServerError(format!("Failed to execute pdflatex compiler: {}", e).into()) })?;
 
         if !output2.status.success() {
             return Err(ServerFnError::ServerError(format!("Latex Compilation Error").into()));
         }
     }
 
-    let pdf_bytes = std::fs::read(pdf_path).map_err(|e| ServerFnError::ServerError(format!("Failed to read compiled PDF: {}", e).into()))?;
+    let pdf_bytes = std::fs::read(pdf_path).map_err(|e| -> ServerFnError { ServerFnError::ServerError(format!("Failed to read compiled PDF: {}", e).into()) })?;
     Ok(pdf_bytes)
 }
