@@ -1,8 +1,5 @@
 use leptos::*;
 
-use crate::pages::certifications::get_certifications;
-use crate::pages::projects::get_projects;
-use crate::pages::resume::get_jobs;
 use crate::auth::*;
 use crate::components::admin_modal::*;
 
@@ -195,7 +192,7 @@ pub fn Admin() -> impl IntoView {
                         <aside class="w-full md:w-64 shrink-0 space-y-2">
                             <div class="mb-12">
                                 <span class="font-label text-[0.6875rem] text-outline font-bold tracking-widest uppercase block mb-4">"Navigation"</span>
-                            {["DASHBOARD", "MAILING LIST", "SETTINGS", "NAVIGATION", "FOOTER", "JOBS", "PROJECTS", "CERTIFICATIONS", "BLOG", "RESUME ENGINE", "LANDING PAGES", "SECURITY"].iter().map(|&t| {
+                            {["DASHBOARD", "MAILING LIST", "SETTINGS", "NAVIGATION", "FOOTER", "BLOG", "RESUME PROFILES", "RESUME ENTRIES", "LANDING PAGES", "SECURITY"].iter().map(|&t| {
                                             let tab = t; // Capture `t` for the closure
                                             view! {
                                                 <button 
@@ -241,11 +238,9 @@ pub fn Admin() -> impl IntoView {
                                         on:click=move |_| {
                                             let state = match active_tab.get() {
                                                 "SETTINGS" => ModalState::Settings,
-                                                "JOBS" => ModalState::Job(None),
-                                                "PROJECTS" => ModalState::Project(None),
-                                                "CERTIFICATIONS" => ModalState::Cert(None),
                                                 "BLOG" => ModalState::Post(None),
-                                                "RESUME ENGINE" => ModalState::Profile(None),
+                                                "RESUME PROFILES" => ModalState::Profile(None),
+                                                "RESUME ENTRIES" => ModalState::BaseEntry(None, None),
                                                 "LANDING PAGES" => ModalState::LandingPage(None),
                                                 "NAVIGATION" => ModalState::NavItem(None),
                                                 "FOOTER" => ModalState::FooterItem(None),
@@ -269,11 +264,9 @@ pub fn Admin() -> impl IntoView {
                                         "NAVIGATION" => view! { <NavTable /> }.into_view(),
                                         "FOOTER" => view! { <FooterTable /> }.into_view(),
                                         "SETTINGS" => view! { <SettingsReadView /> }.into_view(),
-                                        "JOBS" => view! { <JobTable /> }.into_view(),
-                                        "PROJECTS" => view! { <ProjectTable /> }.into_view(),
-                                        "CERTIFICATIONS" => view! { <CertTable /> }.into_view(),
                                         "BLOG" => view! { <PostTable /> }.into_view(),
-                                        "RESUME ENGINE" => view! { <ResumeProfileTable /> }.into_view(),
+                                        "RESUME PROFILES" => view! { <ResumeProfileTable /> }.into_view(),
+                                        "RESUME ENTRIES" => view! { <BaseResumeEntryTable /> }.into_view(),
                                         "LANDING PAGES" => view! { <LandingPageTable /> }.into_view(),
                                         "SECURITY" => view! { <PasskeyTable /> }.into_view(),
                                         _ => view! { 
@@ -550,6 +543,99 @@ fn ResumeProfileTable() -> impl IntoView {
     }
 }
 
+#[component]
+fn BaseResumeEntryTable() -> impl IntoView {
+    use crate::resume_engine::{get_all_base_entries, delete_base_entry, ResumeCategory};
+    let refresh = expect_context::<ReadSignal<i32>>();
+    let set_refresh = expect_context::<WriteSignal<i32>>();
+    let set_modal_state = expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
+    
+    let items_res = create_resource(move || refresh.get(), |_| get_all_base_entries());
+
+    view! {
+        <Transition fallback=move || view! { <div class="jetbrains text-sm text-outline">"LOADING DATA..."</div> }>
+            {move || match items_res.get() {
+                Some(Ok(items)) => {
+                    if items.is_empty() {
+                        view! { <div class="py-8 text-center text-outline-variant">"NO ENTRIES IN DATABASE"</div> }.into_view()
+                    } else {
+                        let categories = vec![
+                            ResumeCategory::Work,
+                            ResumeCategory::Education,
+                            ResumeCategory::Certification,
+                            ResumeCategory::Project,
+                            ResumeCategory::Skill,
+                            ResumeCategory::Language,
+                            ResumeCategory::Volunteer,
+                            ResumeCategory::Extracurricular,
+                            ResumeCategory::Hobby,
+                        ];
+
+                        categories.into_iter().map(|cat| {
+                            let cat_items: Vec<_> = items.iter().filter(|i| i.category == cat).cloned().collect();
+                            if cat_items.is_empty() {
+                                view! { <div class="hidden"></div> }.into_view()
+                            } else {
+                                let category_str = cat.to_string();
+                                view! {
+                                    <div class="mb-12">
+                                        <div class="flex justify-between items-center mb-4">
+                                            <div class="inline-block bg-secondary-container/20 px-3 py-1 border border-secondary/30">
+                                                <span class="font-label text-[0.6875rem] text-secondary font-bold tracking-tighter uppercase">{category_str.clone()} " ENTRIES"</span>
+                                            </div>
+                                            <button 
+                                                on:click=move |_| set_modal_state.set(crate::components::admin_modal::ModalState::BaseEntry(None, Some(cat)))
+                                                class="bg-surface-container-high hover:bg-surface-container-highest text-primary px-3 py-1 text-xs font-bold font-label uppercase transition-colors border border-outline-variant/30 flex items-center gap-2"
+                                            >
+                                                <span class="material-symbols-outlined text-[0.8rem]">"add"</span>
+                                                {format!("NEW {}", category_str.clone())}
+                                            </button>
+                                        </div>
+                                        <table class="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr class="border-b-2 border-outline-variant/30">
+                                                    <th class="py-4 font-label text-[0.65rem] uppercase tracking-widest text-outline w-16">"ID"</th>
+                                                    <th class="py-4 font-label text-[0.65rem] uppercase tracking-widest text-outline">"TITLE"</th>
+                                                    <th class="py-4 font-label text-[0.65rem] uppercase tracking-widest text-outline text-right">"ACTIONS"</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="jetbrains text-sm">
+                                                {cat_items.into_iter().map(|item| {
+                                                    let id_val = item.id;
+                                                    let clone_item = item.clone();
+                                                    view! {
+                                                        <tr class="border-b border-outline-variant/10 hover:bg-surface-container/50 transition-colors">
+                                                            <td class="py-4 text-outline-variant font-medium">#{id_val}</td>
+                                                            <td class="py-4 font-bold text-on-surface truncate">{&item.title}</td>
+                                                            <td class="py-4 text-right space-x-4">
+                                                                <button on:click=move |_| set_modal_state.set(crate::components::admin_modal::ModalState::BaseEntry(Some(clone_item.clone()), Some(clone_item.category))) class="text-secondary hover:text-on-secondary-fixed-variant font-medium tracking-wide">"[EDIT]"</button>
+                                                                <button 
+                                                                    on:click=move |_| {
+                                                                        spawn_local(async move {
+                                                                            let _ = delete_base_entry(id_val).await;
+                                                                            set_refresh.set(refresh.get_untracked() + 1);
+                                                                        });
+                                                                    }
+                                                                    class="text-error hover:text-error/80 font-medium tracking-wide"
+                                                                >"[DEL]"</button>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                }).collect_view()}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }.into_view()
+                            }
+                        }).collect_view()
+                    }
+                },
+                _ => view! { <div class="py-8 text-center text-error">"ERR_NO_DATA"</div> }.into_view(),
+            }}
+        </Transition>
+    }
+}
+
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct MailingListRecord {
     pub id: i32,
@@ -647,189 +733,6 @@ fn MailingListTable() -> impl IntoView {
     }
 }
 
-#[component]
-fn JobTable() -> impl IntoView {
-    let refresh = expect_context::<ReadSignal<i32>>();
-    let set_refresh = expect_context::<WriteSignal<i32>>();
-    let set_modal_state = expect_context::<WriteSignal<ModalState>>();
-    
-    let jobs_resource = create_resource(move || refresh.get(), |_| get_jobs());
-    
-    view! {
-        <Transition fallback=move || view! { <div class="jetbrains text-sm text-outline">"QUERYING_DB..."</div> }>
-            <table class="w-full text-left jetbrains text-sm">
-                <thead>
-                    <tr class="text-outline border-b border-outline-variant/30">
-                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"ID"</th>
-                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Company"</th>
-                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Role"</th>
-                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Actions"</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-outline-variant/20">
-                    {move || match jobs_resource.get() {
-                        Some(Ok(jobs)) => jobs.into_iter().map(|j| {
-                            let job_clone = j.clone();
-                            view! {
-                            <tr class="hover:bg-surface-container-high transition-colors group">
-                                <td class="py-4 px-4 text-outline-variant">"#" {j.id}</td>
-                                <td class="py-4 px-4 font-bold text-primary">{j.company}</td>
-                                <td class="py-4 px-4 text-on-surface">{j.role}</td>
-                                <td class="py-4 px-4">
-                                    <div class="flex space-x-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button 
-                                            on:click=move |_| set_modal_state.set(ModalState::Job(Some(job_clone.clone())))
-                                            class="text-secondary hover:underline uppercase text-xs"
-                                        >
-                                            "Edit"
-                                        </button>
-                                        <button 
-                                            on:click=move |_| {
-                                                let id = j.id;
-                                                spawn_local(async move {
-                                                    if let Ok(_) = crate::pages::resume::delete_job(id).await {
-                                                        set_refresh.set(refresh.get_untracked() + 1);
-                                                    }
-                                                });
-                                            }
-                                            class="text-error hover:underline uppercase text-xs"
-                                        >
-                                            "Drop"
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            }
-                        }).collect_view(),
-                        _ => view! { <tr><td colspan="4" class="py-8 text-center text-error">"ERR_NO_DATA"</td></tr> }.into_view(),
-                    }}
-                </tbody>
-            </table>
-        </Transition>
-    }
-}
-
-#[component]
-fn ProjectTable() -> impl IntoView {
-    let refresh = expect_context::<ReadSignal<i32>>();
-    let set_refresh = expect_context::<WriteSignal<i32>>();
-    let set_modal_state = expect_context::<WriteSignal<ModalState>>();
-    let projects_resource = create_resource(move || refresh.get(), |_| get_projects());
-    
-    view! {
-        <Transition fallback=move || view! { <div class="jetbrains text-sm text-outline">"QUERYING_DB..."</div> }>
-            <table class="w-full text-left jetbrains text-sm">
-                <thead>
-                    <tr class="text-outline border-b border-outline-variant/30">
-                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"ID"</th>
-                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Title"</th>
-                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Impact"</th>
-                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Actions"</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-outline-variant/20">
-                    {move || match projects_resource.get() {
-                        Some(Ok(projects)) => projects.into_iter().map(|p| {
-                            let p_clone = p.clone();
-                            view! {
-                            <tr class="hover:bg-surface-container-high transition-colors group">
-                                <td class="py-4 px-4 text-outline-variant">"#" {p.id}</td>
-                                <td class="py-4 px-4 font-bold text-primary">{p.title}</td>
-                                <td class="py-4 px-4 text-on-surface truncate max-w-[200px]">{p.impact}</td>
-                                <td class="py-4 px-4">
-                                    <div class="flex space-x-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button 
-                                            on:click=move |_| set_modal_state.set(ModalState::Project(Some(p_clone.clone())))
-                                            class="text-secondary hover:underline uppercase text-xs"
-                                        >
-                                            "Edit"
-                                        </button>
-                                        <button 
-                                            on:click=move |_| {
-                                                let id = p.id;
-                                                spawn_local(async move {
-                                                    if let Ok(_) = crate::pages::projects::delete_project(id).await {
-                                                        set_refresh.set(refresh.get_untracked() + 1);
-                                                    }
-                                                });
-                                            }
-                                            class="text-error hover:underline uppercase text-xs"
-                                        >
-                                            "Drop"
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            }
-                        }).collect_view(),
-                        _ => view! { <tr><td colspan="4" class="py-8 text-center text-error">"ERR_NO_DATA"</td></tr> }.into_view(),
-                    }}
-                </tbody>
-            </table>
-        </Transition>
-    }
-}
-
-#[component]
-fn CertTable() -> impl IntoView {
-    let refresh = expect_context::<ReadSignal<i32>>();
-    let set_refresh = expect_context::<WriteSignal<i32>>();
-    let set_modal_state = expect_context::<WriteSignal<ModalState>>();
-    let certs_resource = create_resource(move || refresh.get(), |_| get_certifications());
-    
-    view! {
-        <Transition fallback=move || view! { <div class="jetbrains text-sm text-outline">"QUERYING_DB..."</div> }>
-            <table class="w-full text-left jetbrains text-sm">
-                <thead>
-                    <tr class="text-outline border-b border-outline-variant/30">
-                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"ID"</th>
-                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Certification"</th>
-                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Date"</th>
-                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Actions"</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-outline-variant/20">
-                    {move || match certs_resource.get() {
-                        Some(Ok(certs)) => certs.into_iter().map(|c| {
-                            let c_clone = c.clone();
-                            view! {
-                            <tr class="hover:bg-surface-container-high transition-colors group">
-                                <td class="py-4 px-4 text-outline-variant">"#" {c.id}</td>
-                                <td class="py-4 px-4 font-bold text-primary">{c.title}</td>
-                                <td class="py-4 px-4 text-on-surface">{c.date_range}</td>
-                                <td class="py-4 px-4">
-                                    <div class="flex space-x-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button 
-                                            on:click=move |_| set_modal_state.set(ModalState::Cert(Some(c_clone.clone())))
-                                            class="text-secondary hover:underline uppercase text-xs"
-                                        >
-                                            "Edit"
-                                        </button>
-                                        <button 
-                                            on:click=move |_| {
-                                                let id = c.id;
-                                                spawn_local(async move {
-                                                    if let Ok(_) = crate::pages::certifications::delete_certification(id).await {
-                                                        set_refresh.set(refresh.get_untracked() + 1);
-                                                    }
-                                                });
-                                            }
-                                            class="text-error hover:underline uppercase text-xs"
-                                        >
-                                            "Drop"
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            }
-                        }).collect_view(),
-                        _ => view! { <tr><td colspan="4" class="py-8 text-center text-error">"ERR_NO_DATA"</td></tr> }.into_view(),
-                    }}
-                </tbody>
-            </table>
-        </Transition>
-    }
-}
 
 #[component]
 fn PostTable() -> impl IntoView {
@@ -1030,10 +933,11 @@ pub fn NavTable() -> impl IntoView {
                             view! {
                             <tr class="hover:bg-surface-container-high transition-colors group">
                                 <td class="py-4 px-4 text-outline-variant">{n.display_order}</td>
+                                <td class="py-4 px-4 text-outline font-medium">"#" {n.id}</td>
                                 <td class="py-4 px-4 font-bold text-primary">
-                                    {if let Some(pid) = n.parent_id { format!("↳ {}", n.label) } else { n.label.clone() }}
+                                    {if let Some(_pid) = n.parent_id { format!("↳ {}", n.label) } else { n.label.clone() }}
                                 </td>
-                                <td class="py-4 px-4 text-outline">{n.href.unwrap_or_else(|| "DROPDOWN [null]".to_string())}</td>
+                                <td class="py-4 px-4 text-outline">{n.href.clone().unwrap_or_default()}</td>
                                 <td class="py-4 px-4">
                                     <div class="flex space-x-4 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button 

@@ -16,51 +16,24 @@ pub async fn get_certifications() -> Result<Vec<CertRecord>, ServerFnError> {
     use sqlx::Row;
     
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    let rows = sqlx::query("SELECT id, date_range, title, is_training FROM certifications ORDER BY id ASC")
+    let rows = sqlx::query("SELECT id, title, date_range, metadata FROM resume_entries WHERE category = 'certification' ORDER BY id DESC")
         .fetch_all(&state.pool)
         .await?;
         
-    let certs = rows.into_iter().map(|row| CertRecord {
-        id: row.get("id"),
-        date_range: row.get("date_range"),
-        title: row.get("title"),
-        is_training: row.get("is_training"),
+    let certs = rows.into_iter().map(|row| {
+        let meta: Option<serde_json::Value> = row.try_get("metadata").unwrap_or(None);
+        let is_training = meta.as_ref().and_then(|m| m.get("is_training")).and_then(|v| v.as_bool()).unwrap_or(false);
+        let date_range_opt: Option<String> = row.try_get("date_range").unwrap_or(None);
+        
+        CertRecord {
+            id: row.get("id"),
+            date_range: date_range_opt.unwrap_or_default(),
+            title: row.get("title"),
+            is_training,
+        }
     }).collect();
     
     Ok(certs)
-}
-
-#[server(AddCertification, "/api")]
-pub async fn add_certification(date_range: String, title: String, is_training: bool) -> Result<(), ServerFnError> {
-    use crate::auth::check_session;
-    use axum::Extension;
-    use leptos_axum::extract;
-    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
-    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    sqlx::query("INSERT INTO certifications (date_range, title, is_training) VALUES ($1, $2, $3)").bind(date_range).bind(title).bind(is_training).execute(&state.pool).await?;
-    Ok(())
-}
-
-#[server(UpdateCertification, "/api")]
-pub async fn update_certification(id: i32, date_range: String, title: String, is_training: bool) -> Result<(), ServerFnError> {
-    use crate::auth::check_session;
-    use axum::Extension;
-    use leptos_axum::extract;
-    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
-    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    sqlx::query("UPDATE certifications SET date_range = $1, title = $2, is_training = $3 WHERE id = $4").bind(date_range).bind(title).bind(is_training).bind(id).execute(&state.pool).await?;
-    Ok(())
-}
-
-#[server(DeleteCertification, "/api")]
-pub async fn delete_certification(id: i32) -> Result<(), ServerFnError> {
-    use crate::auth::check_session;
-    use axum::Extension;
-    use leptos_axum::extract;
-    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
-    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    sqlx::query("DELETE FROM certifications WHERE id = $1").bind(id).execute(&state.pool).await?;
-    Ok(())
 }
 
 #[component]

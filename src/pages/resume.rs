@@ -51,61 +51,44 @@ pub async fn get_jobs() -> Result<Vec<JobRecord>, ServerFnError> {
     use sqlx::Row;
     
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    let rows = sqlx::query("SELECT id, date_range, role, company, bullets, employment_type, parent_company, tags, hide_date FROM jobs ORDER BY id ASC")
+    let rows = sqlx::query("SELECT id, title, date_range, bullets, metadata FROM resume_entries WHERE category = 'work' ORDER BY id DESC")
         .fetch_all(&state.pool)
         .await?;
         
     let jobs = rows.into_iter().map(|row| {
-        let et_str: String = row.get("employment_type");
+        let meta: Option<serde_json::Value> = row.try_get("metadata").unwrap_or(None);
+        let company = meta.as_ref().and_then(|m| m.get("company")).and_then(|v| v.as_str()).unwrap_or("").to_string();
+        let parent_company = meta.as_ref().and_then(|m| m.get("parent_company")).and_then(|v| v.as_str()).map(|s| s.to_string());
+        let et_str = meta.as_ref().and_then(|m| m.get("employment_type")).and_then(|v| v.as_str()).unwrap_or("DirectHire");
         let employment_type = JobType::from_str(&et_str).unwrap_or_default();
+        
+        let tags: Vec<String> = meta.as_ref()
+            .and_then(|m| m.get("tags"))
+            .and_then(|v| serde_json::from_value(v.clone()).ok())
+            .unwrap_or_else(|| {
+                meta.as_ref().and_then(|m| m.get("tags")).and_then(|v| v.as_str())
+                    .map(|s| s.split(',').map(|x| x.trim().to_string()).filter(|x| !x.is_empty()).collect())
+                    .unwrap_or_default()
+            });
+
+        let bullets_val: serde_json::Value = row.try_get("bullets").unwrap_or(serde_json::json!([]));
+        let bullets: Vec<String> = serde_json::from_value(bullets_val).unwrap_or_default();
+        let date_range_opt: Option<String> = row.try_get("date_range").unwrap_or(None);
         
         JobRecord {
             id: row.get("id"),
-            date_range: row.get("date_range"),
-            role: row.get("role"),
-            company: row.get("company"),
-            bullets: row.get::<Vec<String>, _>("bullets"),
+            date_range: date_range_opt.unwrap_or_default(),
+            role: row.get("title"),
+            company,
+            bullets,
             employment_type,
-            parent_company: row.get("parent_company"),
-            tags: row.get::<Vec<String>, _>("tags"),
-            hide_date: row.get("hide_date"),
+            parent_company,
+            tags,
+            hide_date: meta.as_ref().and_then(|m| m.get("hide_date")).and_then(|v| v.as_bool()).unwrap_or(false),
         }
     }).collect();
     
     Ok(jobs)
-}
-
-#[server(AddJob, "/api")]
-pub async fn add_job(date_range: String, role: String, company: String, bullets: Vec<String>, employment_type: JobType, parent_company: Option<String>, tags: Vec<String>, hide_date: bool) -> Result<(), ServerFnError> {
-    use crate::auth::check_session;
-    use axum::Extension;
-    use leptos_axum::extract;
-    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
-    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    sqlx::query("INSERT INTO jobs (date_range, role, company, bullets, employment_type, parent_company, tags, hide_date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)").bind(date_range).bind(role).bind(company).bind(bullets).bind(employment_type.to_string()).bind(parent_company).bind(tags).bind(hide_date).execute(&state.pool).await?;
-    Ok(())
-}
-
-#[server(UpdateJob, "/api")]
-pub async fn update_job(id: i32, date_range: String, role: String, company: String, bullets: Vec<String>, employment_type: JobType, parent_company: Option<String>, tags: Vec<String>, hide_date: bool) -> Result<(), ServerFnError> {
-    use crate::auth::check_session;
-    use axum::Extension;
-    use leptos_axum::extract;
-    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
-    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    sqlx::query("UPDATE jobs SET date_range = $1, role = $2, company = $3, bullets = $4, employment_type = $5, parent_company = $6, tags = $7, hide_date = $8 WHERE id = $9").bind(date_range).bind(role).bind(company).bind(bullets).bind(employment_type.to_string()).bind(parent_company).bind(tags).bind(hide_date).bind(id).execute(&state.pool).await?;
-    Ok(())
-}
-
-#[server(DeleteJob, "/api")]
-pub async fn delete_job(id: i32) -> Result<(), ServerFnError> {
-    use crate::auth::check_session;
-    use axum::Extension;
-    use leptos_axum::extract;
-    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
-    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    sqlx::query("DELETE FROM jobs WHERE id = $1").bind(id).execute(&state.pool).await?;
-    Ok(())
 }
 
 #[component]

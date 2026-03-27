@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   app:
     container_name: "ruuderie_app"
@@ -34,6 +33,7 @@ services:
 
 volumes:
   postgres-data:
+
 
 networks:
   ruuderie_net:

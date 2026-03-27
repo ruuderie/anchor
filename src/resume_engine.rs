@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct ResumeProfile {
     pub id: i32,
     pub name: String,
+    pub full_name: String,
     pub objective: Option<String>,
     pub is_public: bool,
     pub target_role: Option<String>,
@@ -13,14 +14,16 @@ pub struct ResumeProfile {
     pub contact_location: Option<String>,
     pub contact_link: Option<String>,
     pub category_visibility: serde_json::Value,
+    pub category_order: serde_json::Value,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
 #[cfg_attr(feature = "ssr", derive(sqlx::Type))]
 #[cfg_attr(feature = "ssr", sqlx(type_name = "resume_category_enum", rename_all = "lowercase"))]
 pub enum ResumeCategory {
     Work,
     Education,
+    Certification,
     Skill,
     Project,
     Language,
@@ -34,6 +37,7 @@ impl std::fmt::Display for ResumeCategory {
         let text = match self {
             Self::Work => "work",
             Self::Education => "education",
+            Self::Certification => "certification",
             Self::Skill => "skill",
             Self::Project => "project",
             Self::Language => "language",
@@ -43,6 +47,17 @@ impl std::fmt::Display for ResumeCategory {
         };
         write!(f, "{}", text)
     }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct BaseResumeEntry {
+    pub id: i32,
+    pub category: ResumeCategory,
+    pub title: String,
+    pub subtitle: Option<String>,
+    pub date_range: Option<String>,
+    pub bullets: Vec<String>,
+    pub metadata: Option<serde_json::Value>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -56,6 +71,14 @@ pub struct ResumeEntry {
     pub bullets: Vec<String>,
     pub display_order: i32,
     pub is_visible: bool,
+    pub metadata: Option<serde_json::Value>,
+    pub overrides: Option<serde_json::Value>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct ProfileEntryMapping {
+    pub entry_id: i32,
+    pub overrides: Option<serde_json::Value>,
 }
 
 #[server(GetResumeProfiles, "/api")]
@@ -64,7 +87,7 @@ pub async fn get_resume_profiles() -> Result<Vec<ResumeProfile>, ServerFnError> 
     use leptos_axum::extract;
     use sqlx::Row;
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    let rows = sqlx::query("SELECT id, name, objective, is_public, target_role, contact_email, contact_phone, contact_location, contact_link, category_visibility FROM resume_profiles ORDER BY id ASC")
+    let rows = sqlx::query("SELECT id, name, full_name, objective, is_public, target_role, contact_email, contact_phone, contact_location, contact_link, category_visibility, category_order FROM resume_profiles ORDER BY id ASC")
         .fetch_all(&state.pool)
         .await?;
         
@@ -72,6 +95,7 @@ pub async fn get_resume_profiles() -> Result<Vec<ResumeProfile>, ServerFnError> 
         ResumeProfile {
             id: row.get("id"),
             name: row.get("name"),
+            full_name: row.get("full_name"),
             objective: row.get("objective"),
             is_public: row.try_get("is_public").unwrap_or(false),
             target_role: row.get("target_role"),
@@ -80,6 +104,7 @@ pub async fn get_resume_profiles() -> Result<Vec<ResumeProfile>, ServerFnError> 
             contact_location: row.get("contact_location"),
             contact_link: row.get("contact_link"),
             category_visibility: row.get("category_visibility"),
+            category_order: row.get("category_order"),
         }
     }).collect();
     
@@ -92,7 +117,7 @@ pub async fn get_resume_entries(profile_id: i32) -> Result<Vec<ResumeEntry>, Ser
     use leptos_axum::extract;
     use sqlx::Row;
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    let rows = sqlx::query("SELECT id, profile_id, category, title, subtitle, date_range, bullets, display_order, is_visible FROM resume_entries WHERE profile_id = $1 ORDER BY display_order ASC")
+    let rows = sqlx::query("SELECT e.id, pe.profile_id, e.category, e.title, e.subtitle, e.date_range, e.bullets, pe.display_order, pe.is_visible, e.metadata, pe.overrides FROM resume_entries e JOIN resume_profile_entries pe ON e.id = pe.entry_id WHERE pe.profile_id = $1 ORDER BY pe.display_order ASC")
         .bind(profile_id)
         .fetch_all(&state.pool)
         .await?;
@@ -110,48 +135,143 @@ pub async fn get_resume_entries(profile_id: i32) -> Result<Vec<ResumeEntry>, Ser
             bullets,
             display_order: row.get("display_order"),
             is_visible: row.get("is_visible"),
+            metadata: row.try_get("metadata").unwrap_or(None),
+            overrides: row.try_get("overrides").unwrap_or(None),
         }
     }).collect();
     
     Ok(items)
 }
 
+#[server(GetAllBaseEntries, "/api")]
+pub async fn get_all_base_entries() -> Result<Vec<BaseResumeEntry>, ServerFnError> {
+    use axum::Extension;
+    use leptos_axum::extract;
+    use sqlx::Row;
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    let rows = sqlx::query("SELECT id, category, title, subtitle, date_range, bullets, metadata FROM resume_entries ORDER BY id DESC")
+        .fetch_all(&state.pool)
+        .await?;
+        
+    let items = rows.into_iter().map(|row| {
+        let bullets_val: serde_json::Value = row.get("bullets");
+        let bullets: Vec<String> = serde_json::from_value(bullets_val).unwrap_or_default();
+        BaseResumeEntry {
+            id: row.get("id"),
+            category: row.get("category"),
+            title: row.get("title"),
+            subtitle: row.get("subtitle"),
+            date_range: row.get("date_range"),
+            bullets,
+            metadata: row.try_get("metadata").unwrap_or(None),
+        }
+    }).collect();
+    
+    Ok(items)
+}
+
+#[server(GetEntryProfileMappings, "/api")]
+pub async fn get_entry_profile_mappings(entry_id: i32) -> Result<Vec<i32>, ServerFnError> {
+    use axum::Extension;
+    use leptos_axum::extract;
+    use sqlx::Row;
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    let rows = sqlx::query("SELECT profile_id FROM resume_profile_entries WHERE entry_id = $1")
+        .bind(entry_id)
+        .fetch_all(&state.pool)
+        .await?;
+        
+    let ids: Vec<i32> = rows.into_iter().map(|row| row.get("profile_id")).collect();
+    Ok(ids)
+}
+
+#[server(GetProfileEntryMappings, "/api")]
+pub async fn get_profile_entry_mappings(profile_id: i32) -> Result<Vec<ProfileEntryMapping>, ServerFnError> {
+    use axum::Extension;
+    use leptos_axum::extract;
+    use sqlx::Row;
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    let rows = sqlx::query("SELECT entry_id, overrides FROM resume_profile_entries WHERE profile_id = $1")
+        .bind(profile_id)
+        .fetch_all(&state.pool)
+        .await?;
+        
+    let mappings: Vec<ProfileEntryMapping> = rows.into_iter().map(|row| {
+        ProfileEntryMapping {
+            entry_id: row.get("entry_id"),
+            overrides: row.try_get("overrides").unwrap_or(None),
+        }
+    }).collect();
+    Ok(mappings)
+}
+
 #[server(AddResumeProfile, "/api")]
 pub async fn add_resume_profile(
-    name: String, objective: Option<String>, is_public: bool, target_role: Option<String>,
+    name: String, full_name: String, objective: Option<String>, is_public: bool, target_role: Option<String>,
     contact_email: Option<String>, contact_phone: Option<String>, contact_location: Option<String>,
-    contact_link: Option<String>, category_visibility: serde_json::Value
+    contact_link: Option<String>, category_visibility: serde_json::Value, category_order: serde_json::Value, active_entries: Vec<ProfileEntryMapping>
 ) -> Result<(), ServerFnError> {
     use crate::auth::check_session;
     use axum::Extension;
     use leptos_axum::extract;
+    use sqlx::Row;
     if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
 
-    sqlx::query("INSERT INTO resume_profiles (name, objective, is_public, target_role, contact_email, contact_phone, contact_location, contact_link, category_visibility) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)")
-        .bind(name).bind(objective).bind(is_public).bind(target_role)
-        .bind(contact_email).bind(contact_phone).bind(contact_location).bind(contact_link).bind(category_visibility)
-        .execute(&state.pool).await?;
+    let row = sqlx::query("INSERT INTO resume_profiles (name, full_name, objective, is_public, target_role, contact_email, contact_phone, contact_location, contact_link, category_visibility, category_order) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id")
+        .bind(name).bind(full_name).bind(objective).bind(is_public).bind(target_role)
+        .bind(contact_email).bind(contact_phone).bind(contact_location).bind(contact_link).bind(category_visibility).bind(category_order)
+        .fetch_one(&state.pool).await?;
+        
+    let pid: i32 = row.get("id");
+    
+    for mapping in active_entries {
+        sqlx::query("INSERT INTO resume_profile_entries (profile_id, entry_id, display_order, is_visible, overrides) VALUES ($1, $2, 0, true, $3)")
+            .bind(pid).bind(mapping.entry_id).bind(mapping.overrides).execute(&state.pool).await?;
+    }
         
     Ok(())
 }
 
 #[server(UpdateResumeProfile, "/api")]
 pub async fn update_resume_profile(
-    id: i32, name: String, objective: Option<String>, is_public: bool, target_role: Option<String>,
+    id: i32, name: String, full_name: String, objective: Option<String>, is_public: bool, target_role: Option<String>,
     contact_email: Option<String>, contact_phone: Option<String>, contact_location: Option<String>,
-    contact_link: Option<String>, category_visibility: serde_json::Value
+    contact_link: Option<String>, category_visibility: serde_json::Value, category_order: serde_json::Value, active_entries: Vec<ProfileEntryMapping>
 ) -> Result<(), ServerFnError> {
     use crate::auth::check_session;
     use axum::Extension;
     use leptos_axum::extract;
+    use sqlx::Row;
     if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
 
-    sqlx::query("UPDATE resume_profiles SET name = $1, objective = $2, is_public = $3, target_role = $4, contact_email = $5, contact_phone = $6, contact_location = $7, contact_link = $8, category_visibility = $9 WHERE id = $10")
-        .bind(name).bind(objective).bind(is_public).bind(target_role)
-        .bind(contact_email).bind(contact_phone).bind(contact_location).bind(contact_link).bind(category_visibility).bind(id)
+    sqlx::query("UPDATE resume_profiles SET name = $1, full_name = $2, objective = $3, is_public = $4, target_role = $5, contact_email = $6, contact_phone = $7, contact_location = $8, contact_link = $9, category_visibility = $10, category_order = $11 WHERE id = $12")
+        .bind(name).bind(full_name).bind(objective).bind(is_public).bind(target_role)
+        .bind(contact_email).bind(contact_phone).bind(contact_location).bind(contact_link).bind(category_visibility).bind(category_order).bind(id)
         .execute(&state.pool).await?;
+        
+    let current_mappings = sqlx::query("SELECT entry_id FROM resume_profile_entries WHERE profile_id = $1").bind(id).fetch_all(&state.pool).await?;
+    let current_eids: Vec<i32> = current_mappings.into_iter().map(|r| r.get("entry_id")).collect();
+    
+    let active_eids: Vec<i32> = active_entries.iter().map(|m| m.entry_id).collect();
+
+    for eid in &current_eids {
+        if !active_eids.contains(eid) {
+            sqlx::query("DELETE FROM resume_profile_entries WHERE profile_id = $1 AND entry_id = $2")
+                .bind(id).bind(eid).execute(&state.pool).await?;
+        }
+    }
+    
+    for mapping in active_entries {
+        if current_eids.contains(&mapping.entry_id) {
+            sqlx::query("UPDATE resume_profile_entries SET overrides = $1 WHERE profile_id = $2 AND entry_id = $3")
+                .bind(mapping.overrides).bind(id).bind(mapping.entry_id).execute(&state.pool).await?;
+        } else {
+            sqlx::query("INSERT INTO resume_profile_entries (profile_id, entry_id, display_order, is_visible, overrides) VALUES ($1, $2, 0, true, $3) ON CONFLICT DO NOTHING")
+                .bind(id).bind(mapping.entry_id).bind(mapping.overrides).execute(&state.pool).await?;
+        }
+    }
         
     Ok(())
 }
@@ -167,54 +287,115 @@ pub async fn delete_resume_profile(id: i32) -> Result<(), ServerFnError> {
     Ok(())
 }
 
-#[server(AddResumeEntry, "/api")]
-pub async fn add_resume_entry(
-    profile_id: i32, category: ResumeCategory, title: String, subtitle: Option<String>,
-    date_range: Option<String>, bullets: Vec<String>, display_order: i32, is_visible: bool
+#[server(AddBaseEntry, "/api")]
+pub async fn add_base_entry(
+    category: ResumeCategory, title: String, subtitle: Option<String>,
+    date_range: Option<String>, bullets: Vec<String>, metadata: Option<serde_json::Value>, active_profiles: Vec<i32>
 ) -> Result<(), ServerFnError> {
     use crate::auth::check_session;
     use axum::Extension;
     use leptos_axum::extract;
+    use sqlx::Row;
     if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
     let bullets_json = serde_json::to_value(&bullets).unwrap_or(serde_json::json!([]));
     
-    sqlx::query("INSERT INTO resume_entries (profile_id, category, title, subtitle, date_range, bullets, display_order, is_visible) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)")
-        .bind(profile_id).bind(category).bind(title).bind(subtitle).bind(date_range)
-        .bind(bullets_json).bind(display_order).bind(is_visible)
-        .execute(&state.pool).await?;
+    let row = sqlx::query("INSERT INTO resume_entries (category, title, subtitle, date_range, bullets, metadata) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id")
+        .bind(category).bind(title).bind(subtitle).bind(date_range).bind(bullets_json).bind(metadata)
+        .fetch_one(&state.pool).await?;
+        
+    let entry_id: i32 = row.get("id");
+    
+    for pid in active_profiles {
+        sqlx::query("INSERT INTO resume_profile_entries (profile_id, entry_id, display_order, is_visible) VALUES ($1, $2, 0, true)")
+            .bind(pid).bind(entry_id).execute(&state.pool).await?;
+    }
         
     Ok(())
 }
 
-#[server(UpdateResumeEntry, "/api")]
-pub async fn update_resume_entry(
+#[server(UpdateBaseEntry, "/api")]
+pub async fn update_base_entry(
     id: i32, category: ResumeCategory, title: String, subtitle: Option<String>,
-    date_range: Option<String>, bullets: Vec<String>, display_order: i32, is_visible: bool
+    date_range: Option<String>, bullets: Vec<String>, metadata: Option<serde_json::Value>, active_profiles: Vec<i32>
 ) -> Result<(), ServerFnError> {
     use crate::auth::check_session;
     use axum::Extension;
     use leptos_axum::extract;
+    use sqlx::Row;
     if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
     let bullets_json = serde_json::to_value(&bullets).unwrap_or(serde_json::json!([]));
     
-    sqlx::query("UPDATE resume_entries SET category = $1, title = $2, subtitle = $3, date_range = $4, bullets = $5, display_order = $6, is_visible = $7 WHERE id = $8")
-        .bind(category).bind(title).bind(subtitle).bind(date_range)
-        .bind(bullets_json).bind(display_order).bind(is_visible).bind(id)
+    sqlx::query("UPDATE resume_entries SET category = $1, title = $2, subtitle = $3, date_range = $4, bullets = $5, metadata = $6 WHERE id = $7")
+        .bind(category).bind(title).bind(subtitle).bind(date_range).bind(bullets_json).bind(metadata).bind(id)
         .execute(&state.pool).await?;
+        
+    let current_mappings = sqlx::query("SELECT profile_id FROM resume_profile_entries WHERE entry_id = $1").bind(id).fetch_all(&state.pool).await?;
+    let current_pids: Vec<i32> = current_mappings.into_iter().map(|r| r.get("profile_id")).collect();
+    
+    for pid in &current_pids {
+        if !active_profiles.contains(pid) {
+            sqlx::query("DELETE FROM resume_profile_entries WHERE entry_id = $1 AND profile_id = $2")
+                .bind(id).bind(pid).execute(&state.pool).await?;
+        }
+    }
+    
+    for pid in active_profiles {
+        if !current_pids.contains(&pid) {
+            sqlx::query("INSERT INTO resume_profile_entries (profile_id, entry_id, display_order, is_visible) VALUES ($1, $2, 0, true) ON CONFLICT DO NOTHING")
+                .bind(pid).bind(id).execute(&state.pool).await?;
+        }
+    }
         
     Ok(())
 }
 
-#[server(DeleteResumeEntry, "/api")]
-pub async fn delete_resume_entry(id: i32) -> Result<(), ServerFnError> {
+#[server(DeleteBaseEntry, "/api")]
+pub async fn delete_base_entry(id: i32) -> Result<(), ServerFnError> {
     use crate::auth::check_session;
     use axum::Extension;
     use leptos_axum::extract;
     if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
     sqlx::query("DELETE FROM resume_entries WHERE id = $1").bind(id).execute(&state.pool).await?;
+    Ok(())
+}
+
+#[server(SetProfileEntry, "/api")]
+pub async fn set_profile_entry(
+    profile_id: i32, entry_id: i32, active: bool
+) -> Result<(), ServerFnError> {
+    use crate::auth::check_session;
+    use axum::Extension;
+    use leptos_axum::extract;
+    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    
+    if active {
+        sqlx::query("INSERT INTO resume_profile_entries (profile_id, entry_id, display_order, is_visible) VALUES ($1, $2, 0, true) ON CONFLICT (profile_id, entry_id) DO NOTHING")
+            .bind(profile_id).bind(entry_id).execute(&state.pool).await?;
+    } else {
+        sqlx::query("DELETE FROM resume_profile_entries WHERE profile_id = $1 AND entry_id = $2")
+            .bind(profile_id).bind(entry_id).execute(&state.pool).await?;
+    }
+    Ok(())
+}
+
+#[server(UpdateProfileEntryVisibility, "/api")]
+pub async fn update_profile_entry_visibility(
+    profile_id: i32, entry_id: i32, display_order: i32, is_visible: bool
+) -> Result<(), ServerFnError> {
+    use crate::auth::check_session;
+    use axum::Extension;
+    use leptos_axum::extract;
+    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    
+    sqlx::query("UPDATE resume_profile_entries SET display_order = $1, is_visible = $2 WHERE profile_id = $3 AND entry_id = $4")
+        .bind(display_order).bind(is_visible).bind(profile_id).bind(entry_id)
+        .execute(&state.pool).await?;
+        
     Ok(())
 }
 
@@ -270,7 +451,7 @@ pub fn generate_latex_string(
 \end{{center}}
 \vspace{{0.1in}}
 "#,
-        latex_escape(&profile.name),
+        latex_escape(&profile.full_name),
         latex_escape(&target_role_str),
         contact_str
     );
@@ -287,16 +468,37 @@ pub fn generate_latex_string(
             .and_then(|v| v.as_bool()).unwrap_or(true)
     };
 
-    let categories_to_render = vec![
-        (ResumeCategory::Work, "Experience"),
-        (ResumeCategory::Education, "Education"),
-        (ResumeCategory::Skill, "Skills"),
-        (ResumeCategory::Project, "Projects"),
-        (ResumeCategory::Language, "Languages"),
-        (ResumeCategory::Volunteer, "Volunteering"),
-        (ResumeCategory::Extracurricular, "Extracurriculars"),
-        (ResumeCategory::Hobby, "Hobbies"),
-    ];
+    let mut ordered_cats = Vec::new();
+    if let Some(arr) = profile.category_order.as_array() {
+        for v in arr {
+            if let Some(s) = v.as_str() {
+                ordered_cats.push(s.to_string());
+            }
+        }
+    }
+    if ordered_cats.is_empty() {
+        ordered_cats = vec![
+            "work".to_string(), "education".to_string(), "certification".to_string(), 
+            "project".to_string(), "skill".to_string(), "volunteer".to_string(), 
+            "extracurricular".to_string(), "language".to_string(), "hobby".to_string()
+        ];
+    }
+
+    let mut categories_to_render = Vec::new();
+    for c in ordered_cats {
+        match c.as_str() {
+            "work" => categories_to_render.push((ResumeCategory::Work, "Experience")),
+            "education" => categories_to_render.push((ResumeCategory::Education, "Education")),
+            "certification" => categories_to_render.push((ResumeCategory::Certification, "Certifications")),
+            "project" => categories_to_render.push((ResumeCategory::Project, "Projects")),
+            "skill" => categories_to_render.push((ResumeCategory::Skill, "Skills")),
+            "language" => categories_to_render.push((ResumeCategory::Language, "Languages")),
+            "volunteer" => categories_to_render.push((ResumeCategory::Volunteer, "Volunteering")),
+            "extracurricular" => categories_to_render.push((ResumeCategory::Extracurricular, "Extracurriculars")),
+            "hobby" => categories_to_render.push((ResumeCategory::Hobby, "Hobbies")),
+            _ => {}
+        }
+    }
 
     for (cat_enum, section_title) in categories_to_render {
         if !is_cat_visible(&cat_enum) { continue; }
@@ -310,9 +512,30 @@ pub fn generate_latex_string(
         tex_content.push_str(&format!("\\section*{{{}}}\n", section_title));
 
         for entry in cat_entries {
-            let title = latex_escape(&entry.title);
-            let date = latex_escape(&entry.date_range.clone().unwrap_or_default());
-            let subtitle = latex_escape(&entry.subtitle.clone().unwrap_or_default());
+            let mut resolved_title = entry.title.clone();
+            let mut resolved_subtitle = entry.subtitle.clone().unwrap_or_default();
+            let mut resolved_date = entry.date_range.clone().unwrap_or_default();
+            let mut resolved_bullets = entry.bullets.clone();
+
+            if let Some(overrides) = &entry.overrides {
+                if let Some(val) = overrides.get("title").and_then(|v| v.as_str()) {
+                    if !val.trim().is_empty() { resolved_title = val.to_string(); }
+                }
+                if let Some(val) = overrides.get("subtitle").and_then(|v| v.as_str()) {
+                    if !val.trim().is_empty() { resolved_subtitle = val.to_string(); }
+                }
+                if let Some(val) = overrides.get("date_range").and_then(|v| v.as_str()) {
+                    if !val.trim().is_empty() { resolved_date = val.to_string(); }
+                }
+                if let Some(arr) = overrides.get("bullets").and_then(|v| v.as_array()) {
+                    let ov_bullets: Vec<String> = arr.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect();
+                    if !ov_bullets.is_empty() { resolved_bullets = ov_bullets; }
+                }
+            }
+
+            let title = latex_escape(&resolved_title);
+            let date = latex_escape(&resolved_date);
+            let subtitle = latex_escape(&resolved_subtitle);
 
             tex_content.push_str(&format!(
                 "\\noindent \\textbf{{{}}} \\hfill {} \\\\\n", title, date
@@ -324,9 +547,9 @@ pub fn generate_latex_string(
                 tex_content.push_str("\\vspace{0.05in}\n");
             }
 
-            if !entry.bullets.is_empty() {
+            if !resolved_bullets.is_empty() {
                 tex_content.push_str("\\begin{itemize}[leftmargin=*,noitemsep,topsep=0pt,parsep=0pt,partopsep=0pt]\n");
-                for bullet in &entry.bullets {
+                for bullet in &resolved_bullets {
                     tex_content.push_str(&format!("\\item {}\n", latex_escape(bullet)));
                 }
                 tex_content.push_str("\\end{itemize}\n");
@@ -350,7 +573,7 @@ pub async fn download_resume(profile_id: i32) -> Result<Vec<u8>, ServerFnError> 
         return Err(ServerFnError::ServerError("Invalid Profile ID".into()));
     }
 
-    let profile_row = sqlx::query("SELECT id, name, objective, is_public, target_role, contact_email, contact_phone, contact_location, contact_link, category_visibility FROM resume_profiles WHERE id = $1")
+    let profile_row = sqlx::query("SELECT id, name, full_name, objective, is_public, target_role, contact_email, contact_phone, contact_location, contact_link, category_visibility, category_order FROM resume_profiles WHERE id = $1")
         .bind(profile_id)
         .fetch_one(&state.pool)
         .await
@@ -359,6 +582,7 @@ pub async fn download_resume(profile_id: i32) -> Result<Vec<u8>, ServerFnError> 
     let profile = ResumeProfile {
         id: profile_row.get("id"),
         name: profile_row.get("name"),
+        full_name: profile_row.get("full_name"),
         objective: profile_row.get("objective"),
         is_public: profile_row.try_get("is_public").unwrap_or(false),
         target_role: profile_row.get("target_role"),
@@ -367,9 +591,10 @@ pub async fn download_resume(profile_id: i32) -> Result<Vec<u8>, ServerFnError> 
         contact_location: profile_row.get("contact_location"),
         contact_link: profile_row.get("contact_link"),
         category_visibility: profile_row.get("category_visibility"),
+        category_order: profile_row.get("category_order"),
     };
 
-    let entries_rows = sqlx::query("SELECT id, profile_id, category, title, subtitle, date_range, bullets, display_order, is_visible FROM resume_entries WHERE profile_id = $1 ORDER BY display_order ASC")
+    let entries_rows = sqlx::query("SELECT e.id, pe.profile_id, e.category, e.title, e.subtitle, e.date_range, e.bullets, pe.display_order, pe.is_visible, pe.overrides FROM resume_entries e JOIN resume_profile_entries pe ON e.id = pe.entry_id WHERE pe.profile_id = $1 ORDER BY pe.display_order ASC")
         .bind(profile_id).fetch_all(&state.pool).await?;
 
     let entries: Vec<ResumeEntry> = entries_rows.into_iter().map(|row| {
@@ -385,6 +610,8 @@ pub async fn download_resume(profile_id: i32) -> Result<Vec<u8>, ServerFnError> 
             bullets,
             display_order: row.get("display_order"),
             is_visible: row.get("is_visible"),
+            metadata: None,
+            overrides: row.try_get("overrides").unwrap_or(None),
         }
     }).collect();
 
@@ -439,7 +666,8 @@ mod tests {
     fn test_generate_latex_string_formats_correctly() {
         let profile = ResumeProfile {
             id: 1,
-            name: "John Doe".into(),
+            name: "Internal Name".into(),
+            full_name: "John Doe".into(),
             objective: Some("Software Dev".into()),
             is_public: true,
             target_role: Some("Engineer".into()),
@@ -448,6 +676,7 @@ mod tests {
             contact_location: None,
             contact_link: None,
             category_visibility: serde_json::json!({"work": true, "education": true}),
+            category_order: serde_json::json!(["work"]),
         };
         let entries = vec![ResumeEntry {
             id: 1,
@@ -473,7 +702,8 @@ mod tests {
     fn test_generate_latex_string_filters_and_masks() {
         let profile = ResumeProfile {
             id: 1,
-            name: "Jane Doe".into(),
+            name: "Internal Name".into(),
+            full_name: "Jane Doe".into(),
             objective: Some("Hidden Test".into()),
             is_public: true,
             target_role: None,
@@ -482,6 +712,7 @@ mod tests {
             contact_location: None,
             contact_link: None,
             category_visibility: serde_json::json!({"work": true, "education": false}),
+            category_order: serde_json::json!(["work", "education"]),
         };
         let entries = vec![
             ResumeEntry {

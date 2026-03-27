@@ -3,11 +3,9 @@ use leptos::*;
 #[derive(Clone, PartialEq, Debug)]
 pub enum ModalState {
     None,
-    Job(Option<crate::pages::resume::JobRecord>),
-    Project(Option<crate::pages::projects::ProjectRecord>),
-    Cert(Option<crate::pages::certifications::CertRecord>),
     Post(Option<crate::pages::blog::PostRecord>),
     Profile(Option<crate::resume_engine::ResumeProfile>),
+    BaseEntry(Option<crate::resume_engine::BaseResumeEntry>, Option<crate::resume_engine::ResumeCategory>),
     LandingPage(Option<crate::pages::dynamic_landing::LandingPageRecord>),
     MailingList(Option<crate::pages::admin::MailingListRecord>),
     NavItem(Option<crate::components::nav::NavItemRecord>),
@@ -39,16 +37,12 @@ pub fn AdminEditorModal() -> impl IntoView {
                         <div class="mb-12 border-b-2 border-outline-variant/30 pb-6 mt-4">
                             <h2 class="text-3xl font-extrabold text-primary uppercase tracking-widest">
                                 {move || match modal_state.get() {
-                                    ModalState::Job(None) => "NEW JOB",
-                                    ModalState::Job(Some(_)) => "EDIT JOB",
-                                    ModalState::Project(None) => "NEW PROJECT",
-                                    ModalState::Project(Some(_)) => "EDIT PROJECT",
-                                    ModalState::Cert(None) => "NEW CERTIFICATION",
-                                    ModalState::Cert(Some(_)) => "EDIT CERTIFICATION",
                                     ModalState::Post(None) => "NEW BLOG POST",
                                     ModalState::Post(Some(_)) => "EDIT BLOG POST",
                                     ModalState::Profile(None) => "NEW RESUME PROFILE",
                                     ModalState::Profile(Some(_)) => "EDIT RESUME PROFILE",
+                                    ModalState::BaseEntry(None, _) => "NEW RESUME ENTRY",
+                                    ModalState::BaseEntry(Some(_), _) => "EDIT RESUME ENTRY",
                                     ModalState::LandingPage(None) => "NEW LANDING PAGE",
                                     ModalState::LandingPage(Some(_)) => "EDIT LANDING PAGE",
                                     ModalState::MailingList(None) => "ADD MAILING LIST MEMBER",
@@ -67,11 +61,21 @@ pub fn AdminEditorModal() -> impl IntoView {
                         // Modal Form Content
                         <div class="space-y-8">
                             {move || match modal_state.get() {
-                                ModalState::Job(j) => view! { <JobForm initial_job=j /> }.into_view(),
-                                ModalState::Project(p) => view! { <ProjectForm initial_project=p /> }.into_view(),
-                                ModalState::Cert(c) => view! { <CertForm initial_cert=c /> }.into_view(),
-                                ModalState::Post(p) => view! { <PostForm initial_post=p /> }.into_view(),
-                                ModalState::Profile(p) => view! { <ResumeProfileForm initial_profile=p /> }.into_view(),
+                                ModalState::Post(post) => {
+                view! { <PostForm initial_post=post.clone() /> }.into_view()
+            },
+            ModalState::Profile(prof) => {
+                view! { <ResumeProfileForm initial_profile=prof.clone() /> }.into_view()
+            },
+            ModalState::BaseEntry(entry, default_cat) => {
+                let cat_clone = default_cat.clone();
+                view! {
+                    <BaseResumeEntryForm 
+                        initial_entry=entry.clone() 
+                        default_category=cat_clone
+                    />
+                }.into_view()
+            },
                                 ModalState::LandingPage(p) => view! { <LandingPageForm initial_page=p /> }.into_view(),
                                 ModalState::MailingList(r) => view! { <MailingListForm initial_record=r /> }.into_view(),
                                 ModalState::NavItem(n) => view! { <NavItemForm initial_item=n /> }.into_view(),
@@ -88,241 +92,7 @@ pub fn AdminEditorModal() -> impl IntoView {
         </Show>
     }
 }
-
 // -----------------------------------------
-// Job Form
-// -----------------------------------------
-#[component]
-pub fn JobForm(initial_job: Option<crate::pages::resume::JobRecord>) -> impl IntoView {
-    let set_modal_state = expect_context::<WriteSignal<ModalState>>();
-    let set_refresh = expect_context::<WriteSignal<i32>>();
-    let refresh = expect_context::<ReadSignal<i32>>();
-
-    let is_edit = initial_job.is_some();
-    let id_val = initial_job.as_ref().map(|j| j.id).unwrap_or(0);
-
-    let (date_range, set_date_range) = create_signal(initial_job.as_ref().map(|j| j.date_range.clone()).unwrap_or_default());
-    let (role, set_role) = create_signal(initial_job.as_ref().map(|j| j.role.clone()).unwrap_or_default());
-    let (company, set_company) = create_signal(initial_job.as_ref().map(|j| j.company.clone()).unwrap_or_default());
-    let (bullets, set_bullets) = create_signal(initial_job.as_ref().map(|j| j.bullets.join("\n")).unwrap_or_default());
-    let (employment_type, set_employment_type) = create_signal(initial_job.as_ref().map(|j| j.employment_type.clone()).unwrap_or_default());
-    let (parent_company, set_parent_company) = create_signal(initial_job.as_ref().and_then(|j| j.parent_company.clone()).unwrap_or_default());
-    let (tags, set_tags) = create_signal(initial_job.as_ref().map(|j| j.tags.join(", ")).unwrap_or_default());
-    let (hide_date, set_hide_date) = create_signal(initial_job.as_ref().map(|j| j.hide_date).unwrap_or(false));
-
-    let save = move |_| {
-        let dr = date_range.get_untracked();
-        let r = role.get_untracked();
-        let c = company.get_untracked();
-        let b: Vec<String> = bullets.get_untracked().split('\n').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
-        let et = employment_type.get_untracked();
-        let pc = parent_company.get_untracked();
-        let pc_opt = if et == crate::pages::resume::JobType::CorpToCorp && !pc.is_empty() { Some(pc) } else { None };
-        let tg: Vec<String> = tags.get_untracked().split(',').map(|x| x.trim().to_string()).filter(|x| !x.is_empty()).collect();
-        let hd = hide_date.get_untracked();
-
-        spawn_local(async move {
-            if is_edit {
-                let _ = crate::pages::resume::update_job(id_val, dr, r, c, b, et.clone(), pc_opt.clone(), tg, hd).await;
-            } else {
-                let _ = crate::pages::resume::add_job(dr, r, c, b, et.clone(), pc_opt.clone(), tg, hd).await;
-            }
-            set_refresh.set(refresh.get_untracked() + 1);
-            set_modal_state.set(ModalState::None);
-        });
-    };
-
-    view! {
-        <div class="space-y-6">
-            <div class="grid grid-cols-2 gap-4">
-                <div class="flex flex-col gap-2">
-                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Date Range"</label>
-                    <input type="text" prop:value=date_range on:input=move |ev| set_date_range.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" />
-                </div>
-                <div class="flex flex-col gap-2">
-                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Company"</label>
-                    <input type="text" prop:value=company on:input=move |ev| set_company.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" />
-                </div>
-            </div>
-            <div class="flex flex-col gap-2">
-                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Role"</label>
-                <input type="text" prop:value=role on:input=move |ev| set_role.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" />
-            </div>
-            <div class="flex flex-col gap-2">
-                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Tags (CSV)"</label>
-                <input type="text" prop:value=tags on:input=move |ev| set_tags.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" />
-            </div>
-            <div class="flex flex-col gap-2">
-                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Bullets (1 per line)"</label>
-                <textarea prop:value=bullets on:input=move |ev| set_bullets.set(event_target_value(&ev)) rows="5" class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains resize-y"></textarea>
-            </div>
-            <div class="flex flex-col gap-2">
-                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Employment Type"</label>
-                <select on:change=move |ev| set_employment_type.set(event_target_value(&ev).parse().unwrap_or_default()) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains outline-none">
-                    <option value="DirectHire" selected=move || employment_type.get() == crate::pages::resume::JobType::DirectHire>"Direct Hire (W2)"</option>
-                    <option value="Contract" selected=move || employment_type.get() == crate::pages::resume::JobType::Contract>"Contract / 1099"</option>
-                    <option value="CorpToCorp" selected=move || employment_type.get() == crate::pages::resume::JobType::CorpToCorp>"Corp-to-Corp (C2C)"</option>
-                </select>
-            </div>
-            
-            {move || {
-                if employment_type.get() == crate::pages::resume::JobType::CorpToCorp {
-                    view! {
-                        <div class="flex flex-col gap-2">
-                            <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider text-secondary">"Parent Company (C2C Entity)"</label>
-                            <input type="text" prop:value=parent_company on:input=move |ev| set_parent_company.set(event_target_value(&ev)) class="bg-surface p-3 border border-secondary/50 focus:border-secondary focus:ring-0 text-sm jetbrains" placeholder="e.g. Oplyst International, LLC" />
-                        </div>
-                    }.into_view()
-                } else {
-                    view! { <span class="hidden"></span> }.into_view()
-                }
-            }}            <div class="flex items-center gap-3">
-                <input type="checkbox" prop:checked=hide_date on:change=move |ev| set_hide_date.set(event_target_checked(&ev)) class="w-4 h-4 text-primary bg-surface border-outline-variant focus:ring-primary focus:ring-2" />
-                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Hide Date Option (Resume Builder)"</label>
-            </div>
-            <button on:click=save class="mt-8 bg-primary text-on-primary font-bold jetbrains uppercase w-full py-4 tracking-widest hover:bg-primary-container transition-colors">
-                "COMMIT TO DATABASE"
-            </button>
-        </div>
-    }
-}
-
-// -----------------------------------------
-// Project Form
-// -----------------------------------------
-#[component]
-pub fn ProjectForm(initial_project: Option<crate::pages::projects::ProjectRecord>) -> impl IntoView {
-    let set_modal_state = expect_context::<WriteSignal<ModalState>>();
-    let set_refresh = expect_context::<WriteSignal<i32>>();
-    let refresh = expect_context::<ReadSignal<i32>>();
-
-    let is_edit = initial_project.is_some();
-    let id_val = initial_project.as_ref().map(|p| p.id).unwrap_or(0);
-
-    let (title, set_title) = create_signal(initial_project.as_ref().map(|p| p.title.clone()).unwrap_or_default());
-    let (slug, set_slug) = create_signal(initial_project.as_ref().map(|p| p.slug.clone()).unwrap_or_default());
-    let (impact, set_impact) = create_signal(initial_project.as_ref().map(|p| p.impact.clone()).unwrap_or_default());
-    let (tags, set_tags) = create_signal(initial_project.as_ref().map(|p| p.tags.join(", ")).unwrap_or_default());
-    let (bullets, set_bullets) = create_signal(initial_project.as_ref().map(|p| p.bullets.join("\n")).unwrap_or_default());
-    let (status, set_status) = create_signal(initial_project.as_ref().map(|p| p.status.clone()).unwrap_or_else(|| "IN PROGRESS".to_string()));
-    let (date_range, set_date_range) = create_signal(initial_project.as_ref().map(|p| p.date_range.clone()).unwrap_or_default());
-
-    let save = move |_| {
-        let t = title.get_untracked();
-        let s = slug.get_untracked();
-        let i = impact.get_untracked();
-        let st = status.get_untracked();
-        let tg: Vec<String> = tags.get_untracked().split(',').map(|x| x.trim().to_string()).filter(|x| !x.is_empty()).collect();
-        let b: Vec<String> = bullets.get_untracked().split('\n').map(|x| x.trim().to_string()).filter(|x| !x.is_empty()).collect();
-        let dr = date_range.get_untracked();
-
-        spawn_local(async move {
-            if is_edit {
-                let _ = crate::pages::projects::update_project(id_val, t, s, i, tg, b, st, dr).await;
-            } else {
-                let _ = crate::pages::projects::add_project(t, s, i, tg, b, st, dr).await;
-            }
-            set_refresh.set(refresh.get_untracked() + 1);
-            set_modal_state.set(ModalState::None);
-        });
-    };
-
-    view! {
-        <div class="space-y-6">
-            <div class="grid grid-cols-2 gap-4">
-                <div class="flex flex-col gap-2">
-                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Title"</label>
-                    <input type="text" prop:value=title on:input=move |ev| set_title.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" />
-                </div>
-                <div class="flex flex-col gap-2">
-                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Repo Slug"</label>
-                    <input type="text" prop:value=slug on:input=move |ev| set_slug.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" />
-                </div>
-            </div>
-            <div class="flex flex-col gap-2">
-                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Impact"</label>
-                <input type="text" prop:value=impact on:input=move |ev| set_impact.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" />
-            </div>
-            <div class="flex flex-col gap-2">
-                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Date Range"</label>
-                <input type="text" prop:value=date_range on:input=move |ev| set_date_range.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains placeholder:text-outline-variant" placeholder="e.g. Q4 2026" />
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div class="flex flex-col gap-2">
-                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Tags (CSV)"</label>
-                    <input type="text" prop:value=tags on:input=move |ev| set_tags.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" />
-                </div>
-                <div class="flex flex-col gap-2">
-                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Project Status"</label>
-                    <select on:change=move |ev| set_status.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains text-on-surface">
-                        <option value="IN PROGRESS" selected=status.get_untracked() == "IN PROGRESS">"IN PROGRESS"</option>
-                        <option value="COMPLETED" selected=status.get_untracked() == "COMPLETED">"COMPLETED"</option>
-                    </select>
-                </div>
-            </div>
-            <div class="flex flex-col gap-2">
-                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Bullets (1 per line)"</label>
-                <textarea prop:value=bullets on:input=move |ev| set_bullets.set(event_target_value(&ev)) rows="5" class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains resize-y"></textarea>
-            </div>
-            <button on:click=save class="mt-8 bg-primary text-on-primary font-bold jetbrains uppercase w-full py-4 tracking-widest hover:bg-primary-container transition-colors">
-                "COMMIT TO DATABASE"
-            </button>
-        </div>
-    }
-}
-
-// -----------------------------------------
-// Cert Form
-// -----------------------------------------
-#[component]
-pub fn CertForm(initial_cert: Option<crate::pages::certifications::CertRecord>) -> impl IntoView {
-    let set_modal_state = expect_context::<WriteSignal<ModalState>>();
-    let set_refresh = expect_context::<WriteSignal<i32>>();
-    let refresh = expect_context::<ReadSignal<i32>>();
-
-    let is_edit = initial_cert.is_some();
-    let id_val = initial_cert.as_ref().map(|c| c.id).unwrap_or(0);
-
-    let (title, set_title) = create_signal(initial_cert.as_ref().map(|c| c.title.clone()).unwrap_or_default());
-    let (date_range, set_date_range) = create_signal(initial_cert.as_ref().map(|c| c.date_range.clone()).unwrap_or_default());
-    let (is_training, set_is_training) = create_signal(initial_cert.as_ref().map(|c| c.is_training).unwrap_or(false));
-
-    let save = move |_| {
-        let t = title.get_untracked();
-        let dr = date_range.get_untracked();
-        let it = is_training.get_untracked();
-
-        spawn_local(async move {
-            if is_edit {
-                let _ = crate::pages::certifications::update_certification(id_val, dr, t, it).await;
-            } else {
-                let _ = crate::pages::certifications::add_certification(dr, t, it).await;
-            }
-            set_refresh.set(refresh.get_untracked() + 1);
-            set_modal_state.set(ModalState::None);
-        });
-    };
-
-    view! {
-        <div class="space-y-6">
-            <div class="flex flex-col gap-2">
-                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Certification Title"</label>
-                <input type="text" prop:value=title on:input=move |ev| set_title.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" />
-            </div>
-            <div class="flex flex-col gap-2">
-                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Date Earned"</label>
-                <input type="text" prop:value=date_range on:input=move |ev| set_date_range.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains placeholder:text-outline-variant" placeholder="e.g. 2026.03.14" />
-            </div>
-            <div class="flex items-center gap-3 mt-4">
-                <input type="checkbox" prop:checked=is_training on:change=move |ev| set_is_training.set(event_target_checked(&ev)) class="w-4 h-4 text-primary bg-surface border-outline-variant focus:ring-primary focus:ring-2" />
-                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Is Training (Vs Accredited Certification)"</label>
-            </div>
-            <button on:click=save class="mt-8 bg-primary text-on-primary font-bold jetbrains uppercase w-full py-4 tracking-widest hover:bg-primary-container transition-colors">
-                "COMMIT TO DATABASE"
-            </button>
-        </div>
-    }
-}
 
 // -----------------------------------------
 // Post Form (Markdown)
@@ -749,6 +519,7 @@ pub fn ResumeProfileForm(initial_profile: Option<crate::resume_engine::ResumePro
     let id_val = initial_profile.as_ref().map(|p| p.id).unwrap_or(0);
 
     let (name, set_name) = create_signal(initial_profile.as_ref().map(|p| p.name.clone()).unwrap_or_default());
+    let (full_name, set_full_name) = create_signal(initial_profile.as_ref().map(|p| p.full_name.clone()).unwrap_or_default());
     let (objective, set_objective) = create_signal(initial_profile.as_ref().and_then(|p| p.objective.clone()).unwrap_or_default());
     let (is_public, set_is_public) = create_signal(initial_profile.as_ref().map(|p| p.is_public).unwrap_or(false));
     
@@ -758,16 +529,143 @@ pub fn ResumeProfileForm(initial_profile: Option<crate::resume_engine::ResumePro
     let (contact_location, set_contact_location) = create_signal(initial_profile.as_ref().and_then(|p| p.contact_location.clone()).unwrap_or_default());
     let (contact_link, set_contact_link) = create_signal(initial_profile.as_ref().and_then(|p| p.contact_link.clone()).unwrap_or_default());
 
-    let (cat_vis_str, set_cat_vis_str) = create_signal(
+    let get_vis = |key: &str| -> bool {
         initial_profile.as_ref()
-            .map(|p| p.category_visibility.to_string())
-            .unwrap_or_else(|| "{\n  \"work\": true,\n  \"education\": true\n}".to_string())
-    );
+            .and_then(|p| p.category_visibility.get(key))
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true)
+    };
 
-    let placeholder_text = "{\n  \"work\": true,\n  \"education\": false\n}";
+    let (work_vis, set_work_vis) = create_signal(get_vis("work"));
+    let (education_vis, set_education_vis) = create_signal(get_vis("education"));
+    let (certification_vis, set_certification_vis) = create_signal(get_vis("certification"));
+    let (skill_vis, set_skill_vis) = create_signal(get_vis("skill"));
+    let (project_vis, set_project_vis) = create_signal(get_vis("project"));
+    let (language_vis, set_language_vis) = create_signal(get_vis("language"));
+    let (volunteer_vis, set_volunteer_vis) = create_signal(get_vis("volunteer"));
+    let (extracurricular_vis, set_extracurricular_vis) = create_signal(get_vis("extracurricular"));
+    let (hobby_vis, set_hobby_vis) = create_signal(get_vis("hobby"));
+
+    let default_order = vec![
+        "work".to_string(), "education".to_string(), "certification".to_string(), 
+        "project".to_string(), "skill".to_string(), "volunteer".to_string(), 
+        "extracurricular".to_string(), "language".to_string(), "hobby".to_string()
+    ];
+    let initial_order = initial_profile.as_ref()
+        .and_then(|p| p.category_order.as_array())
+        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect::<Vec<_>>())
+        .unwrap_or(default_order);
+        
+    let (category_order, set_category_order) = create_signal(initial_order);
+
+    let move_up = move |idx: usize| {
+        if idx > 0 {
+            set_category_order.update(|order| {
+                order.swap(idx, idx - 1);
+            });
+        }
+    };
+    
+    let move_down = move |idx: usize| {
+        set_category_order.update(|order| {
+            if idx < order.len() - 1 {
+                order.swap(idx, idx + 1);
+            }
+        });
+    };
+
+    let entries_res = create_resource(move || (), |_| crate::resume_engine::get_all_base_entries());
+    let mapped_res = create_resource(move || (), move |_| async move {
+        if id_val > 0 {
+            crate::resume_engine::get_profile_entry_mappings(id_val).await
+        } else {
+            Ok(vec![])
+        }
+    });
+
+    let (active_entries, set_active_entries) = create_signal(std::collections::HashMap::<i32, Option<serde_json::Value>>::new());
+    let (expanded_entries, set_expanded_entries) = create_signal(std::collections::HashSet::<i32>::new());
+
+    create_effect(move |_| {
+        if let Some(Ok(mappings)) = mapped_res.get() {
+            let mut map = std::collections::HashMap::new();
+            for m in mappings {
+                map.insert(m.entry_id, m.overrides);
+            }
+            set_active_entries.set(map);
+        }
+    });
+
+    let toggle_entry = move |eid: i32, checked: bool| {
+        set_active_entries.update(|state| {
+            if checked && !state.contains_key(&eid) {
+                state.insert(eid, None);
+            } else if !checked {
+                state.remove(&eid);
+                set_expanded_entries.update(|e| { e.remove(&eid); });
+            }
+        });
+    };
+
+    let toggle_expand = move |eid: i32| {
+        set_expanded_entries.update(|e| {
+            if e.contains(&eid) { e.remove(&eid); } else { e.insert(eid); }
+        });
+    };
+
+    let update_override = move |eid: i32, key: &str, val: String| {
+        set_active_entries.update(|state| {
+            if let Some(opt_val) = state.get_mut(&eid) {
+                let mut obj = opt_val.take().unwrap_or_else(|| serde_json::json!({}));
+                if val.is_empty() {
+                    if let Some(map) = obj.as_object_mut() {
+                        map.remove(key);
+                    }
+                } else if key == "bullets" {
+                    let arr: Vec<String> = val.split('\n').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+                    obj[key] = serde_json::to_value(arr).unwrap();
+                } else {
+                    obj[key] = serde_json::Value::String(val);
+                }
+                *opt_val = Some(obj);
+            }
+        });
+    };
+    
+    let get_override = move |eid: i32, key: &str| -> String {
+        active_entries.with(|state| {
+            state.get(&eid)
+                .and_then(|opt| opt.as_ref())
+                .and_then(|v| v.get(key))
+                .and_then(|v| {
+                    if key == "bullets" {
+                        v.as_array().map(|arr| arr.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect::<Vec<_>>().join("\n"))
+                    } else {
+                        v.as_str().map(|s| s.to_string())
+                    }
+                })
+                .unwrap_or_default()
+        })
+    };
+
+    let get_reactive_vis = move |key: &str| -> bool {
+        match key {
+            "work" => work_vis.get(),
+            "education" => education_vis.get(),
+            "certification" => certification_vis.get(),
+            "skill" => skill_vis.get(),
+            "project" => project_vis.get(),
+            "language" => language_vis.get(),
+            "volunteer" => volunteer_vis.get(),
+            "extracurricular" => extracurricular_vis.get(),
+            "hobby" => hobby_vis.get(),
+            _ => true
+        }
+    };
 
     let save = move |_| {
         let n = name.get_untracked();
+        let fnm = full_name.get_untracked();
         let obj = if objective.get_untracked().is_empty() { None } else { Some(objective.get_untracked()) };
         let p_pub = is_public.get_untracked();
         
@@ -777,13 +675,33 @@ pub fn ResumeProfileForm(initial_profile: Option<crate::resume_engine::ResumePro
         let clo = if contact_location.get_untracked().is_empty() { None } else { Some(contact_location.get_untracked()) };
         let cli = if contact_link.get_untracked().is_empty() { None } else { Some(contact_link.get_untracked()) };
         
-        let cv: serde_json::Value = serde_json::from_str(&cat_vis_str.get_untracked()).unwrap_or_else(|_| serde_json::json!({}));
+        let cv = serde_json::json!({
+            "work": work_vis.get_untracked(),
+            "education": education_vis.get_untracked(),
+            "certification": certification_vis.get_untracked(),
+            "skill": skill_vis.get_untracked(),
+            "project": project_vis.get_untracked(),
+            "language": language_vis.get_untracked(),
+            "volunteer": volunteer_vis.get_untracked(),
+            "extracurricular": extracurricular_vis.get_untracked(),
+            "hobby": hobby_vis.get_untracked(),
+        });
+        
+        let ae_map = active_entries.get_untracked();
+        let mut ae = Vec::new();
+        for (eid, overrides) in ae_map {
+            ae.push(crate::resume_engine::ProfileEntryMapping {
+                entry_id: eid,
+                overrides,
+            });
+        }
+        let co = serde_json::to_value(category_order.get_untracked()).unwrap_or(serde_json::json!([]));
 
         spawn_local(async move {
             if is_edit {
-                let _ = crate::resume_engine::update_resume_profile(id_val, n, obj, p_pub, tr, ce, cp, clo, cli, cv).await;
+                let _ = crate::resume_engine::update_resume_profile(id_val, n, fnm, obj, p_pub, tr, ce, cp, clo, cli, cv, co, ae).await;
             } else {
-                let _ = crate::resume_engine::add_resume_profile(n, obj, p_pub, tr, ce, cp, clo, cli, cv).await;
+                let _ = crate::resume_engine::add_resume_profile(n, fnm, obj, p_pub, tr, ce, cp, clo, cli, cv, co, ae).await;
             }
             set_refresh.set(refresh.get_untracked() + 1);
             set_modal_state.set(ModalState::None);
@@ -805,10 +723,14 @@ pub fn ResumeProfileForm(initial_profile: Option<crate::resume_engine::ResumePro
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="flex flex-col gap-2">
                     <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Profile Name (Internal)"</label>
                     <input type="text" prop:value=name on:input=move |ev| set_name.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" placeholder="e.g. Architect Profile" />
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Document Header Name"</label>
+                    <input type="text" prop:value=full_name on:input=move |ev| set_full_name.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" placeholder="e.g. Ruud Salym Erie" />
                 </div>
                 <div class="flex flex-col gap-2">
                     <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Target Role Headline"</label>
@@ -843,9 +765,139 @@ pub fn ResumeProfileForm(initial_profile: Option<crate::resume_engine::ResumePro
                 </div>
             </div>
 
-            <div class="flex flex-col gap-2 border-t border-outline-variant/30 pt-6">
-                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Category Visibility Configuration JSON (Enum Keys: work, education, skill, project, language, volunteer, extracurricular, hobby)"</label>
-                <textarea prop:value=cat_vis_str on:input=move |ev| set_cat_vis_str.set(event_target_value(&ev)) rows="3" class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains font-mono resize-y text-secondary text-xs" placeholder=placeholder_text></textarea>
+            <div class="flex flex-col gap-4 border-t border-outline-variant/30 pt-6">
+                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider font-bold">"Category Visibility Configuration"</label>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" prop:checked=work_vis on:change=move |ev| set_work_vis.set(event_target_checked(&ev)) class="w-4 h-4 text-primary bg-surface border-outline-variant focus:ring-primary focus:ring-2" />
+                        <span class="jetbrains text-xs text-on-surface uppercase tracking-wider">"Work"</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" prop:checked=education_vis on:change=move |ev| set_education_vis.set(event_target_checked(&ev)) class="w-4 h-4 text-primary bg-surface border-outline-variant focus:ring-primary focus:ring-2" />
+                        <span class="jetbrains text-xs text-on-surface uppercase tracking-wider">"Education"</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" prop:checked=certification_vis on:change=move |ev| set_certification_vis.set(event_target_checked(&ev)) class="w-4 h-4 text-primary bg-surface border-outline-variant focus:ring-primary focus:ring-2" />
+                        <span class="jetbrains text-xs text-on-surface uppercase tracking-wider">"Certification"</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" prop:checked=skill_vis on:change=move |ev| set_skill_vis.set(event_target_checked(&ev)) class="w-4 h-4 text-primary bg-surface border-outline-variant focus:ring-primary focus:ring-2" />
+                        <span class="jetbrains text-xs text-on-surface uppercase tracking-wider">"Skill"</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" prop:checked=project_vis on:change=move |ev| set_project_vis.set(event_target_checked(&ev)) class="w-4 h-4 text-primary bg-surface border-outline-variant focus:ring-primary focus:ring-2" />
+                        <span class="jetbrains text-xs text-on-surface uppercase tracking-wider">"Project"</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" prop:checked=language_vis on:change=move |ev| set_language_vis.set(event_target_checked(&ev)) class="w-4 h-4 text-primary bg-surface border-outline-variant focus:ring-primary focus:ring-2" />
+                        <span class="jetbrains text-xs text-on-surface uppercase tracking-wider">"Language"</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" prop:checked=volunteer_vis on:change=move |ev| set_volunteer_vis.set(event_target_checked(&ev)) class="w-4 h-4 text-primary bg-surface border-outline-variant focus:ring-primary focus:ring-2" />
+                        <span class="jetbrains text-xs text-on-surface uppercase tracking-wider">"Volunteer"</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" prop:checked=extracurricular_vis on:change=move |ev| set_extracurricular_vis.set(event_target_checked(&ev)) class="w-4 h-4 text-primary bg-surface border-outline-variant focus:ring-primary focus:ring-2" />
+                        <span class="jetbrains text-xs text-on-surface uppercase tracking-wider">"Extracurricular"</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" prop:checked=hobby_vis on:change=move |ev| set_hobby_vis.set(event_target_checked(&ev)) class="w-4 h-4 text-primary bg-surface border-outline-variant focus:ring-primary focus:ring-2" />
+                        <span class="jetbrains text-xs text-on-surface uppercase tracking-wider">"Hobby"</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-4 border-t border-outline-variant/30 pt-6">
+                <div class="flex justify-between items-center">
+                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider font-bold">"Document Section Ordering"</label>
+                    <span class="text-[0.55rem] text-secondary tracking-widest font-mono">"PDF RENDER PRIORITY"</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {move || category_order.get().into_iter().enumerate()
+                        .filter(|(_, cat_name)| get_reactive_vis(cat_name))
+                        .map(|(idx, cat_name)| {
+                        view! {
+                            <div class="flex items-center justify-between bg-surface p-2 border border-outline-variant/30 hover:bg-surface-container-high transition-colors">
+                                <span class="jetbrains text-xs font-bold text-on-surface uppercase tracking-wider px-2">{cat_name.clone()}</span>
+                                <div class="flex gap-1">
+                                    <button type="button" on:click=move |_| move_up(idx) class="p-1 hover:bg-surface-container-highest hover:text-primary transition-colors border border-outline-variant/30 bg-surface-container text-outline">
+                                        <span class="material-symbols-outlined text-[1rem]">"arrow_upward"</span>
+                                    </button>
+                                    <button type="button" on:click=move |_| move_down(idx) class="p-1 hover:bg-surface-container-highest hover:text-primary transition-colors border border-outline-variant/30 bg-surface-container text-outline">
+                                        <span class="material-symbols-outlined text-[1rem]">"arrow_downward"</span>
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    }).collect_view()}
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-4 border-t border-outline-variant/30 pt-6">
+                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider font-bold">"Assign Global Entries"</label>
+                <div class="text-xs text-outline mb-2">"Select which resume entries should be included in this profile."</div>
+                <Transition fallback=move || view! { <div class="text-xs text-outline">"Loading entries..."</div> }>
+                    <div class="grid grid-cols-1 gap-2">
+                        {move || match entries_res.get() {
+                            Some(Ok(entries)) => {
+                                entries.into_iter().map(|e| {
+                                    let eid = e.id;
+                                    let is_checked = move || active_entries.get().contains_key(&eid);
+                                    let c_str = e.category.to_string();
+                                    view! {
+                                        <div class="flex flex-col bg-surface border border-outline-variant/30 transition-colors">
+                                            <div class="flex items-center gap-3 p-3 hover:bg-surface-container-high">
+                                                <input 
+                                                    type="checkbox" 
+                                                    prop:checked=is_checked
+                                                    on:change=move |ev| toggle_entry(eid, event_target_checked(&ev))
+                                                    class="w-4 h-4 text-primary bg-surface border-outline-variant focus:ring-primary focus:ring-2" 
+                                                />
+                                                <div class="flex flex-col flex-1">
+                                                    <span class="jetbrains text-xs font-bold text-on-surface uppercase tracking-wider">"[" {c_str} "] " {e.title.clone()}</span>
+                                                    <span class="text-[0.65rem] text-outline truncate">{e.subtitle.clone().unwrap_or_default()}</span>
+                                                </div>
+                                                <Show when=move || active_entries.get().contains_key(&eid)>
+                                                    <button 
+                                                        type="button" 
+                                                        on:click=move |_| toggle_expand(eid) 
+                                                        class="text-[0.65rem] font-bold jetbrains uppercase px-2 py-1 bg-surface-container border border-outline-variant/50 hover:text-primary transition-colors cursor-pointer"
+                                                    >
+                                                        {move || if expanded_entries.get().contains(&eid) { "Hide Overrides" } else { "Edit Overrides" }}
+                                                    </button>
+                                                </Show>
+                                            </div>
+                                            <Show when=move || expanded_entries.get().contains(&eid)>
+                                                <div class="p-4 border-t border-outline-variant/30 bg-surface-container-lowest grid grid-cols-1 gap-4">
+                                                    <div class="text-[0.65rem] text-secondary tracking-widest uppercase mb-2">"Leave blank to preserve absolute origin value"</div>
+                                                    <div class="grid grid-cols-2 gap-4">
+                                                        <div class="flex flex-col gap-1 col-span-2 md:col-span-1">
+                                                            <label class="jetbrains text-[0.6rem] uppercase text-outline">"Title Override"</label>
+                                                            <input type="text" prop:value=move || get_override(eid, "title") on:input=move |ev| update_override(eid, "title", event_target_value(&ev)) placeholder=e.title.clone() class="bg-surface p-2 border border-outline-variant focus:border-primary focus:ring-0 text-xs jetbrains w-full" />
+                                                        </div>
+                                                        <div class="flex flex-col gap-1 col-span-2 md:col-span-1">
+                                                            <label class="jetbrains text-[0.6rem] uppercase text-outline">"Subtitle Override"</label>
+                                                            <input type="text" prop:value=move || get_override(eid, "subtitle") on:input=move |ev| update_override(eid, "subtitle", event_target_value(&ev)) placeholder=e.subtitle.clone().unwrap_or_default() class="bg-surface p-2 border border-outline-variant focus:border-primary focus:ring-0 text-xs jetbrains w-full" />
+                                                        </div>
+                                                        <div class="flex flex-col gap-1 col-span-2">
+                                                            <label class="jetbrains text-[0.6rem] uppercase text-outline">"Date Range Override"</label>
+                                                            <input type="text" prop:value=move || get_override(eid, "date_range") on:input=move |ev| update_override(eid, "date_range", event_target_value(&ev)) placeholder=e.date_range.clone().unwrap_or_default() class="bg-surface p-2 border border-outline-variant focus:border-primary focus:ring-0 text-xs jetbrains w-full" />
+                                                        </div>
+                                                        <div class="flex flex-col gap-1 col-span-2">
+                                                            <label class="jetbrains text-[0.6rem] uppercase text-outline">"Bullets Override (Newline separated)"</label>
+                                                            <textarea prop:value=move || get_override(eid, "bullets") on:input=move |ev| update_override(eid, "bullets", event_target_value(&ev)) rows="3" placeholder=e.bullets.clone().join("\n") class="bg-surface p-2 border border-outline-variant focus:border-primary focus:ring-0 text-xs jetbrains w-full resize-y"></textarea>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </Show>
+                                        </div>
+                                    }
+                                }).collect_view()
+                            },
+                            _ => view! { <div class="text-xs text-error">"Failed to load entries"</div> }.into_view()
+                        }}
+                    </div>
+                </Transition>
             </div>
 
             <button on:click=save class="mt-8 bg-primary text-on-primary font-bold jetbrains uppercase w-full py-4 tracking-widest hover:bg-primary-container transition-colors">
@@ -1253,6 +1305,179 @@ pub fn FooterItemForm(initial_item: Option<crate::components::footer::FooterItem
                     {move || if is_edit { "COMMIT CHANGES" } else { "CREATE NODE" }}
                 </button>
             </div>
+        </div>
+    }
+}
+
+// -----------------------------------------
+// Base Resume Entry Form
+// -----------------------------------------
+#[component]
+pub fn BaseResumeEntryForm(initial_entry: Option<crate::resume_engine::BaseResumeEntry>, default_category: Option<crate::resume_engine::ResumeCategory>) -> impl IntoView {
+    use crate::resume_engine::{add_base_entry, update_base_entry, ResumeCategory};
+    let set_modal_state = expect_context::<WriteSignal<ModalState>>();
+    let set_refresh = expect_context::<WriteSignal<i32>>();
+    let refresh = expect_context::<ReadSignal<i32>>();
+
+    let is_edit = initial_entry.is_some();
+    let id_val = initial_entry.as_ref().map(|e| e.id).unwrap_or(0);
+
+    let (category_str, set_category_str) = create_signal(
+        initial_entry.as_ref().map(|e| e.category.to_string()).unwrap_or_else(|| {
+            default_category.map(|c| c.to_string()).unwrap_or_else(|| "Work".to_string())
+        })
+    );
+    let (title, set_title) = create_signal(initial_entry.as_ref().map(|e| e.title.clone()).unwrap_or_default());
+    let (subtitle, set_subtitle) = create_signal(initial_entry.as_ref().and_then(|e| e.subtitle.clone()).unwrap_or_default());
+    let (date_range, set_date_range) = create_signal(initial_entry.as_ref().and_then(|e| e.date_range.clone()).unwrap_or_default());
+    let (bullets_str, set_bullets_str) = create_signal(
+        initial_entry.as_ref().map(|e| e.bullets.join("\n")).unwrap_or_default()
+    );
+    let (metadata_str, set_metadata_str) = create_signal(
+        initial_entry.as_ref().and_then(|e| e.metadata.as_ref().map(|m| serde_json::to_string_pretty(m).unwrap_or_default())).unwrap_or_default()
+    );
+
+    let profiles_res = create_resource(move || (), |_| crate::resume_engine::get_resume_profiles());
+    
+    // Fetch mapped profiles for this entry
+    let mapped_res = create_resource(move || (), move |_| async move { 
+        if id_val > 0 { 
+            crate::resume_engine::get_entry_profile_mappings(id_val).await 
+        } else { 
+            Ok(vec![]) 
+        } 
+    });
+
+    let (active_profiles, set_active_profiles) = create_signal(Vec::<i32>::new());
+
+    create_effect(move |_| {
+        if let Some(Ok(mappings)) = mapped_res.get() {
+            set_active_profiles.set(mappings);
+        }
+    });
+
+    let toggle_profile = move |pid: i32, checked: bool| {
+        set_active_profiles.update(|state| {
+            if checked && !state.contains(&pid) {
+                state.push(pid);
+            } else if !checked {
+                state.retain(|&x| x != pid);
+            }
+        });
+    };
+
+    let save = move |_| {
+        let cat_val = match category_str.get_untracked().as_str() {
+            "Work" => ResumeCategory::Work,
+            "Education" => ResumeCategory::Education,
+            "Skill" => ResumeCategory::Skill,
+            "Project" => ResumeCategory::Project,
+            "Language" => ResumeCategory::Language,
+            "Volunteer" => ResumeCategory::Volunteer,
+            "Extracurricular" => ResumeCategory::Extracurricular,
+            "Hobby" => ResumeCategory::Hobby,
+            _ => ResumeCategory::Work,
+        };
+        let t = title.get_untracked();
+        let sub = if subtitle.get_untracked().is_empty() { None } else { Some(subtitle.get_untracked()) };
+        let dr = if date_range.get_untracked().is_empty() { None } else { Some(date_range.get_untracked()) };
+        let b: Vec<String> = bullets_str.get_untracked().lines().filter(|l| !l.trim().is_empty()).map(|l| l.to_string()).collect();
+        let profs = active_profiles.get_untracked();
+        
+        let md_str = metadata_str.get_untracked();
+        let md = if md_str.trim().is_empty() { None } else {
+            serde_json::from_str(&md_str).ok()
+        };
+        
+        spawn_local(async move {
+            if is_edit {
+                let _ = update_base_entry(id_val, cat_val, t, sub, dr, b, md, profs).await;
+            } else {
+                let _ = add_base_entry(cat_val, t, sub, dr, b, md, profs).await;
+            }
+            set_refresh.set(refresh.get_untracked() + 1);
+            set_modal_state.set(ModalState::None);
+        });
+    };
+
+    view! {
+        <div class="space-y-6">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider font-bold">"Category"</label>
+                    <select prop:value=category_str on:change=move |ev| set_category_str.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains appearance-none">
+                        <option value="Work">"Work"</option>
+                        <option value="Education">"Education"</option>
+                        <option value="Skill">"Skill"</option>
+                        <option value="Project">"Project"</option>
+                        <option value="Language">"Language"</option>
+                        <option value="Volunteer">"Volunteer"</option>
+                        <option value="Extracurricular">"Extracurricular"</option>
+                        <option value="Hobby">"Hobby"</option>
+                    </select>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider font-bold">"Title"</label>
+                    <input type="text" prop:value=title on:input=move |ev| set_title.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" placeholder="e.g. Software Engineer" />
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider font-bold">"Subtitle / Company"</label>
+                    <input type="text" prop:value=subtitle on:input=move |ev| set_subtitle.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" placeholder="e.g. Google" />
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider font-bold">"Date Range"</label>
+                    <input type="text" prop:value=date_range on:input=move |ev| set_date_range.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" placeholder="e.g. Jan 2020 - Present" />
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider font-bold">"Bullets (1 per line)"</label>
+                <textarea prop:value=bullets_str on:input=move |ev| set_bullets_str.set(event_target_value(&ev)) rows="5" class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains resize-y leading-relaxed font-mono" placeholder="Maintained distributed systems...\nIncreased performance by 30%..."></textarea>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider font-bold">"Metadata (Valid JSON. Optional. Used for generic Projects/Certs URLs etc)"</label>
+                <textarea prop:value=metadata_str on:input=move |ev| set_metadata_str.set(event_target_value(&ev)) rows="3" class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains resize-y leading-relaxed font-mono" placeholder={r#"{"slug": "test-project", "image_url": "..."}"#}></textarea>
+            </div>
+
+            <div class="flex flex-col gap-4 border-t border-outline-variant/30 pt-6">
+                <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider font-bold">"Assign to Profiles"</label>
+                <div class="text-xs text-outline mb-2">"Select which profiles should include this entry by default."</div>
+                <Transition fallback=move || view! { <div class="text-xs text-outline">"Loading profiles..."</div> }>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {move || match profiles_res.get() {
+                            Some(Ok(profiles)) => {
+                                profiles.into_iter().map(|p| {
+                                    let pid = p.id;
+                                    let is_checked = move || active_profiles.get().contains(&pid);
+                                    view! {
+                                        <div class="flex items-center gap-3 bg-surface p-3 border border-outline-variant/30 hover:bg-surface-container-high transition-colors">
+                                            <input 
+                                                type="checkbox" 
+                                                prop:checked=is_checked
+                                                on:change=move |ev| toggle_profile(pid, event_target_checked(&ev))
+                                                class="w-4 h-4 text-primary bg-surface border-outline-variant focus:ring-primary focus:ring-2" 
+                                            />
+                                            <div class="flex flex-col">
+                                                <span class="jetbrains text-xs font-bold text-on-surface uppercase tracking-wider">{p.name}</span>
+                                                <span class="text-[0.65rem] text-outline truncate">{p.target_role.unwrap_or_default()}</span>
+                                            </div>
+                                        </div>
+                                    }
+                                }).collect_view()
+                            },
+                            _ => view! { <div class="text-xs text-error">"Failed to load profiles"</div> }.into_view()
+                        }}
+                    </div>
+                </Transition>
+            </div>
+
+            <button on:click=save class="mt-8 bg-primary text-on-primary font-bold jetbrains uppercase w-full py-4 tracking-widest hover:bg-primary-container transition-colors">
+                {if is_edit { "UPDATE ENTRY" } else { "CREATE ENTRY" }}
+            </button>
         </div>
     }
 }

@@ -20,55 +20,43 @@ pub async fn get_projects() -> Result<Vec<ProjectRecord>, ServerFnError> {
     use sqlx::Row;
     
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    let rows = sqlx::query("SELECT id, title, slug, impact, tags, bullets, COALESCE(status, 'Completed') as status, COALESCE(date_range, '') as date_range FROM projects ORDER BY id ASC")
+    let rows = sqlx::query("SELECT id, title, date_range, bullets, metadata FROM resume_entries WHERE category = 'project' ORDER BY id DESC")
         .fetch_all(&state.pool)
         .await?;
         
-    let projs = rows.into_iter().map(|row| ProjectRecord {
-        id: row.get("id"),
-        title: row.get("title"),
-        slug: row.get("slug"),
-        impact: row.get("impact"),
-        tags: row.get::<Vec<String>, _>("tags"),
-        bullets: row.get::<Vec<String>, _>("bullets"),
-        status: row.get("status"),
-        date_range: row.get("date_range"),
+    let projs = rows.into_iter().map(|row| {
+        let meta: Option<serde_json::Value> = row.try_get("metadata").unwrap_or(None);
+        let slug = meta.as_ref().and_then(|m| m.get("slug")).and_then(|v| v.as_str()).unwrap_or("").to_string();
+        let impact = meta.as_ref().and_then(|m| m.get("impact")).and_then(|v| v.as_str()).unwrap_or("").to_string();
+        let status = meta.as_ref().and_then(|m| m.get("status")).and_then(|v| v.as_str()).unwrap_or("COMPLETED").to_string();
+        
+        let tags: Vec<String> = meta.as_ref()
+            .and_then(|m| m.get("tags"))
+            .and_then(|v| serde_json::from_value(v.clone()).ok())
+            .unwrap_or_else(|| {
+                // fallback if tags is a string
+                meta.as_ref().and_then(|m| m.get("tags")).and_then(|v| v.as_str())
+                    .map(|s| s.split(',').map(|x| x.trim().to_string()).filter(|x| !x.is_empty()).collect())
+                    .unwrap_or_default()
+            });
+            
+        let bullets_val: serde_json::Value = row.try_get("bullets").unwrap_or(serde_json::json!([]));
+        let bullets: Vec<String> = serde_json::from_value(bullets_val).unwrap_or_default();
+        let date_range_opt: Option<String> = row.try_get("date_range").unwrap_or(None);
+        
+        ProjectRecord {
+            id: row.get("id"),
+            title: row.get("title"),
+            slug,
+            impact,
+            tags,
+            bullets,
+            status,
+            date_range: date_range_opt.unwrap_or_default(),
+        }
     }).collect();
     
     Ok(projs)
-}
-
-#[server(AddProject, "/api")]
-pub async fn add_project(title: String, slug: String, impact: String, tags: Vec<String>, bullets: Vec<String>, status: String, date_range: String) -> Result<(), ServerFnError> {
-    use crate::auth::check_session;
-    use axum::Extension;
-    use leptos_axum::extract;
-    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
-    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    sqlx::query("INSERT INTO projects (title, slug, impact, tags, bullets, status, date_range) VALUES ($1, $2, $3, $4, $5, $6, $7)").bind(title).bind(slug).bind(impact).bind(tags).bind(bullets).bind(status).bind(date_range).execute(&state.pool).await?;
-    Ok(())
-}
-
-#[server(UpdateProject, "/api")]
-pub async fn update_project(id: i32, title: String, slug: String, impact: String, tags: Vec<String>, bullets: Vec<String>, status: String, date_range: String) -> Result<(), ServerFnError> {
-    use crate::auth::check_session;
-    use axum::Extension;
-    use leptos_axum::extract;
-    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
-    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    sqlx::query("UPDATE projects SET title = $1, slug = $2, impact = $3, tags = $4, bullets = $5, status = $6, date_range = $7 WHERE id = $8").bind(title).bind(slug).bind(impact).bind(tags).bind(bullets).bind(status).bind(date_range).bind(id).execute(&state.pool).await?;
-    Ok(())
-}
-
-#[server(DeleteProject, "/api")]
-pub async fn delete_project(id: i32) -> Result<(), ServerFnError> {
-    use crate::auth::check_session;
-    use axum::Extension;
-    use leptos_axum::extract;
-    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
-    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    sqlx::query("DELETE FROM projects WHERE id = $1").bind(id).execute(&state.pool).await?;
-    Ok(())
 }
 
 #[component]
