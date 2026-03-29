@@ -67,7 +67,7 @@ pub fn Services() -> impl IntoView {
                                         {items.into_iter().map(|item| view! {
                                             <div class="bg-surface-container-low p-8 border border-outline-variant/20 hover:border-primary/50 transition-colors group flex flex-col h-full">
                                                 <h3 class="font-bold text-2xl mb-4 text-on-surface group-hover:text-primary transition-colors">{&item.title}</h3>
-                                                <p class="text-outline-variant mb-8 flex-1 leading-relaxed">{&item.description}</p>
+                                                <p class="text-on-surface-variant lg:text-lg mb-8 flex-1 leading-relaxed">{&item.description}</p>
                                                 
                                                 <div class="space-y-4 mb-8">
                                                     <div class="font-label text-xs uppercase tracking-widest text-secondary font-bold">"Deliverables"</div>
@@ -122,7 +122,7 @@ pub fn Services() -> impl IntoView {
                                                 <div class="space-y-6">
                                                     <div>
                                                         <h4 class="font-bold text-on-surface mb-2">"The Challenge"</h4>
-                                                        <div class="text-outline-variant text-sm leading-relaxed prose prose-invert prose-p:text-sm max-w-none" inner_html=render_markdown(&item.problem)>
+                                                        <div class="text-on-surface-variant text-sm leading-relaxed prose prose-invert prose-p:text-sm max-w-none" inner_html=render_markdown(&item.problem)>
                                                             {
                                                                 #[cfg(target_arch = "wasm32")]
                                                                 let _ = js_sys::eval("if(window.renderMermaid) window.renderMermaid();");
@@ -131,7 +131,7 @@ pub fn Services() -> impl IntoView {
                                                     </div>
                                                     <div>
                                                         <h4 class="font-bold text-on-surface mb-2">"The Solution"</h4>
-                                                        <div class="text-outline-variant text-sm leading-relaxed prose prose-invert prose-p:text-sm max-w-none" inner_html=render_markdown(&item.solution)>
+                                                        <div class="text-on-surface-variant text-sm leading-relaxed prose prose-invert prose-p:text-sm max-w-none" inner_html=render_markdown(&item.solution)>
                                                             {
                                                                 #[cfg(target_arch = "wasm32")]
                                                                 let _ = js_sys::eval("if(window.renderMermaid) window.renderMermaid();");
@@ -198,7 +198,7 @@ pub fn HighlightsGallery() -> impl IntoView {
                                                 <div class="p-6 flex flex-col flex-1">
                                                     <h3 class="font-bold text-lg mb-2 text-on-surface group-hover:text-primary transition-colors">{&item.title}</h3>
                                                     {item.description.clone().map(|d| view! {
-                                                        <p class="text-outline-variant text-sm leading-relaxed mb-4 flex-1">{d}</p>
+                                                        <p class="text-on-surface-variant text-sm leading-relaxed mb-4 flex-1">{d}</p>
                                                     })}
                                                     {if has_link {
                                                         Some(view! {

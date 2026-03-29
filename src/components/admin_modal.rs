@@ -317,6 +317,16 @@ pub fn SettingsForm() -> impl IntoView {
     let (x_url, set_x_url) = create_signal(String::new());
     let (linkedin_url, set_linkedin_url) = create_signal(String::new());
     let (b2b_enabled, set_b2b_enabled) = create_signal(true);
+    let (meta_title, set_meta_title) = create_signal(String::new());
+    let (meta_description, set_meta_description) = create_signal(String::new());
+    let (og_image, set_og_image) = create_signal(String::new());
+
+    let smtp_res = create_resource(|| (), |_| crate::email::get_smtp_config());
+    let (smtp_host, set_smtp_host) = create_signal(String::new());
+    let (smtp_port, set_smtp_port) = create_signal(String::new());
+    let (smtp_username, set_smtp_username) = create_signal(String::new());
+    let (smtp_token, set_smtp_token) = create_signal(String::new());
+    let (smtp_from, set_smtp_from) = create_signal(String::new());
 
     create_effect(move |_| {
         if let Some(Ok(s)) = settings_res.get() {
@@ -344,6 +354,16 @@ pub fn SettingsForm() -> impl IntoView {
             set_x_url.set(s.x_url);
             set_linkedin_url.set(s.linkedin_url);
             set_b2b_enabled.set(s.b2b_enabled);
+            set_meta_title.set(s.meta_title);
+            set_meta_description.set(s.meta_description);
+            set_og_image.set(s.og_image);
+        }
+        if let Some(Ok(c)) = smtp_res.get() {
+            set_smtp_host.set(c.smtp_host);
+            set_smtp_port.set(c.smtp_port);
+            set_smtp_username.set(c.smtp_username);
+            set_smtp_token.set(c.smtp_token);
+            set_smtp_from.set(c.smtp_from);
         }
     });
 
@@ -372,10 +392,19 @@ pub fn SettingsForm() -> impl IntoView {
         let xu = x_url.get_untracked();
         let lu = linkedin_url.get_untracked();
         let b2b = b2b_enabled.get_untracked();
-
+        let mt = meta_title.get_untracked();
+        let md = meta_description.get_untracked();
+        let og = og_image.get_untracked();
+        
+        let shost = smtp_host.get_untracked();
+        let sport = smtp_port.get_untracked();
+        let suser = smtp_username.get_untracked();
+        let stoken = smtp_token.get_untracked();
+        let sfrom = smtp_from.get_untracked();
 
         spawn_local(async move {
-            let _ = crate::pages::landing::update_site_settings(cf, st, hq, hs, sttl, lt, ld, ll, lp, lb, lf, le, sc, wu, ae, loj, gai, bu, th, ph, gu, xu, lu, b2b).await;
+            let _ = crate::pages::landing::update_site_settings(cf, st, hq, hs, sttl, lt, ld, ll, lp, lb, lf, le, sc, wu, ae, loj, gai, bu, th, ph, gu, xu, lu, b2b, mt, md, og).await;
+            let _ = crate::email::update_smtp_config(shost, sport, suser, stoken, sfrom).await;
             set_modal_state.set(ModalState::None);
         });
     };
@@ -404,6 +433,23 @@ pub fn SettingsForm() -> impl IntoView {
                     <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Hero Parameter // Quote"</label>
                     <textarea prop:value=hero_quote on:input=move |ev| set_hero_quote.set(event_target_value(&ev)) rows="3" class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains resize-y"></textarea>
                 </div>
+
+                <div class="bg-primary/5 border-l-4 border-primary p-4 my-6">
+                    <p class="jetbrains text-[0.65rem] text-on-surface uppercase tracking-widest font-bold">"SEO & METADATA CONFIGURATION"</p>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Metadata // Global Title"</label>
+                    <input type="text" prop:value=meta_title on:input=move |ev| set_meta_title.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" />
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Metadata // Global Description"</label>
+                    <textarea prop:value=meta_description on:input=move |ev| set_meta_description.set(event_target_value(&ev)) rows="2" class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains resize-y"></textarea>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Metadata // Open Graph Image URL"</label>
+                    <input type="text" prop:value=og_image on:input=move |ev| set_og_image.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" placeholder="https://example.com/banner.jpg" />
+                </div>
+
                 <div class="flex flex-col gap-2">
                     <label class="jetbrains text-[0.65rem] uppercase text-secondary tracking-wider mt-4">"Lead Capture Parameter // Site Title"</label>
                     <input type="text" prop:value=site_title on:input=move |ev| set_site_title.set(event_target_value(&ev)) class="bg-surface p-3 border border-secondary/50 focus:border-secondary focus:ring-0 text-sm jetbrains" />
@@ -530,6 +576,34 @@ pub fn SettingsForm() -> impl IntoView {
                         </div>
                         <span class="jetbrains text-[0.7rem] uppercase tracking-widest font-bold text-on-surface">"Enable Master B2B Platform Flag"</span>
                     </label>
+                </div>
+                <div class="bg-primary/5 border-l-4 border-primary p-4 my-6">
+                    <p class="jetbrains text-[0.65rem] text-on-surface uppercase tracking-widest font-bold">"EMAIL PROTOCOL SETTINGS (SMTP/SECURE)"</p>
+                    <p class="jetbrains text-[0.6rem] mt-1 text-on-surface-variant leading-relaxed">"These credentials are sent directly to the server side system_secrets table. They never broadcast to public site hydration requests."</p>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="flex flex-col gap-2">
+                        <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"SMTP Protocol // Host"</label>
+                        <input type="text" prop:value=smtp_host on:input=move |ev| set_smtp_host.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" placeholder="smtp.protonmail.ch" />
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"SMTP Protocol // Port"</label>
+                        <input type="text" prop:value=smtp_port on:input=move |ev| set_smtp_port.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" placeholder="587" />
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="flex flex-col gap-2">
+                        <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"SMTP Credentials // Username"</label>
+                        <input type="text" prop:value=smtp_username on:input=move |ev| set_smtp_username.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" placeholder="username@proton.me" />
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"SMTP Credentials // Secret Token"</label>
+                        <input type="password" prop:value=smtp_token on:input=move |ev| set_smtp_token.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" placeholder="Leave blank to keep current" />
+                    </div>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"System Default // From Address"</label>
+                    <input type="text" prop:value=smtp_from on:input=move |ev| set_smtp_from.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" placeholder="admin@domain.com" />
                 </div>
 
                 <button on:click=save class="mt-8 bg-primary text-on-primary font-bold jetbrains uppercase w-full py-4 tracking-widest hover:bg-primary-container transition-colors">

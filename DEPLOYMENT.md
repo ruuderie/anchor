@@ -84,7 +84,11 @@ stringData:
   RP_ID: "your-production-domain.com"
   LEPTOS_SITE_ADDR: "0.0.0.0:3000"
   LEPTOS_ENV: "PROD"
+  SETUP_TOKEN: "your_secure_randomly_generated_token"
 ```
+
+> [!IMPORTANT]
+> The `SETUP_TOKEN` is critical. It acts as the initial master password that allows you to register the first admin user via Passkeys. Without it, the registration process will be locked or insecure. Generate a long, random string. After logging into the dashboard using this token, you can navigate to the Email settings to configure your outbound `SMTP` integrations.
 > [!WARNING]
 > WebAuthn requires the `RP_ORIGIN` to explicitly include the `https://` scheme and port if non-standard, and `RP_ID` must strictly be the domain suffix without the scheme or port. Mismatches here will result in `Device setup rejected` errors from the browser or `Validation failed` errors from the server.
 

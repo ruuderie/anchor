@@ -28,6 +28,9 @@ pub struct SiteSettings {
     pub x_url: String,
     pub linkedin_url: String,
     pub b2b_enabled: bool,
+    pub meta_title: String,
+    pub meta_description: String,
+    pub og_image: String,
 }
 
 impl Default for SiteSettings {
@@ -57,6 +60,9 @@ impl Default for SiteSettings {
             x_url: "".into(),
             linkedin_url: "".into(),
             b2b_enabled: true,
+            meta_title: "Ruud Salym Erie - Technical Architect".into(),
+            meta_description: "Technical Architect and Software Engineer specializing in Rust, Salesforce, and high-performance enterprise applications.".into(),
+            og_image: "".into(),
         }
     }
 }
@@ -99,6 +105,9 @@ pub async fn get_site_settings() -> Result<SiteSettings, ServerFnError> {
         if key == "x_url" { settings.x_url = value.clone(); }
         if key == "linkedin_url" { settings.linkedin_url = value.clone(); }
         if key == "b2b_enabled" { settings.b2b_enabled = value == "true"; }
+        if key == "meta_title" { settings.meta_title = value.clone(); }
+        if key == "meta_description" { settings.meta_description = value.clone(); }
+        if key == "og_image" { settings.og_image = value.clone(); }
     }
 
     Ok(settings)
@@ -106,7 +115,7 @@ pub async fn get_site_settings() -> Result<SiteSettings, ServerFnError> {
 
 #[server(UpdateSiteSettings, "/api")]
 pub async fn update_site_settings(
-    current_focus: String, status: String, hero_quote: String, hero_subtitle: String, site_title: String, lc_title: String, lc_desc: String, lc_label: String, lc_placeholder: String, lc_btn: String, lc_footer: String, lc_endpoint: String, status_color: String, webhook_url: String, admin_email: String, landing_options_json: String, google_analytics_id: String, booking_url: String, terms_html: String, privacy_html: String, github_url: String, x_url: String, linkedin_url: String, b2b_enabled: bool
+    current_focus: String, status: String, hero_quote: String, hero_subtitle: String, site_title: String, lc_title: String, lc_desc: String, lc_label: String, lc_placeholder: String, lc_btn: String, lc_footer: String, lc_endpoint: String, status_color: String, webhook_url: String, admin_email: String, landing_options_json: String, google_analytics_id: String, booking_url: String, terms_html: String, privacy_html: String, github_url: String, x_url: String, linkedin_url: String, b2b_enabled: bool, meta_title: String, meta_description: String, og_image: String
 ) -> Result<(), ServerFnError> {
     use crate::auth::check_session;
     use axum::Extension;
@@ -140,6 +149,10 @@ pub async fn update_site_settings(
     
     let b2b_str = if b2b_enabled { "true" } else { "false" };
     sqlx::query("INSERT INTO site_settings (key, value) VALUES ('b2b_enabled', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(b2b_str).execute(&state.pool).await?;
+
+    sqlx::query("INSERT INTO site_settings (key, value) VALUES ('meta_title', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(meta_title).execute(&state.pool).await?;
+    sqlx::query("INSERT INTO site_settings (key, value) VALUES ('meta_description', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(meta_description).execute(&state.pool).await?;
+    sqlx::query("INSERT INTO site_settings (key, value) VALUES ('og_image', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(og_image).execute(&state.pool).await?;
     
     Ok(())
 }
@@ -217,10 +230,10 @@ pub fn Landing() -> impl IntoView {
                     <div class="inline-block bg-surface-container-high px-3 py-1 jetbrains text-[0.625rem] font-medium tracking-widest text-on-surface-variant mb-8 uppercase">
                         "RUST SYSTEMS ENGINEER // BITCOIN ENTHUSIAST"
                     </div>
-                    <h1 class="text-6xl md:text-[6rem] leading-[0.9] font-extrabold tracking-[-0.04em] text-primary mb-12 uppercase">
+                    <h1 class="text-5xl sm:text-6xl md:text-[6rem] leading-[0.9] font-extrabold tracking-[-0.04em] text-primary mb-12 uppercase">
                         "Ruud Salym"<br/>"Erie."
                     </h1>
-                    <p class="text-xl md::text-2xl font-medium tracking-tight text-on-surface-variant max-w-2xl leading-relaxed uppercase">
+                    <p class="text-lg sm:text-xl md:text-2xl font-medium tracking-tight text-on-surface-variant max-w-2xl leading-relaxed uppercase">
                         <Suspense fallback=move || view! { <span>"..."</span> }>
                             {move || settings_resource.get().unwrap_or(Ok(SiteSettings::default())).unwrap_or(SiteSettings::default()).hero_subtitle}
                         </Suspense>

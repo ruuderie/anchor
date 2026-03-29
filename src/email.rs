@@ -1,42 +1,163 @@
 use leptos::*;
 
-#[server(SendEmail, "/api")]
-pub async fn send_email(to_email: String, subject: String, body_html: String) -> Result<(), ServerFnError> {
-    use std::env;
-    let api_key = match env::var("RESEND_API_KEY") {
-        Ok(k) if !k.is_empty() => k,
-        _ => {
-            println!("RESEND_API_KEY not set. Email not sent to: {}", to_email);
-            return Ok(());
-        }
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct SmtpConfig {
+    pub smtp_host: String,
+    pub smtp_port: String,
+    pub smtp_username: String,
+    pub smtp_token: String,
+    pub smtp_from: String,
+}
+
+#[cfg(feature = "ssr")]
+pub mod ssr_imports {
+    pub use crate::auth::check_session;
+    pub use axum::Extension;
+    pub use leptos_axum::extract;
+    pub use sqlx::Row;
+    pub use lettre::{Message, AsyncSmtpTransport, tokio1::AsyncTransport};
+    pub use lettre::message::{header, MultiPart, SinglePart};
+    pub use lettre::transport::smtp::authentication::Credentials;
+}
+
+
+#[server(GetSmtpConfig, "/api")]
+pub async fn get_smtp_config() -> Result<SmtpConfig, ServerFnError> {
+    use self::ssr_imports::*;
+    
+    if !check_session().await.unwrap_or(false) {
+        return Err(ServerFnError::ServerError("Unauthorized".into()));
+    }
+    
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    
+    let mut config = SmtpConfig {
+        smtp_host: "".into(),
+        smtp_port: "587".into(),
+        smtp_username: "".into(),
+        smtp_token: "".into(),
+        smtp_from: "".into(),
     };
     
-    let client = reqwest::Client::new();
-    let from_email = env::var("RESEND_FROM_EMAIL").unwrap_or_else(|_| "Acme <onboarding@resend.dev>".to_string());
-    let payload = serde_json::json!({
-        "from": from_email,
-        "to": [to_email],
-        "subject": subject,
-        "html": body_html
-    });
+    if let Ok(rows) = sqlx::query("SELECT key, value FROM system_secrets WHERE key LIKE 'smtp_%'").fetch_all(&state.pool).await {
+        for row in rows {
+            let key: String = row.get("key");
+            let value: String = row.get("value");
+            match key.as_str() {
+                "smtp_host" => config.smtp_host = value,
+                "smtp_port" => config.smtp_port = value,
+                "smtp_username" => config.smtp_username = value,
+                "smtp_token" => config.smtp_token = value,
+                "smtp_from" => config.smtp_from = value,
+                _ => {}
+            }
+        }
+    }
+    
+    // Mask the token when returning to the UI to avoid reading real passwords plainly
+    if !config.smtp_token.is_empty() {
+        config.smtp_token = "********".into();
+    }
+    
+    Ok(config)
+}
 
-    let res = client.post("https://api.resend.com/emails")
-        .bearer_auth(api_key)
-        .json(&payload)
-        .send()
-        .await;
+
+#[server(UpdateSmtpConfig, "/api")]
+pub async fn update_smtp_config(
+    host: String, port: String, username: String, token: String, from: String
+) -> Result<(), ServerFnError> {
+    use self::ssr_imports::*;
+    
+    if !check_session().await.unwrap_or(false) {
+        return Err(ServerFnError::ServerError("Unauthorized".into()));
+    }
+    
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    
+    sqlx::query("INSERT INTO system_secrets (key, value) VALUES ('smtp_host', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(host).execute(&state.pool).await?;
+    sqlx::query("INSERT INTO system_secrets (key, value) VALUES ('smtp_port', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(port).execute(&state.pool).await?;
+    sqlx::query("INSERT INTO system_secrets (key, value) VALUES ('smtp_username', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(username).execute(&state.pool).await?;
+    
+    if !token.is_empty() && token != "********" {
+        sqlx::query("INSERT INTO system_secrets (key, value) VALUES ('smtp_token', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(token).execute(&state.pool).await?;
+    }
+    
+    sqlx::query("INSERT INTO system_secrets (key, value) VALUES ('smtp_from', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(from).execute(&state.pool).await?;
+    
+    Ok(())
+}
+
+
+#[server(SendEmail, "/api")]
+pub async fn send_email(to_email: String, subject: String, body_html: String) -> Result<(), ServerFnError> {
+    use self::ssr_imports::*;
+    
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    
+    let mut host = String::new();
+    let mut port = 587;
+    let mut username = String::new();
+    let mut token = String::new();
+    let mut from = String::new();
+    
+    if let Ok(rows) = sqlx::query("SELECT key, value FROM system_secrets WHERE key LIKE 'smtp_%'").fetch_all(&state.pool).await {
+        for row in rows {
+            let key: String = row.get("key");
+            let value: String = row.get("value");
+            match key.as_str() {
+                "smtp_host" => host = value,
+                "smtp_port" => port = value.parse().unwrap_or(587),
+                "smtp_username" => username = value,
+                "smtp_token" => token = value,
+                "smtp_from" => from = value,
+                _ => {}
+            }
+        }
+    }
+    
+    if host.is_empty() || token.is_empty() {
+        println!("SMTP is not fully configured in system_secrets. Email to {} aborted.", to_email);
+        return Ok(());
+    }
+    
+    let email = Message::builder()
+        .from(from.parse().unwrap_or_else(|_| "admin@ruuderie.com".parse().unwrap()))
+        .to(to_email.parse().unwrap_or_else(|_| "admin@ruuderie.com".parse().unwrap()))
+        .subject(&subject)
+        .multipart(
+            MultiPart::alternative()
+                .singlepart(
+                    SinglePart::builder()
+                        .header(header::ContentType::TEXT_HTML)
+                        .body(body_html),
+                )
+        ).unwrap();
         
-    match res {
-        Ok(r) if r.status().is_success() => Ok(()),
-        Ok(r) => {
-            let status = r.status();
-            let text = r.text().await.unwrap_or_default();
-            println!("Failed to send email: {} - {}", status, text);
-            Err(ServerFnError::ServerError("Failed to send email.".into()))
+    let creds = Credentials::new(username, token);
+    
+    let mailer: AsyncSmtpTransport<lettre::tokio1::Tokio1Executor> = if port == 465 {
+        AsyncSmtpTransport::<lettre::tokio1::Tokio1Executor>::relay(&host)
+            .unwrap()
+            .port(port)
+            .credentials(creds)
+            .build()
+    } else {
+        AsyncSmtpTransport::<lettre::tokio1::Tokio1Executor>::starttls_relay(&host)
+            .unwrap()
+            .port(port)
+            .credentials(creds)
+            .build()
+    };
+    
+    match mailer.send(email).await {
+        Ok(_) => {
+            println!("Email successfully sent to {}", to_email);
+            Ok(())
         },
         Err(e) => {
-            println!("Reqwest error sending email: {:?}", e);
-            Err(ServerFnError::ServerError("Network error sending email.".into()))
+            println!("Failed to send email to {}: {:?}", to_email, e);
+            Err(ServerFnError::ServerError("Failed to send email over SMTP.".into()))
         }
     }
 }

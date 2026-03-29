@@ -221,6 +221,7 @@ pub async fn delete_nav_item(id: i32) -> Result<(), ServerFnError> {
 #[component]
 pub fn Nav() -> impl IntoView {
     let (tick, set_tick) = create_signal(0);
+    let (mobile_menu_open, set_mobile_menu_open) = create_signal(false);
     
     create_effect(move |_| {
         let handle = set_interval_with_handle(
@@ -286,8 +287,16 @@ pub fn Nav() -> impl IntoView {
                     }}
                 </Suspense>
             </div>
-            <div class="flex items-center space-x-6">
-                <a href="/admin" class="material-symbols-outlined text-primary cursor-pointer hover:opacity-80 transition-opacity block">"terminal"</a>
+            <div class="flex items-center space-x-4 md:space-x-6 z-50">
+                <button 
+                    on:click=move |_| set_mobile_menu_open.update(|o| *o = !*o)
+                    class="md:hidden text-primary focus:outline-none flex items-center justify-center p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                >
+                    <span class="material-symbols-outlined text-3xl">
+                        {move || if mobile_menu_open.get() { "close" } else { "menu" }}
+                    </span>
+                </button>
+                <a href="/admin" class="material-symbols-outlined text-primary cursor-pointer hover:opacity-80 transition-opacity hidden sm:block">"terminal"</a>
                 <Suspense fallback=move || view! { 
                     <a href="#" class="bg-surface border border-outline-variant/30 px-6 py-2 jetbrains text-[0.65rem] font-bold tracking-wider opacity-50 block whitespace-nowrap">
                         <div class="flex flex-col items-center leading-none justify-center">
@@ -314,6 +323,56 @@ pub fn Nav() -> impl IntoView {
                         }
                     }}
                 </Suspense>
+            </div>
+            
+            // Mobile Menu Overlay
+            <div 
+                class="fixed inset-0 bg-white dark:bg-slate-900 z-40 flex flex-col pt-32 px-6 transition-transform duration-300 ease-in-out md:hidden"
+                class:translate-x-0=move || mobile_menu_open.get()
+                class:translate-x-full=move || !mobile_menu_open.get()
+            >
+                <div class="flex flex-col space-y-8 overflow-y-auto pb-24 h-full">
+                    <Suspense fallback=move || view! { <div class="w-24 h-4 bg-slate-200 dark:bg-slate-700 animate-pulse rounded"></div> }>
+                        {move || {
+                            let items = nav_resource.get().unwrap_or(Ok(vec![])).unwrap_or_default();
+                            
+                            let root_items: Vec<_> = items.iter().filter(|i| i.parent_id.is_none()).collect();
+                            
+                            root_items.into_iter().map(|root| {
+                                let children: Vec<_> = items.iter().filter(|i| i.parent_id == Some(root.id)).collect();
+                                
+                                if children.is_empty() {
+                                    view! {
+                                        <a href=root.href.clone().unwrap_or_else(|| "#".to_string()) on:click=move |_| set_mobile_menu_open.set(false) class="text-3xl font-bold text-slate-800 dark:text-slate-100 uppercase hover:text-primary transition-colors">
+                                            {root.label.clone()}
+                                        </a>
+                                    }.into_view()
+                                } else {
+                                    view! {
+                                        <div class="flex flex-col space-y-4">
+                                            <div class="text-3xl font-bold text-slate-400 dark:text-slate-500 uppercase bg-transparent w-full text-left">
+                                                {root.label.clone()}
+                                            </div>
+                                            <div class="flex flex-col space-y-4 pl-4 border-l-2 border-slate-200 dark:border-slate-800">
+                                                {children.into_iter().map(|child| {
+                                                    view! {
+                                                        <a href=child.href.clone().unwrap_or_else(|| "#".to_string()) on:click=move |_| set_mobile_menu_open.set(false) class="text-xl font-medium text-slate-600 dark:text-slate-300 uppercase hover:text-primary transition-colors block py-2 border-b border-outline-variant/20 last:border-0 w-full text-left">
+                                                            {child.label.clone()}
+                                                        </a>
+                                                    }
+                                                }).collect_view()}
+                                            </div>
+                                        </div>
+                                    }.into_view()
+                                }
+                            }).collect_view()
+                        }}
+                    </Suspense>
+                    <a href="/admin" on:click=move |_| set_mobile_menu_open.set(false) class="mt-8 flex items-center space-x-2 text-primary text-xl font-bold uppercase transition-opacity border p-4 border-outline-variant/30 text-center justify-center">
+                        <span class="material-symbols-outlined">"terminal"</span>
+                        <span>"Admin Terminal"</span>
+                    </a>
+                </div>
             </div>
         </nav>
     }

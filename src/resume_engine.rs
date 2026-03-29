@@ -112,13 +112,28 @@ pub async fn get_resume_profiles() -> Result<Vec<ResumeProfile>, ServerFnError> 
 }
 
 #[server(GetResumeEntries, "/api")]
-pub async fn get_resume_entries(profile_id: i32) -> Result<Vec<ResumeEntry>, ServerFnError> {
+pub async fn get_resume_entries(profile_id: Option<i32>) -> Result<Vec<ResumeEntry>, ServerFnError> {
     use axum::Extension;
     use leptos_axum::extract;
     use sqlx::Row;
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    
+    let target_id = match profile_id {
+        Some(id) => id,
+        None => {
+            let row = sqlx::query("SELECT id FROM resume_profiles WHERE is_public = true ORDER BY id ASC LIMIT 1")
+                .fetch_optional(&state.pool)
+                .await?;
+            if let Some(r) = row {
+                r.get("id")
+            } else {
+                return Ok(vec![]);
+            }
+        }
+    };
+
     let rows = sqlx::query("SELECT e.id, pe.profile_id, e.category, e.title, e.subtitle, e.date_range, e.bullets, pe.display_order, pe.is_visible, e.metadata, pe.overrides FROM resume_entries e JOIN resume_profile_entries pe ON e.id = pe.entry_id WHERE pe.profile_id = $1 ORDER BY pe.display_order ASC")
-        .bind(profile_id)
+        .bind(target_id)
         .fetch_all(&state.pool)
         .await?;
         

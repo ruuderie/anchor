@@ -146,11 +146,7 @@ pub fn Resume() -> impl IntoView {
     let profile_data_resource = create_resource(
         move || active_profile_id.get(),
         |id_opt| async move {
-            if let Some(id) = id_opt {
-                crate::resume_engine::get_resume_entries(id).await.unwrap_or_default()
-            } else {
-                vec![]
-            }
+            crate::resume_engine::get_resume_entries(id_opt).await.unwrap_or_default()
         }
     );
 

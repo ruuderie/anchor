@@ -76,18 +76,25 @@ pub fn App() -> impl IntoView {
         </Script>
 
         <Stylesheet id="leptos" href="/pkg/ruuderie_ai.css"/>
-        <Title text="Ruud Salym Erie - Technical Architect"/>
-        <Meta name="description" content="Technical Architect and Software Engineer specializing in Rust, Salesforce, and high-performance enterprise applications."/>
-        <Meta property="og:title" content="Ruud Salym Erie - Technical Architect"/>
-        <Meta property="og:description" content="Technical Architect and Software Engineer specializing in Rust, Salesforce, and high-performance enterprise applications."/>
-        <Meta property="og:type" content="website"/>
-        <Meta name="twitter:card" content="summary_large_image"/>
-        <Meta name="twitter:title" content="Ruud Salym Erie - Technical Architect"/>
-        <Meta name="twitter:description" content="Technical Architect and Software Engineer specializing in Rust, Salesforce, and high-performance enterprise applications."/>
 
         {
             let settings_resource = create_resource(|| (), |_| crate::pages::landing::get_site_settings());
+            let title_sig = move || settings_resource.get().and_then(Result::ok).map(|s| s.meta_title).unwrap_or("Ruud Salym Erie - Technical Architect".into());
+            let desc_sig = move || settings_resource.get().and_then(Result::ok).map(|s| s.meta_description).unwrap_or("Technical Architect and Software Engineer specializing in Rust, Salesforce, and high-performance enterprise applications.".into());
+            let og_image_sig = move || settings_resource.get().and_then(Result::ok).map(|s| s.og_image).unwrap_or("".into());
+
             view! {
+                <Title text=title_sig/>
+                <Meta name="description" content=desc_sig/>
+                <Meta property="og:title" content=title_sig/>
+                <Meta property="og:description" content=desc_sig/>
+                <Meta property="og:type" content="website"/>
+                <Meta property="og:image" content=og_image_sig/>
+                <Meta name="twitter:card" content="summary_large_image"/>
+                <Meta name="twitter:title" content=title_sig/>
+                <Meta name="twitter:description" content=desc_sig/>
+                <Meta name="twitter:image" content=og_image_sig/>
+                
                 <Suspense fallback=move || view! {}>
                     {move || {
                         let settings = settings_resource.get().unwrap_or(Ok(crate::pages::landing::SiteSettings::default())).unwrap_or_default();
