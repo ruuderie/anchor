@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct ContentNode {
-    pub id: String, 
+    pub id: String,
     pub category: String, // 'project', 'certification', 'blog_post'
     pub title: String,
     pub subtitle: Option<String>,
@@ -25,8 +25,8 @@ pub enum LayoutMode {
 
 #[component]
 pub fn ContentFeed(
-    nodes: Vec<ContentNode>, 
-    #[prop(default = LayoutMode::Grid)] layout: LayoutMode
+    nodes: Vec<ContentNode>,
+    #[prop(default = LayoutMode::Grid)] layout: LayoutMode,
 ) -> impl IntoView {
     match layout {
         LayoutMode::Grid => view! {

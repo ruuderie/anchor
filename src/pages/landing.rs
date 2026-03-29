@@ -74,40 +74,96 @@ pub async fn get_site_settings() -> Result<SiteSettings, ServerFnError> {
     use sqlx::Row;
 
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    
+
     let mut settings = SiteSettings::default();
 
-    let rows = sqlx::query("SELECT key, value FROM site_settings").fetch_all(&state.pool).await?;
+    let rows = sqlx::query("SELECT key, value FROM site_settings")
+        .fetch_all(&state.pool)
+        .await?;
     for row in rows {
         let key: String = row.get("key");
         let value: String = row.get("value");
-        if key == "current_focus" { settings.current_focus = value.clone(); }
-        if key == "status" { settings.status = value.clone(); }
-        if key == "hero_quote" { settings.hero_quote = value.clone(); }
-        if key == "hero_subtitle" { settings.hero_subtitle = value.clone(); }
-        if key == "site_title" { settings.site_title = value.clone(); }
-        if key == "lead_capture_title" { settings.lc_title = value.clone(); }
-        if key == "lead_capture_desc" { settings.lc_desc = value.clone(); }
-        if key == "lead_capture_label" { settings.lc_label = value.clone(); }
-        if key == "lead_capture_placeholder" { settings.lc_placeholder = value.clone(); }
-        if key == "lead_capture_btn" { settings.lc_btn = value.clone(); }
-        if key == "lead_capture_footer" { settings.lc_footer = value.clone(); }
-        if key == "lead_capture_endpoint" { settings.lc_endpoint = value.clone(); }
-        if key == "status_color" { settings.status_color = value.clone(); }
-        if key == "webhook_url" { settings.webhook_url = value.clone(); }
-        if key == "admin_email" { settings.admin_email = value.clone(); }
-        if key == "landing_options_json" { settings.landing_options_json = value.clone(); }
-        if key == "google_analytics_id" { settings.google_analytics_id = value.clone(); }
-        if key == "booking_url" { settings.booking_url = value.clone(); }
-        if key == "terms_html" { settings.terms_html = value.clone(); }
-        if key == "privacy_html" { settings.privacy_html = value.clone(); }
-        if key == "github_url" { settings.github_url = value.clone(); }
-        if key == "x_url" { settings.x_url = value.clone(); }
-        if key == "linkedin_url" { settings.linkedin_url = value.clone(); }
-        if key == "b2b_enabled" { settings.b2b_enabled = value == "true"; }
-        if key == "meta_title" { settings.meta_title = value.clone(); }
-        if key == "meta_description" { settings.meta_description = value.clone(); }
-        if key == "og_image" { settings.og_image = value.clone(); }
+        if key == "current_focus" {
+            settings.current_focus = value.clone();
+        }
+        if key == "status" {
+            settings.status = value.clone();
+        }
+        if key == "hero_quote" {
+            settings.hero_quote = value.clone();
+        }
+        if key == "hero_subtitle" {
+            settings.hero_subtitle = value.clone();
+        }
+        if key == "site_title" {
+            settings.site_title = value.clone();
+        }
+        if key == "lead_capture_title" {
+            settings.lc_title = value.clone();
+        }
+        if key == "lead_capture_desc" {
+            settings.lc_desc = value.clone();
+        }
+        if key == "lead_capture_label" {
+            settings.lc_label = value.clone();
+        }
+        if key == "lead_capture_placeholder" {
+            settings.lc_placeholder = value.clone();
+        }
+        if key == "lead_capture_btn" {
+            settings.lc_btn = value.clone();
+        }
+        if key == "lead_capture_footer" {
+            settings.lc_footer = value.clone();
+        }
+        if key == "lead_capture_endpoint" {
+            settings.lc_endpoint = value.clone();
+        }
+        if key == "status_color" {
+            settings.status_color = value.clone();
+        }
+        if key == "webhook_url" {
+            settings.webhook_url = value.clone();
+        }
+        if key == "admin_email" {
+            settings.admin_email = value.clone();
+        }
+        if key == "landing_options_json" {
+            settings.landing_options_json = value.clone();
+        }
+        if key == "google_analytics_id" {
+            settings.google_analytics_id = value.clone();
+        }
+        if key == "booking_url" {
+            settings.booking_url = value.clone();
+        }
+        if key == "terms_html" {
+            settings.terms_html = value.clone();
+        }
+        if key == "privacy_html" {
+            settings.privacy_html = value.clone();
+        }
+        if key == "github_url" {
+            settings.github_url = value.clone();
+        }
+        if key == "x_url" {
+            settings.x_url = value.clone();
+        }
+        if key == "linkedin_url" {
+            settings.linkedin_url = value.clone();
+        }
+        if key == "b2b_enabled" {
+            settings.b2b_enabled = value == "true";
+        }
+        if key == "meta_title" {
+            settings.meta_title = value.clone();
+        }
+        if key == "meta_description" {
+            settings.meta_description = value.clone();
+        }
+        if key == "og_image" {
+            settings.og_image = value.clone();
+        }
     }
 
     Ok(settings)
@@ -115,30 +171,106 @@ pub async fn get_site_settings() -> Result<SiteSettings, ServerFnError> {
 
 #[server(UpdateSiteSettings, "/api")]
 pub async fn update_site_settings(
-    current_focus: String, status: String, hero_quote: String, hero_subtitle: String, site_title: String, lc_title: String, lc_desc: String, lc_label: String, lc_placeholder: String, lc_btn: String, lc_footer: String, lc_endpoint: String, status_color: String, webhook_url: String, admin_email: String, landing_options_json: String, google_analytics_id: String, booking_url: String, terms_html: String, privacy_html: String, github_url: String, x_url: String, linkedin_url: String, b2b_enabled: bool, meta_title: String, meta_description: String, og_image: String
+    current_focus: String,
+    status: String,
+    hero_quote: String,
+    hero_subtitle: String,
+    site_title: String,
+    lc_title: String,
+    lc_desc: String,
+    lc_label: String,
+    lc_placeholder: String,
+    lc_btn: String,
+    lc_footer: String,
+    lc_endpoint: String,
+    status_color: String,
+    webhook_url: String,
+    admin_email: String,
+    landing_options_json: String,
+    google_analytics_id: String,
+    booking_url: String,
+    terms_html: String,
+    privacy_html: String,
+    github_url: String,
+    x_url: String,
+    linkedin_url: String,
+    b2b_enabled: bool,
+    meta_title: String,
+    meta_description: String,
+    og_image: String,
 ) -> Result<(), ServerFnError> {
     use crate::auth::check_session;
     use axum::Extension;
     use leptos_axum::extract;
-    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    if !check_session().await.unwrap_or(false) {
+        return Err(ServerFnError::ServerError("Unauthorized".into()));
+    }
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'current_focus'").bind(current_focus).execute(&state.pool).await?;
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'status'").bind(status).execute(&state.pool).await?;
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'hero_quote'").bind(hero_quote).execute(&state.pool).await?;
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'hero_subtitle'").bind(hero_subtitle).execute(&state.pool).await?;
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'site_title'").bind(site_title).execute(&state.pool).await?;
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'lead_capture_title'").bind(lc_title).execute(&state.pool).await?;
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'lead_capture_desc'").bind(lc_desc).execute(&state.pool).await?;
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'lead_capture_label'").bind(lc_label).execute(&state.pool).await?;
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'lead_capture_placeholder'").bind(lc_placeholder).execute(&state.pool).await?;
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'lead_capture_btn'").bind(lc_btn).execute(&state.pool).await?;
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'lead_capture_footer'").bind(lc_footer).execute(&state.pool).await?;
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'lead_capture_endpoint'").bind(lc_endpoint).execute(&state.pool).await?;
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'status_color'").bind(status_color).execute(&state.pool).await?;
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'webhook_url'").bind(webhook_url).execute(&state.pool).await?;
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'admin_email'").bind(admin_email).execute(&state.pool).await?;
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'landing_options_json'").bind(landing_options_json).execute(&state.pool).await?;
+
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'current_focus'")
+        .bind(current_focus)
+        .execute(&state.pool)
+        .await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'status'")
+        .bind(status)
+        .execute(&state.pool)
+        .await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'hero_quote'")
+        .bind(hero_quote)
+        .execute(&state.pool)
+        .await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'hero_subtitle'")
+        .bind(hero_subtitle)
+        .execute(&state.pool)
+        .await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'site_title'")
+        .bind(site_title)
+        .execute(&state.pool)
+        .await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'lead_capture_title'")
+        .bind(lc_title)
+        .execute(&state.pool)
+        .await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'lead_capture_desc'")
+        .bind(lc_desc)
+        .execute(&state.pool)
+        .await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'lead_capture_label'")
+        .bind(lc_label)
+        .execute(&state.pool)
+        .await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'lead_capture_placeholder'")
+        .bind(lc_placeholder)
+        .execute(&state.pool)
+        .await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'lead_capture_btn'")
+        .bind(lc_btn)
+        .execute(&state.pool)
+        .await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'lead_capture_footer'")
+        .bind(lc_footer)
+        .execute(&state.pool)
+        .await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'lead_capture_endpoint'")
+        .bind(lc_endpoint)
+        .execute(&state.pool)
+        .await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'status_color'")
+        .bind(status_color)
+        .execute(&state.pool)
+        .await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'webhook_url'")
+        .bind(webhook_url)
+        .execute(&state.pool)
+        .await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'admin_email'")
+        .bind(admin_email)
+        .execute(&state.pool)
+        .await?;
+    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'landing_options_json'")
+        .bind(landing_options_json)
+        .execute(&state.pool)
+        .await?;
     sqlx::query("INSERT INTO site_settings (key, value) VALUES ('google_analytics_id', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(google_analytics_id).execute(&state.pool).await?;
     sqlx::query("INSERT INTO site_settings (key, value) VALUES ('booking_url', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(booking_url).execute(&state.pool).await?;
     sqlx::query("INSERT INTO site_settings (key, value) VALUES ('terms_html', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(terms_html).execute(&state.pool).await?;
@@ -146,14 +278,14 @@ pub async fn update_site_settings(
     sqlx::query("INSERT INTO site_settings (key, value) VALUES ('github_url', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(github_url).execute(&state.pool).await?;
     sqlx::query("INSERT INTO site_settings (key, value) VALUES ('x_url', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(x_url).execute(&state.pool).await?;
     sqlx::query("INSERT INTO site_settings (key, value) VALUES ('linkedin_url', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(linkedin_url).execute(&state.pool).await?;
-    
+
     let b2b_str = if b2b_enabled { "true" } else { "false" };
     sqlx::query("INSERT INTO site_settings (key, value) VALUES ('b2b_enabled', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(b2b_str).execute(&state.pool).await?;
 
     sqlx::query("INSERT INTO site_settings (key, value) VALUES ('meta_title', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(meta_title).execute(&state.pool).await?;
     sqlx::query("INSERT INTO site_settings (key, value) VALUES ('meta_description', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(meta_description).execute(&state.pool).await?;
     sqlx::query("INSERT INTO site_settings (key, value) VALUES ('og_image', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(og_image).execute(&state.pool).await?;
-    
+
     Ok(())
 }
 
@@ -162,39 +294,51 @@ pub async fn handle_lead_capture(email: String, options: Vec<String>) -> Result<
     use axum::Extension;
     use leptos_axum::extract;
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    
+
     let settings = get_site_settings().await.unwrap_or_default();
-    
+
     let prefs_json = serde_json::to_value(&options).unwrap_or(serde_json::json!([]));
-    
+
     let _ = sqlx::query("INSERT INTO mailing_list (email, list_type, preferences) VALUES ($1, $2, $3) ON CONFLICT (email) DO UPDATE SET preferences = $3")
         .bind(&email)
         .bind("general")
         .bind(&prefs_json)
         .execute(&state.pool)
         .await;
-        
+
     if !settings.webhook_url.is_empty() {
         let payload = serde_json::json!({
             "email": &email,
             "options": &options
         });
         let client = reqwest::Client::new();
-        match client.post(&settings.webhook_url).json(&payload).send().await {
+        match client
+            .post(&settings.webhook_url)
+            .json(&payload)
+            .send()
+            .await
+        {
             Ok(res) if res.status().is_success() => {
                 println!("Webhook successfully triggered for {}", email);
-            },
+            }
             Ok(res) => {
-                println!("Webhook returned non-success for {}: {}", email, res.status());
-            },
+                println!(
+                    "Webhook returned non-success for {}: {}",
+                    email,
+                    res.status()
+                );
+            }
             Err(e) => {
                 println!("Failed to trigger webhook for {}: {:?}", email, e);
             }
         }
     } else {
-        println!("NEW LEAD CAPTURE (NO WEBHOOK CONFIGURED): {} requested {:?}", email, options);
+        println!(
+            "NEW LEAD CAPTURE (NO WEBHOOK CONFIGURED): {} requested {:?}",
+            email, options
+        );
     }
-    
+
     if !settings.admin_email.is_empty() {
         let subject = format!("New Lead Capture: {}", email);
         let body = format!("<h3>New lead captured!</h3><p><strong>Email:</strong> {}</p><p><strong>Options requested:</strong> {:?}</p>", email, options);
@@ -210,7 +354,8 @@ pub fn Landing() -> impl IntoView {
     let stats_resource = create_resource(|| (), |_| crate::components::nav::get_bitcoin_stats());
 
     let (email, set_email) = create_signal(String::new());
-    let (selected_options, set_selected_options) = create_signal(std::collections::HashSet::<String>::new());
+    let (selected_options, set_selected_options) =
+        create_signal(std::collections::HashSet::<String>::new());
     let (submitted, set_submitted) = create_signal(false);
 
     let submit_action = create_action(move |_: &()| {
@@ -347,15 +492,15 @@ pub fn Landing() -> impl IntoView {
                                     {move || {
                                         let settings = settings_resource.get().unwrap_or(Ok(SiteSettings::default())).unwrap_or(SiteSettings::default());
                                         let parsed_opts: std::collections::HashMap<String, String> = serde_json::from_str(&settings.landing_options_json).unwrap_or_default();
-                                        
+
                                         view! {
                                             <div class="space-y-4 text-left border border-outline-variant/30 p-6 bg-surface-container-lowest/50">
                                                 {parsed_opts.into_iter().map(|(key, label)| {
                                                     let k = key.clone();
                                                     view! {
                                                     <label class="flex items-center space-x-3 cursor-pointer group">
-                                                        <input type="checkbox" 
-                                                            class="w-5 h-5 bg-transparent border-2 border-outline-variant text-primary focus:ring-primary focus:ring-offset-surface-container-low" 
+                                                        <input type="checkbox"
+                                                            class="w-5 h-5 bg-transparent border-2 border-outline-variant text-primary focus:ring-primary focus:ring-offset-surface-container-low"
                                                             on:change=move |ev| {
                                                                 if event_target_checked(&ev) {
                                                                     set_selected_options.update(|set| { set.insert(k.clone()); });

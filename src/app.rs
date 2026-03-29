@@ -2,47 +2,58 @@ use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 
-use crate::components::nav::Nav;
 use crate::components::footer::Footer;
+use crate::components::nav::Nav;
 use crate::pages::admin::Admin;
+use crate::pages::bitcoin::BitcoinDashboard;
 use crate::pages::blog::Blog;
+use crate::pages::book::BookDiscovery;
 use crate::pages::certifications::Certifications;
+use crate::pages::dynamic_landing::DynamicLanding;
 use crate::pages::landing::Landing;
+use crate::pages::legal::{Privacy, Terms};
 use crate::pages::projects::Projects;
 use crate::pages::resume::Resume;
-use crate::pages::dynamic_landing::DynamicLanding;
-use crate::pages::bitcoin::BitcoinDashboard;
 use crate::pages::services::Services;
-use crate::pages::book::BookDiscovery;
-use crate::pages::legal::{Terms, Privacy};
 
 #[cfg(feature = "ssr")]
-static PAGE_VIEW_CACHE: std::sync::OnceLock<moka::future::Cache<String, bool>> = std::sync::OnceLock::new();
+static PAGE_VIEW_CACHE: std::sync::OnceLock<moka::future::Cache<String, bool>> =
+    std::sync::OnceLock::new();
 
 #[cfg(feature = "ssr")]
 fn get_view_cache() -> moka::future::Cache<String, bool> {
-    PAGE_VIEW_CACHE.get_or_init(|| {
-        moka::future::Cache::builder()
-            .time_to_live(std::time::Duration::from_secs(3600))
-            .max_capacity(10_000)
-            .build()
-    }).clone()
+    PAGE_VIEW_CACHE
+        .get_or_init(|| {
+            moka::future::Cache::builder()
+                .time_to_live(std::time::Duration::from_secs(3600))
+                .max_capacity(10_000)
+                .build()
+        })
+        .clone()
 }
 
 #[server(RecordPageView, "/api")]
 pub async fn record_page_view(path: String) -> Result<(), ServerFnError> {
-    use axum::Extension;
     use axum::http::HeaderMap;
+    use axum::Extension;
     use leptos_axum::extract;
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
     let headers = extract::<HeaderMap>().await.unwrap_or_default();
-    
-    let user_agent = headers.get(axum::http::header::USER_AGENT).and_then(|h| h.to_str().ok()).unwrap_or("unknown").to_string();
-    let ip = headers.get("x-forwarded-for").and_then(|h| h.to_str().ok()).unwrap_or("unknown").to_string();
-    
+
+    let user_agent = headers
+        .get(axum::http::header::USER_AGENT)
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("unknown")
+        .to_string();
+    let ip = headers
+        .get("x-forwarded-for")
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("unknown")
+        .to_string();
+
     let cache_key = format!("{}:{}:{}", ip, user_agent, path);
     let cache = get_view_cache();
-    
+
     if cache.contains_key(&cache_key) {
         return Ok(());
     }
@@ -94,7 +105,7 @@ pub fn App() -> impl IntoView {
                 <Meta name="twitter:title" content=title_sig/>
                 <Meta name="twitter:description" content=desc_sig/>
                 <Meta name="twitter:image" content=og_image_sig/>
-                
+
                 <Suspense fallback=move || view! {}>
                     {move || {
                         let settings = settings_resource.get().unwrap_or(Ok(crate::pages::landing::SiteSettings::default())).unwrap_or_default();

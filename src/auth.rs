@@ -4,65 +4,78 @@ use uuid::Uuid;
 #[cfg(feature = "ssr")]
 pub mod ssr {
     pub use webauthn_rs::prelude::*;
-    
+
     pub fn get_webauthn() -> Webauthn {
-        let origin_str = std::env::var("RP_ORIGIN").unwrap_or_else(|_| "http://localhost:3000".to_string());
+        let origin_str =
+            std::env::var("RP_ORIGIN").unwrap_or_else(|_| "http://localhost:3000".to_string());
         let id_str = std::env::var("RP_ID").unwrap_or_else(|_| "localhost".to_string());
         let rp_origin = Url::parse(&origin_str).expect("Invalid RP_ORIGIN URL");
-        let builder = WebauthnBuilder::new(&id_str, &rp_origin).expect("Invalid RP_ID or RP_ORIGIN configuration")
+        let builder = WebauthnBuilder::new(&id_str, &rp_origin)
+            .expect("Invalid RP_ID or RP_ORIGIN configuration")
             .rp_name("RuudErie_ai");
         builder.build().unwrap()
     }
 }
 
 #[server(RegisterStart, "/api")]
-pub async fn register_start(username: String, setup_token: Option<String>) -> Result<String, ServerFnError> {
+pub async fn register_start(
+    username: String,
+    setup_token: Option<String>,
+) -> Result<String, ServerFnError> {
     use self::ssr::*;
-    use leptos_axum::extract;
-    use axum::Extension;
     use crate::state::AppState;
+    use axum::Extension;
+    use leptos_axum::extract;
 
     let app_state = match extract::<Extension<AppState>>().await {
         Ok(state) => state,
         Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
     };
-    
-    let user_exists: bool = match sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)")
-        .bind(&username)
-        .fetch_one(&app_state.pool)
-        .await
-    {
-        Ok(v) => v,
-        Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
-    };
+
+    let user_exists: bool =
+        match sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)")
+            .bind(&username)
+            .fetch_one(&app_state.pool)
+            .await
+        {
+            Ok(v) => v,
+            Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
+        };
 
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users")
         .fetch_one(&app_state.pool)
         .await
         .unwrap_or(0);
-    
+
     if count == 0 {
-        let expected_token = std::env::var("SETUP_TOKEN")
-            .unwrap_or_else(|_| "CHANGEME".to_string());
+        let expected_token =
+            std::env::var("SETUP_TOKEN").unwrap_or_else(|_| "CHANGEME".to_string());
         if setup_token.unwrap_or_default() != expected_token {
             return Err(ServerFnError::ServerError("Invalid setup token.".into()));
         }
     } else if !user_exists {
         if !crate::auth::check_session().await.unwrap_or(false) {
-            return Err(ServerFnError::ServerError("Registration locked. Admin already exists.".into()));
+            return Err(ServerFnError::ServerError(
+                "Registration locked. Admin already exists.".into(),
+            ));
         }
     }
 
     let user_unique_id = Uuid::new_v4();
     let webauthn = get_webauthn();
-    let res = match webauthn.start_passkey_registration(user_unique_id.clone(), &username, &username, None) {
+    let res = match webauthn.start_passkey_registration(
+        user_unique_id.clone(),
+        &username,
+        &username,
+        None,
+    ) {
         Ok(r) => r,
         Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
     };
-    
+
     let (challenge, reg_state) = res;
     let reg_json = serde_json::to_value(&reg_state).unwrap();
-    
+
     if let Err(e) = sqlx::query("INSERT INTO auth_challenges (id, challenge_data) VALUES ($1, $2)")
         .bind(user_unique_id)
         .bind(reg_json)
@@ -82,25 +95,34 @@ pub async fn register_start(username: String, setup_token: Option<String>) -> Re
 }
 
 #[server(RegisterFinish, "/api")]
-pub async fn register_finish(username: String, challenge_id: Uuid, credential_json: String) -> Result<String, ServerFnError> {
+pub async fn register_finish(
+    username: String,
+    challenge_id: Uuid,
+    credential_json: String,
+) -> Result<String, ServerFnError> {
     use self::ssr::*;
-    use leptos_axum::extract;
-    use axum::Extension;
     use crate::state::AppState;
+    use axum::Extension;
+    use leptos_axum::extract;
 
     let app_state = match extract::<Extension<AppState>>().await {
         Ok(state) => state,
         Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
     };
-    
-    let challenge_row: (serde_json::Value,) = match sqlx::query_as("SELECT challenge_data FROM auth_challenges WHERE id = $1")
-        .bind(challenge_id)
-        .fetch_one(&app_state.pool)
-        .await
-    {
-        Ok(row) => row,
-        Err(_) => return Err(ServerFnError::ServerError("Challenge expired or invalid".into())),
-    };
+
+    let challenge_row: (serde_json::Value,) =
+        match sqlx::query_as("SELECT challenge_data FROM auth_challenges WHERE id = $1")
+            .bind(challenge_id)
+            .fetch_one(&app_state.pool)
+            .await
+        {
+            Ok(row) => row,
+            Err(_) => {
+                return Err(ServerFnError::ServerError(
+                    "Challenge expired or invalid".into(),
+                ))
+            }
+        };
 
     let reg_state: PasskeyRegistration = match serde_json::from_value(challenge_row.0) {
         Ok(s) => s,
@@ -110,7 +132,7 @@ pub async fn register_finish(username: String, challenge_id: Uuid, credential_js
         Ok(c) => c,
         Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
     };
-    
+
     let webauthn = get_webauthn();
     let passkey = match webauthn.finish_passkey_registration(&credential, &reg_state) {
         Ok(p) => p,
@@ -120,22 +142,33 @@ pub async fn register_finish(username: String, challenge_id: Uuid, credential_js
     let session_token = Uuid::new_v4().to_string();
     let passkey_json = serde_json::to_value(&passkey).unwrap();
 
-    if let Err(e) = sqlx::query("INSERT INTO users (username, passkey, session_token) VALUES ($1, $2, $3)")
-        .bind(&username)
-        .bind(passkey_json)
-        .bind(&session_token)
-        .execute(&app_state.pool)
-        .await
+    if let Err(e) =
+        sqlx::query("INSERT INTO users (username, passkey, session_token) VALUES ($1, $2, $3)")
+            .bind(&username)
+            .bind(passkey_json)
+            .bind(&session_token)
+            .execute(&app_state.pool)
+            .await
     {
         return Err(ServerFnError::ServerError("Internal System Error".into()));
     }
 
-    sqlx::query("DELETE FROM auth_challenges WHERE id = $1").bind(challenge_id).execute(&app_state.pool).await.ok();
+    sqlx::query("DELETE FROM auth_challenges WHERE id = $1")
+        .bind(challenge_id)
+        .execute(&app_state.pool)
+        .await
+        .ok();
 
     use leptos_axum::ResponseOptions;
     let response = leptos::expect_context::<ResponseOptions>();
-    let header_val = format!("session={}; HttpOnly; Path=/; SameSite=Strict", session_token);
-    response.append_header(axum::http::header::SET_COOKIE, axum::http::HeaderValue::from_str(&header_val).unwrap());
+    let header_val = format!(
+        "session={}; HttpOnly; Path=/; SameSite=Strict",
+        session_token
+    );
+    response.append_header(
+        axum::http::header::SET_COOKIE,
+        axum::http::HeaderValue::from_str(&header_val).unwrap(),
+    );
 
     Ok("SUCCESS".to_string())
 }
@@ -143,23 +176,24 @@ pub async fn register_finish(username: String, challenge_id: Uuid, credential_js
 #[server(LoginStart, "/api")]
 pub async fn login_start(username: String) -> Result<String, ServerFnError> {
     use self::ssr::*;
-    use leptos_axum::extract;
-    use axum::Extension;
     use crate::state::AppState;
+    use axum::Extension;
+    use leptos_axum::extract;
 
     let app_state = match extract::<Extension<AppState>>().await {
         Ok(state) => state,
         Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
     };
-    
-    let user_row: (serde_json::Value,) = match sqlx::query_as("SELECT passkey FROM users WHERE username = $1")
-        .bind(&username)
-        .fetch_one(&app_state.pool)
-        .await
-    {
-        Ok(row) => row,
-        Err(_) => return Err(ServerFnError::ServerError("User not found".into())),
-    };
+
+    let user_row: (serde_json::Value,) =
+        match sqlx::query_as("SELECT passkey FROM users WHERE username = $1")
+            .bind(&username)
+            .fetch_one(&app_state.pool)
+            .await
+        {
+            Ok(row) => row,
+            Err(_) => return Err(ServerFnError::ServerError("User not found".into())),
+        };
 
     let passkey: Passkey = match serde_json::from_value(user_row.0) {
         Ok(k) => k,
@@ -171,7 +205,7 @@ pub async fn login_start(username: String) -> Result<String, ServerFnError> {
         Ok(r) => r,
         Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
     };
-    
+
     let (challenge, auth_state) = res;
     let auth_id = Uuid::new_v4();
 
@@ -195,34 +229,44 @@ pub async fn login_start(username: String) -> Result<String, ServerFnError> {
 }
 
 #[server(LoginFinish, "/api")]
-pub async fn login_finish(username: String, challenge_id: Uuid, auth_json: String) -> Result<String, ServerFnError> {
+pub async fn login_finish(
+    username: String,
+    challenge_id: Uuid,
+    auth_json: String,
+) -> Result<String, ServerFnError> {
     use self::ssr::*;
-    use leptos_axum::extract;
-    use axum::Extension;
     use crate::state::AppState;
+    use axum::Extension;
+    use leptos_axum::extract;
 
     let app_state = match extract::<Extension<AppState>>().await {
         Ok(state) => state,
         Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
     };
-    
-    let _user_row: (serde_json::Value,) = match sqlx::query_as("SELECT passkey FROM users WHERE username = $1")
-        .bind(&username)
-        .fetch_one(&app_state.pool)
-        .await
-    {
-        Ok(row) => row,
-        Err(_) => return Err(ServerFnError::ServerError("User not found".into())),
-    };
 
-    let challenge_row: (serde_json::Value,) = match sqlx::query_as("SELECT challenge_data FROM auth_challenges WHERE id = $1")
-        .bind(challenge_id)
-        .fetch_one(&app_state.pool)
-        .await
-    {
-        Ok(row) => row,
-        Err(_) => return Err(ServerFnError::ServerError("Challenge expired or invalid".into())),
-    };
+    let _user_row: (serde_json::Value,) =
+        match sqlx::query_as("SELECT passkey FROM users WHERE username = $1")
+            .bind(&username)
+            .fetch_one(&app_state.pool)
+            .await
+        {
+            Ok(row) => row,
+            Err(_) => return Err(ServerFnError::ServerError("User not found".into())),
+        };
+
+    let challenge_row: (serde_json::Value,) =
+        match sqlx::query_as("SELECT challenge_data FROM auth_challenges WHERE id = $1")
+            .bind(challenge_id)
+            .fetch_one(&app_state.pool)
+            .await
+        {
+            Ok(row) => row,
+            Err(_) => {
+                return Err(ServerFnError::ServerError(
+                    "Challenge expired or invalid".into(),
+                ))
+            }
+        };
 
     let auth_state: PasskeyAuthentication = match serde_json::from_value(challenge_row.0) {
         Ok(s) => s,
@@ -232,7 +276,7 @@ pub async fn login_finish(username: String, challenge_id: Uuid, auth_json: Strin
         Ok(c) => c,
         Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
     };
-    
+
     let webauthn = get_webauthn();
     let _auth_res = match webauthn.finish_passkey_authentication(&credential, &auth_state) {
         Ok(r) => r,
@@ -250,38 +294,49 @@ pub async fn login_finish(username: String, challenge_id: Uuid, auth_json: Strin
         return Err(ServerFnError::ServerError("Internal System Error".into()));
     }
 
-    sqlx::query("DELETE FROM auth_challenges WHERE id = $1").bind(challenge_id).execute(&app_state.pool).await.ok();
+    sqlx::query("DELETE FROM auth_challenges WHERE id = $1")
+        .bind(challenge_id)
+        .execute(&app_state.pool)
+        .await
+        .ok();
 
     use leptos_axum::ResponseOptions;
     let response = leptos::expect_context::<ResponseOptions>();
-    let header_val = format!("session={}; HttpOnly; Path=/; SameSite=Strict", session_token);
-    response.append_header(axum::http::header::SET_COOKIE, axum::http::HeaderValue::from_str(&header_val).unwrap());
+    let header_val = format!(
+        "session={}; HttpOnly; Path=/; SameSite=Strict",
+        session_token
+    );
+    response.append_header(
+        axum::http::header::SET_COOKIE,
+        axum::http::HeaderValue::from_str(&header_val).unwrap(),
+    );
 
     Ok("SUCCESS".to_string())
 }
 
 #[server(CheckSession, "/api")]
 pub async fn check_session() -> Result<bool, ServerFnError> {
-    use leptos_axum::extract;
-    use axum::http::HeaderMap;
-    use axum_extra::extract::cookie::CookieJar;
-    use axum::Extension;
     use crate::state::AppState;
-    
+    use axum::http::HeaderMap;
+    use axum::Extension;
+    use axum_extra::extract::cookie::CookieJar;
+    use leptos_axum::extract;
+
     let headers = extract::<HeaderMap>().await.unwrap_or_default();
     let cookies = CookieJar::from_headers(&headers);
     let session_cookie = cookies.get("session");
-    
+
     if let Some(cookie) = session_cookie {
         let app_state = match extract::<Extension<AppState>>().await {
             Ok(state) => state,
             Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
         };
-        let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE session_token = $1)")
-            .bind(cookie.value())
-            .fetch_one(&app_state.pool)
-            .await
-            .unwrap_or(false);
+        let exists: bool =
+            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE session_token = $1)")
+                .bind(cookie.value())
+                .fetch_one(&app_state.pool)
+                .await
+                .unwrap_or(false);
         Ok(exists)
     } else {
         Ok(false)
@@ -300,16 +355,21 @@ pub async fn get_users() -> Result<Vec<UserRecord>, ServerFnError> {
     use axum::Extension;
     use leptos_axum::extract;
     use sqlx::Row;
-    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    if !check_session().await.unwrap_or(false) {
+        return Err(ServerFnError::ServerError("Unauthorized".into()));
+    }
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
     let rows = sqlx::query("SELECT id, username, to_char(created_at, 'YYYY.MM.DD HH24:MI:SS') as created_at FROM users ORDER BY id ASC")
         .fetch_all(&state.pool)
         .await?;
-    let users = rows.into_iter().map(|row| UserRecord {
-        id: row.get("id"),
-        username: row.get("username"),
-        created_at: row.get("created_at"),
-    }).collect();
+    let users = rows
+        .into_iter()
+        .map(|row| UserRecord {
+            id: row.get("id"),
+            username: row.get("username"),
+            created_at: row.get("created_at"),
+        })
+        .collect();
     Ok(users)
 }
 
@@ -317,9 +377,14 @@ pub async fn get_users() -> Result<Vec<UserRecord>, ServerFnError> {
 pub async fn delete_user(id: i32) -> Result<(), ServerFnError> {
     use axum::Extension;
     use leptos_axum::extract;
-    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    if !check_session().await.unwrap_or(false) {
+        return Err(ServerFnError::ServerError("Unauthorized".into()));
+    }
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    sqlx::query("DELETE FROM users WHERE id = $1").bind(id).execute(&state.pool).await?;
+    sqlx::query("DELETE FROM users WHERE id = $1")
+        .bind(id)
+        .execute(&state.pool)
+        .await?;
     Ok(())
 }
 

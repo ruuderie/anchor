@@ -1,5 +1,5 @@
 use leptos::*;
-use leptos_meta::{Title, Meta};
+use leptos_meta::{Meta, Title};
 
 use crate::pages::landing::get_site_settings;
 
@@ -13,11 +13,11 @@ pub fn BookDiscovery() -> impl IntoView {
         <Meta property="og:title" content="Book Discovery | Ruuderie"/>
         <Meta property="og:description" content="Schedule a discovery call with Ruud Salym Erie to discuss technical architecture, software engineering, and infrastructure modernization."/>
         <main class="min-h-screen pt-32 pb-24 px-6 md:px-12 max-w-7xl mx-auto flex flex-col items-center">
-            
+
             <div class="max-w-3xl text-center mb-12 flex flex-col items-center">
                 <crate::components::dynamic_header::DynamicPageHeader route_path="/book".to_string() badge_color="primary".to_string() />
             </div>
-            
+
             <Transition fallback=move || view! { <div class="text-outline jetbrains">"Loading calendar..."</div> }>
                 {move || match settings_res.get() {
                     Some(Ok(settings)) => {
@@ -27,11 +27,11 @@ pub fn BookDiscovery() -> impl IntoView {
                         } else {
                             view! {
                                 <div class="w-full max-w-4xl bg-surface-container-low rounded-3xl overflow-hidden border border-outline-variant/30 shadow-xl h-[700px]">
-                                    <iframe 
-                                        src=bu 
-                                        width="100%" 
-                                        height="100%" 
-                                        frameborder="0" 
+                                    <iframe
+                                        src=bu
+                                        width="100%"
+                                        height="100%"
+                                        frameborder="0"
                                         class="w-full h-full"
                                     ></iframe>
                                 </div>

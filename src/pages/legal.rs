@@ -1,5 +1,5 @@
 use leptos::*;
-use leptos_meta::{Title, Meta};
+use leptos_meta::{Meta, Title};
 
 use crate::pages::landing::get_site_settings;
 
@@ -7,7 +7,7 @@ fn render_markdown(md: &str) -> String {
     let mut options = pulldown_cmark::Options::empty();
     options.insert(pulldown_cmark::Options::ENABLE_STRIKETHROUGH);
     options.insert(pulldown_cmark::Options::ENABLE_TABLES);
-    
+
     let parser = pulldown_cmark::Parser::new_ext(md, options);
     let mut html_output = String::new();
     pulldown_cmark::html::push_html(&mut html_output, parser);
@@ -27,7 +27,7 @@ pub fn Terms() -> impl IntoView {
                     Some(Ok(settings)) => {
                         let html = render_markdown(&settings.terms_html);
                         view! {
-                            <article class="prose prose-invert prose-emerald max-w-none 
+                            <article class="prose prose-invert prose-emerald max-w-none
                                 prose-headings:font-display prose-headings:font-bold 
                                 prose-h1:text-4xl prose-h2:text-2xl prose-h3:text-xl
                                 prose-a:text-primary prose-a:no-underline hover:prose-a:underline
@@ -62,7 +62,7 @@ pub fn Privacy() -> impl IntoView {
                     Some(Ok(settings)) => {
                         let html = render_markdown(&settings.privacy_html);
                         view! {
-                            <article class="prose prose-invert prose-emerald max-w-none 
+                            <article class="prose prose-invert prose-emerald max-w-none
                                 prose-headings:font-display prose-headings:font-bold 
                                 prose-h1:text-4xl prose-h2:text-2xl prose-h3:text-xl
                                 prose-a:text-primary prose-a:no-underline hover:prose-a:underline

@@ -49,45 +49,74 @@ pub async fn get_jobs() -> Result<Vec<JobRecord>, ServerFnError> {
     use axum::Extension;
     use leptos_axum::extract;
     use sqlx::Row;
-    
+
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
     let rows = sqlx::query("SELECT id, title, date_range, bullets, metadata FROM resume_entries WHERE category = 'work' ORDER BY id DESC")
         .fetch_all(&state.pool)
         .await?;
-        
-    let jobs = rows.into_iter().map(|row| {
-        let meta: Option<serde_json::Value> = row.try_get("metadata").unwrap_or(None);
-        let company = meta.as_ref().and_then(|m| m.get("company")).and_then(|v| v.as_str()).unwrap_or("").to_string();
-        let parent_company = meta.as_ref().and_then(|m| m.get("parent_company")).and_then(|v| v.as_str()).map(|s| s.to_string());
-        let et_str = meta.as_ref().and_then(|m| m.get("employment_type")).and_then(|v| v.as_str()).unwrap_or("DirectHire");
-        let employment_type = JobType::from_str(&et_str).unwrap_or_default();
-        
-        let tags: Vec<String> = meta.as_ref()
-            .and_then(|m| m.get("tags"))
-            .and_then(|v| serde_json::from_value(v.clone()).ok())
-            .unwrap_or_else(|| {
-                meta.as_ref().and_then(|m| m.get("tags")).and_then(|v| v.as_str())
-                    .map(|s| s.split(',').map(|x| x.trim().to_string()).filter(|x| !x.is_empty()).collect())
-                    .unwrap_or_default()
-            });
 
-        let bullets_val: serde_json::Value = row.try_get("bullets").unwrap_or(serde_json::json!([]));
-        let bullets: Vec<String> = serde_json::from_value(bullets_val).unwrap_or_default();
-        let date_range_opt: Option<String> = row.try_get("date_range").unwrap_or(None);
-        
-        JobRecord {
-            id: row.get("id"),
-            date_range: date_range_opt.unwrap_or_default(),
-            role: row.get("title"),
-            company,
-            bullets,
-            employment_type,
-            parent_company,
-            tags,
-            hide_date: meta.as_ref().and_then(|m| m.get("hide_date")).and_then(|v| v.as_bool()).unwrap_or(false),
-        }
-    }).collect();
-    
+    let jobs = rows
+        .into_iter()
+        .map(|row| {
+            let meta: Option<serde_json::Value> = row.try_get("metadata").unwrap_or(None);
+            let company = meta
+                .as_ref()
+                .and_then(|m| m.get("company"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let parent_company = meta
+                .as_ref()
+                .and_then(|m| m.get("parent_company"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let et_str = meta
+                .as_ref()
+                .and_then(|m| m.get("employment_type"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("DirectHire");
+            let employment_type = JobType::from_str(&et_str).unwrap_or_default();
+
+            let tags: Vec<String> = meta
+                .as_ref()
+                .and_then(|m| m.get("tags"))
+                .and_then(|v| serde_json::from_value(v.clone()).ok())
+                .unwrap_or_else(|| {
+                    meta.as_ref()
+                        .and_then(|m| m.get("tags"))
+                        .and_then(|v| v.as_str())
+                        .map(|s| {
+                            s.split(',')
+                                .map(|x| x.trim().to_string())
+                                .filter(|x| !x.is_empty())
+                                .collect()
+                        })
+                        .unwrap_or_default()
+                });
+
+            let bullets_val: serde_json::Value =
+                row.try_get("bullets").unwrap_or(serde_json::json!([]));
+            let bullets: Vec<String> = serde_json::from_value(bullets_val).unwrap_or_default();
+            let date_range_opt: Option<String> = row.try_get("date_range").unwrap_or(None);
+
+            JobRecord {
+                id: row.get("id"),
+                date_range: date_range_opt.unwrap_or_default(),
+                role: row.get("title"),
+                company,
+                bullets,
+                employment_type,
+                parent_company,
+                tags,
+                hide_date: meta
+                    .as_ref()
+                    .and_then(|m| m.get("hide_date"))
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false),
+            }
+        })
+        .collect();
+
     Ok(jobs)
 }
 
@@ -100,14 +129,14 @@ pub fn Resume() -> impl IntoView {
             if let Ok(bytes) = download_resume(profile_id).await {
                 use web_sys::js_sys::{Array, Uint8Array};
                 use web_sys::{Blob, BlobPropertyBag, Url};
-                
+
                 let uint8_arr = Uint8Array::from(bytes.as_slice());
                 let parts = Array::new();
                 parts.push(&uint8_arr);
-                
+
                 let props = BlobPropertyBag::new();
                 props.set_type("application/pdf");
-                
+
                 if let Ok(blob) = Blob::new_with_u8_array_sequence_and_options(&parts, &props) {
                     if let Ok(url) = Url::create_object_url_with_blob(&blob) {
                         let document = leptos::document();
@@ -124,15 +153,20 @@ pub fn Resume() -> impl IntoView {
         }
     });
 
-    let profiles_resource = create_resource(|| (), |_| async move {
-        crate::resume_engine::get_resume_profiles().await.unwrap_or_default()
-    });
+    let profiles_resource = create_resource(
+        || (),
+        |_| async move {
+            crate::resume_engine::get_resume_profiles()
+                .await
+                .unwrap_or_default()
+        },
+    );
 
     let (active_profile_id, set_active_profile_id) = create_signal(None::<i32>);
     let (show_modal, set_show_modal) = create_signal(false);
     let (lead_name, set_lead_name) = create_signal(String::new());
     let (lead_email, set_lead_email) = create_signal(String::new());
-    
+
     // Automatically select the first PUBLIC profile on load
     create_effect(move |_| {
         if let Some(mut profiles) = profiles_resource.get() {
@@ -146,8 +180,10 @@ pub fn Resume() -> impl IntoView {
     let profile_data_resource = create_resource(
         move || active_profile_id.get(),
         |id_opt| async move {
-            crate::resume_engine::get_resume_entries(id_opt).await.unwrap_or_default()
-        }
+            crate::resume_engine::get_resume_entries(id_opt)
+                .await
+                .unwrap_or_default()
+        },
     );
 
     let handle_download_click = move |_| {
@@ -159,15 +195,18 @@ pub fn Resume() -> impl IntoView {
         let email = lead_email.get_untracked();
         let id_opt = active_profile_id.get_untracked();
 
-        if email.is_empty() || name.is_empty() { return; }
+        if email.is_empty() || name.is_empty() {
+            return;
+        }
 
         spawn_local(async move {
             let _ = crate::pages::dynamic_landing::handle_dynamic_lead(
-                "resume_download".to_string(), 
-                email, 
-                vec![format!("Name: {}", name)]
-            ).await;
-            
+                "resume_download".to_string(),
+                email,
+                vec![format!("Name: {}", name)],
+            )
+            .await;
+
             if let Some(id) = id_opt {
                 download_pdf.dispatch(id);
             }
@@ -203,7 +242,7 @@ pub fn Resume() -> impl IntoView {
                             view! {
                                 <div class="flex flex-col md:flex-row gap-4 items-start md:items-center">
                                     <label class="jetbrains text-xs text-secondary font-bold uppercase tracking-widest block">"ACTIVE PROFILE_SET //"</label>
-                                    <select 
+                                    <select
                                         class="bg-surface border-2 border-outline-variant/30 text-on-surface text-sm font-bold jetbrains px-4 py-2 outline-none focus:border-primary transition-colors cursor-pointer w-full md:w-auto"
                                         on:change=move |ev| {
                                             if let Ok(id) = event_target_value(&ev).parse::<i32>() {
@@ -212,8 +251,8 @@ pub fn Resume() -> impl IntoView {
                                         }
                                     >
                                         {profiles.into_iter().map(|p| view! {
-                                            <option 
-                                                value=p.id 
+                                            <option
+                                                value=p.id
                                                 selected=move || active_profile_id.get() == Some(p.id)
                                             >
                                                 {p.name}
@@ -235,12 +274,12 @@ pub fn Resume() -> impl IntoView {
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
-                        
+
                         <div class="mb-8 border-b-2 border-outline-variant/30 pb-4">
                             <h2 class="text-2xl font-extrabold text-primary uppercase tracking-widest mb-2">"AUTHORIZATION REQUIRED"</h2>
                             <p class="jetbrains text-xs text-secondary/80">"Please identify yourself to compile and download this profile's TeX payload."</p>
                         </div>
-                        
+
                         <div class="space-y-6">
                             <div class="flex flex-col gap-2">
                                 <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Full Name"</label>
@@ -250,8 +289,8 @@ pub fn Resume() -> impl IntoView {
                                 <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Email Address"</label>
                                 <input type="email" prop:value=lead_email on:input=move |ev| set_lead_email.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" placeholder="guest@example.com" />
                             </div>
-                            
-                            <button 
+
+                            <button
                                 on:click=submit_lead
                                 disabled=move || lead_name.get().is_empty() || lead_email.get().is_empty() || download_pdf.pending().get()
                                 class="w-full bg-primary text-on-primary py-4 mt-4 jetbrains text-xs font-bold tracking-[0.2em] uppercase hover:bg-primary-container disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg flex justify-center items-center gap-2"
@@ -269,7 +308,7 @@ pub fn Resume() -> impl IntoView {
             <Suspense fallback=move || view! { <div class="text-on-surface-variant font-bold jetbrains uppercase h-64 flex items-center justify-center">"Hydrating systems database..."</div> }>
                 {move || {
                     let entries = profile_data_resource.get().unwrap_or_default();
-                    
+
                     let categories_to_render = vec![
                         (crate::resume_engine::ResumeCategory::Work, "Experience"),
                         (crate::resume_engine::ResumeCategory::Education, "Education"),
@@ -288,7 +327,7 @@ pub fn Resume() -> impl IntoView {
                                     .filter(|e| e.category == cat_enum && e.is_visible)
                                     .cloned()
                                     .collect();
-                                    
+
                                 if cat_entries.is_empty() {
                                     view! { <div class="hidden"></div> }.into_view()
                                 } else {

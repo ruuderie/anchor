@@ -1,7 +1,7 @@
 use leptos::*;
-use leptos_meta::{Title, Meta};
+use leptos_meta::{Meta, Title};
 
-use crate::b2b::{get_services, get_case_studies, get_highlights};
+use crate::b2b::{get_case_studies, get_highlights, get_services};
 use crate::pages::landing::get_site_settings;
 
 #[component]
@@ -55,7 +55,7 @@ pub fn Services() -> impl IntoView {
                     <h2 class="font-label text-sm uppercase tracking-[0.2em] text-secondary font-bold">"Core Offerings"</h2>
                     <div class="h-[1px] bg-outline-variant/30 flex-1"></div>
                 </div>
-                
+
                 <Transition fallback=move || view! { <div class="text-center text-outline jetbrains">"Loading services..."</div> }>
                     {move || match services_res.get() {
                         Some(Ok(items)) => {
@@ -68,7 +68,7 @@ pub fn Services() -> impl IntoView {
                                             <div class="bg-surface-container-low p-8 border border-outline-variant/20 hover:border-primary/50 transition-colors group flex flex-col h-full">
                                                 <h3 class="font-bold text-2xl mb-4 text-on-surface group-hover:text-primary transition-colors">{&item.title}</h3>
                                                 <p class="text-on-surface-variant lg:text-lg mb-8 flex-1 leading-relaxed">{&item.description}</p>
-                                                
+
                                                 <div class="space-y-4 mb-8">
                                                     <div class="font-label text-xs uppercase tracking-widest text-secondary font-bold">"Deliverables"</div>
                                                     <ul class="space-y-2">
@@ -80,7 +80,7 @@ pub fn Services() -> impl IntoView {
                                                         }).collect_view()}
                                                     </ul>
                                                 </div>
-                                                
+
                                                 {item.price_range.map(|range| view! {
                                                     <div class="mt-auto pt-6 border-t border-outline-variant/10 font-jetbrains text-sm text-outline font-medium tracking-wide">
                                                         {range}
@@ -100,12 +100,12 @@ pub fn Services() -> impl IntoView {
             // Case Studies / Proof
             <section class="space-y-12 bg-surface-container py-16 px-8 rounded-3xl -mx-8 relative overflow-hidden">
                 <div class="absolute -right-32 -top-32 w-96 h-96 bg-primary/5 blur-3xl rounded-full"></div>
-                
+
                 <div class="flex items-center gap-4 relative z-10">
                     <h2 class="font-label text-[0.65rem] uppercase tracking-widest text-outline">"Proof of Impact"</h2>
                     <div class="h-[1px] bg-outline-variant/20 flex-1"></div>
                 </div>
-                
+
                 <Transition fallback=move || view! { <div class="text-center text-outline jetbrains">"Loading case studies..."</div> }>
                     {move || match case_studies_res.get() {
                         Some(Ok(items)) => {
@@ -156,7 +156,7 @@ pub fn Services() -> impl IntoView {
 
             // Highlights component
             <HighlightsGallery />
-            
+
         </main>
                         }.into_view()
                     }
@@ -170,14 +170,14 @@ pub fn Services() -> impl IntoView {
 #[component]
 pub fn HighlightsGallery() -> impl IntoView {
     let highlights_res = create_resource(|| (), |_| get_highlights(true));
-    
+
     view! {
         <section class="py-16 overflow-hidden">
             <div class="flex items-center gap-4 mb-12">
                 <h2 class="font-label text-sm uppercase tracking-[0.2em] text-secondary font-bold shrink-0">"Featured In & Highlights"</h2>
                 <div class="h-[1px] bg-outline-variant/30 flex-1"></div>
             </div>
-            
+
             <Transition fallback=move || view! { <div class="text-outline jetbrains px-6">"Loading highlights..."</div> }>
                 {move || match highlights_res.get() {
                     Some(Ok(items)) => {
@@ -212,7 +212,7 @@ pub fn HighlightsGallery() -> impl IntoView {
                                                 </div>
                                             </div>
                                         };
-                                        
+
                                         if has_link {
                                             view! { <a href=item.url target="_blank" rel="noopener noreferrer" class="block h-full cursor-pointer">{content}</a> }.into_view()
                                         } else {
@@ -226,7 +226,7 @@ pub fn HighlightsGallery() -> impl IntoView {
                     _ => view! { <div class="text-error px-6">"Failed to load highlights"</div> }.into_view()
                 }}
             </Transition>
-            
+
             <style>
                 ".hide-scrollbar::-webkit-scrollbar { display: none; }
                  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }"

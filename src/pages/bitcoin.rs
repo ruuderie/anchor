@@ -24,7 +24,7 @@ pub async fn get_bitcoin_blocks(limit: i64) -> Result<Vec<BitcoinBlockRecord>, S
         "SELECT id, height, timestamp, tx_count, size, weight, difficulty 
          FROM bitcoin_blocks 
          ORDER BY height DESC 
-         LIMIT $1"
+         LIMIT $1",
     )
     .bind(limit)
     .fetch_all(&state.pool)
@@ -54,12 +54,12 @@ pub fn BitcoinDashboard() -> impl IntoView {
         <Title text="Bitcoin // The Mechanical Reality"/>
         <div class="min-h-screen bg-surface text-on-surface font-sans selection:bg-secondary-container selection:text-on-secondary-container pt-32 pb-20 relative overflow-hidden">
             // Background effect
-            <div class="absolute inset-0 z-0 opacity-20 dark:opacity-10 pointer-events-none" 
+            <div class="absolute inset-0 z-0 opacity-20 dark:opacity-10 pointer-events-none"
                 style="background-image: linear-gradient(var(--color-outline-variant) 1px, transparent 1px), linear-gradient(90deg, var(--color-outline-variant) 1px, transparent 1px); background-size: 40px 40px;">
             </div>
-            
+
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-16">
-                
+
                 // Hero Section
                 <div class="mb-20 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                     <div>
@@ -78,14 +78,14 @@ pub fn BitcoinDashboard() -> impl IntoView {
                 </div>
 
                 // Blocks Data
-                <Suspense fallback=move || view! { 
+                <Suspense fallback=move || view! {
                     <div class="animate-pulse w-full h-[600px] bg-surface-container rounded-sm border border-outline-variant flex items-center justify-center">
                         <span class="text-outline font-mono tracking-widest uppercase">"Decrypting Ledger..."</span>
-                    </div> 
+                    </div>
                 }>
                     {move || {
                         let blocks = blocks_resource.get().unwrap_or(Ok(vec![])).unwrap_or_default();
-                        
+
                         if blocks.is_empty() {
                             view! {
                                 <div class="p-8 text-center text-on-surface-variant font-mono bg-surface-container rounded-sm border border-outline-variant">
@@ -95,7 +95,7 @@ pub fn BitcoinDashboard() -> impl IntoView {
                         } else {
                             let latest = blocks[0].clone();
                             let difficulty_trillions = latest.difficulty / 1_000_000_000_000.0;
-                            
+
                             view! {
                                 <div class="space-y-12">
                                     // Latest Block Stats Grid
@@ -105,7 +105,7 @@ pub fn BitcoinDashboard() -> impl IntoView {
                                         <StatCard title="BLOCK SIZE" value=format!("{:.2} MB", latest.size as f64 / 1_000_000.0) icon="data_exploration" color="text-secondary" />
                                         <StatCard title="TRANSACTIONS" value=format!("{}", latest.tx_count) icon="swap_horiz" color="text-tertiary" />
                                     </div>
-                                    
+
                                     // Immutable Chain Timeline
                                     <div class="bg-surface-container-low shadow-sm border border-outline-variant p-6 lg:p-10 overflow-hidden relative">
                                         <div class="absolute top-0 right-0 p-32 opacity-[0.02] dark:opacity-5 pointer-events-none select-none text-[30rem] leading-none material-symbols-outlined font-black">
@@ -114,7 +114,7 @@ pub fn BitcoinDashboard() -> impl IntoView {
                                         <h2 class="text-sm font-bold tracking-[0.2em] text-on-surface-variant uppercase mb-8 font-mono border-b border-outline-variant/50 pb-4">
                                             "Immutable Chain Sequence"
                                         </h2>
-                                        
+
                                         <div class="overflow-x-auto">
                                             <table class="w-full text-left whitespace-nowrap">
                                                 <thead>
@@ -129,13 +129,12 @@ pub fn BitcoinDashboard() -> impl IntoView {
                                                 <tbody class="divide-y divide-outline-variant/30">
                                                     {blocks.into_iter().enumerate().map(|(idx, block)| {
                                                         // Convert timestamp to naive datetime string
-                                                        let date_str = chrono::DateTime::<chrono::Utc>::from_utc(
-                                                            chrono::NaiveDateTime::from_timestamp_opt(block.timestamp, 0).unwrap_or_default(),
-                                                            chrono::Utc
-                                                        ).format("%Y-%m-%d %H:%M:%S UTC").to_string();
-                                                        
+                                                        let date_str = chrono::DateTime::from_timestamp(block.timestamp, 0)
+                                                            .unwrap_or_default()
+                                                            .format("%Y-%m-%d %H:%M:%S UTC").to_string();
+
                                                         let is_latest = idx == 0;
-                                                        
+
                                                         view! {
                                                             <tr class=format!("group hover:bg-surface-container transition-colors {}", if is_latest { "bg-primary/5" } else { "" })>
                                                                 <td class="py-4 pr-6 font-mono">
@@ -182,7 +181,12 @@ pub fn BitcoinDashboard() -> impl IntoView {
 }
 
 #[component]
-fn StatCard(title: &'static str, value: String, icon: &'static str, color: &'static str) -> impl IntoView {
+fn StatCard(
+    title: &'static str,
+    value: String,
+    icon: &'static str,
+    color: &'static str,
+) -> impl IntoView {
     view! {
         <div class="bg-surface-container-low shadow-sm border border-outline-variant p-6 flex flex-col hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
             <div class="flex items-center justify-between mb-4">

@@ -1,46 +1,58 @@
+use crate::components::content_feed::{ContentFeed, ContentNode, LayoutMode};
 use leptos::*;
-use crate::components::content_feed::{ContentNode, ContentFeed, LayoutMode};
 
 #[server(GetCertifications, "/api")]
 pub async fn get_certifications() -> Result<Vec<ContentNode>, ServerFnError> {
     use axum::Extension;
     use leptos_axum::extract;
     use sqlx::Row;
-    
+
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
     let rows = sqlx::query("SELECT id, title, subtitle, date_range, metadata FROM resume_entries WHERE category = 'certification' ORDER BY id DESC")
         .fetch_all(&state.pool)
         .await?;
-        
-    let certs = rows.into_iter().map(|row| {
-        let meta: Option<serde_json::Value> = row.try_get("metadata").unwrap_or(None);
-        let is_training = meta.as_ref().and_then(|m| m.get("is_training")).and_then(|v| v.as_bool()).unwrap_or(false);
-        let date_range_opt: Option<String> = row.try_get("date_range").unwrap_or(None);
-        let id: i32 = row.get("id");
-        
-        ContentNode {
-            id: id.to_string(),
-            category: "certification".to_string(),
-            title: row.get("title"),
-            subtitle: row.try_get("subtitle").unwrap_or(None),
-            date_label: date_range_opt,
-            status: None,
-            tags: vec![],
-            bullets: vec![],
-            markdown: None,
-            link_url: meta.as_ref().and_then(|m| m.get("url")).and_then(|v| v.as_str()).map(|s| s.to_string()),
-            is_highlight: is_training,
-        }
-    }).collect();
-    
+
+    let certs = rows
+        .into_iter()
+        .map(|row| {
+            let meta: Option<serde_json::Value> = row.try_get("metadata").unwrap_or(None);
+            let is_training = meta
+                .as_ref()
+                .and_then(|m| m.get("is_training"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let date_range_opt: Option<String> = row.try_get("date_range").unwrap_or(None);
+            let id: i32 = row.get("id");
+
+            ContentNode {
+                id: id.to_string(),
+                category: "certification".to_string(),
+                title: row.get("title"),
+                subtitle: row.try_get("subtitle").unwrap_or(None),
+                date_label: date_range_opt,
+                status: None,
+                tags: vec![],
+                bullets: vec![],
+                markdown: None,
+                link_url: meta
+                    .as_ref()
+                    .and_then(|m| m.get("url"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string()),
+                is_highlight: is_training,
+            }
+        })
+        .collect();
+
     Ok(certs)
 }
 
 #[component]
 pub fn Certifications() -> impl IntoView {
-    let certs_resource = create_resource(|| (), |_| async move {
-        get_certifications().await.unwrap_or_else(|_| vec![])
-    });
+    let certs_resource = create_resource(
+        || (),
+        |_| async move { get_certifications().await.unwrap_or_else(|_| vec![]) },
+    );
 
     view! {
         <main class="pt-32 pb-24 px-6 md:px-[8.5rem] bg-surface min-h-screen">
@@ -68,7 +80,7 @@ pub fn Certifications() -> impl IntoView {
                                         <ContentFeed nodes=training layout=LayoutMode::Carousel />
                                     </>
                                 })}
-                                
+
                                 <div class="max-w-6xl mt-16 bg-surface-container-low p-8 border-l-4 border-outline">
                                     <h3 class="text-xl font-bold text-on-surface mb-2 uppercase">"Publications"</h3>
                                     <p class="text-sm font-bold text-on-surface-variant mb-6">"Experience ADITL Podcast | A Day In The Life of a Salesforce Technical Architect"</p>

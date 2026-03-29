@@ -4,15 +4,17 @@ use std::time::Duration;
 #[server(GetBlockHeight, "/api")]
 pub async fn get_block_height() -> Result<u64, ServerFnError> {
     use axum::Extension;
-    use leptos_axum::extract;
     use chrono::Utc;
+    use leptos_axum::extract;
 
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
 
     use sqlx::Row;
-    let latest_db = sqlx::query("SELECT height, timestamp, fetched_at FROM bitcoin_blocks ORDER BY height DESC LIMIT 1")
-        .fetch_optional(&state.pool)
-        .await?;
+    let latest_db = sqlx::query(
+        "SELECT height, timestamp, fetched_at FROM bitcoin_blocks ORDER BY height DESC LIMIT 1",
+    )
+    .fetch_optional(&state.pool)
+    .await?;
 
     let mut needs_fetch = true;
     let mut current_height = 0;
@@ -22,10 +24,10 @@ pub async fn get_block_height() -> Result<u64, ServerFnError> {
         let block_timestamp = row.get::<i64, _>("timestamp");
         let fetched_at = row.get::<chrono::DateTime<Utc>, _>("fetched_at");
         let now = Utc::now();
-        
+
         let time_since_fetch = now.signed_duration_since(fetched_at).num_seconds();
         let time_since_block = now.timestamp() - block_timestamp;
-        
+
         // Skip fetching if either:
         // 1. We just fetched within the last 60 seconds (prevents hammering API)
         // 2. OR the block was mined less than 10 mins (600s) ago
@@ -51,8 +53,14 @@ pub async fn get_block_height() -> Result<u64, ServerFnError> {
             let tx_count = block["tx_count"].as_i64().unwrap_or(0) as i32;
             let size = block["size"].as_i64().unwrap_or(0) as i32;
             let weight = block["weight"].as_i64().unwrap_or(0) as i32;
-            let merkle_root = block["merkle_root"].as_str().unwrap_or_default().to_string();
-            let previousblockhash = block["previousblockhash"].as_str().unwrap_or_default().to_string();
+            let merkle_root = block["merkle_root"]
+                .as_str()
+                .unwrap_or_default()
+                .to_string();
+            let previousblockhash = block["previousblockhash"]
+                .as_str()
+                .unwrap_or_default()
+                .to_string();
             let mediantime = block["mediantime"].as_i64().unwrap_or(0);
             let nonce = block["nonce"].as_i64().unwrap_or(0);
             let bits = block["bits"].as_i64().unwrap_or(0);
@@ -81,10 +89,12 @@ pub async fn get_block_height() -> Result<u64, ServerFnError> {
                 .await;
         }
 
-        let _ = sqlx::query("DELETE FROM bitcoin_blocks WHERE fetched_at < NOW() - INTERVAL '24 hours'")
-            .execute(&state.pool)
-            .await;
-            
+        let _ = sqlx::query(
+            "DELETE FROM bitcoin_blocks WHERE fetched_at < NOW() - INTERVAL '24 hours'",
+        )
+        .execute(&state.pool)
+        .await;
+
         let _ = sqlx::query("INSERT INTO api_requests_log (endpoint) VALUES ('mempool_api')")
             .execute(&state.pool)
             .await;
@@ -121,7 +131,12 @@ pub async fn get_bitcoin_stats() -> Result<BitcoinStats, ServerFnError> {
             weight: r.get("weight"),
         })
     } else {
-        Ok(BitcoinStats { difficulty: 0.0, tx_count: 0, size: 0, weight: 0 })
+        Ok(BitcoinStats {
+            difficulty: 0.0,
+            tx_count: 0,
+            size: 0,
+            weight: 0,
+        })
     }
 }
 
@@ -159,14 +174,18 @@ pub async fn get_nav_items() -> Result<Vec<NavItemRecord>, ServerFnError> {
 
 #[server(GetAllNavItems, "/api")]
 pub async fn get_all_nav_items() -> Result<Vec<NavItemRecord>, ServerFnError> {
+    use crate::auth::check_session;
     use axum::Extension;
     use leptos_axum::extract;
     use sqlx::Row;
-    use crate::auth::check_session;
-    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    if !check_session().await.unwrap_or(false) {
+        return Err(ServerFnError::ServerError("Unauthorized".into()));
+    }
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    let rows = sqlx::query("SELECT * FROM nav_items ORDER BY parent_id NULLS FIRST, display_order ASC")
-        .fetch_all(&state.pool).await?;
+    let rows =
+        sqlx::query("SELECT * FROM nav_items ORDER BY parent_id NULLS FIRST, display_order ASC")
+            .fetch_all(&state.pool)
+            .await?;
     let mut items = Vec::new();
     for row in rows {
         items.push(NavItemRecord {
@@ -182,11 +201,19 @@ pub async fn get_all_nav_items() -> Result<Vec<NavItemRecord>, ServerFnError> {
 }
 
 #[server(AddNavItem, "/api")]
-pub async fn add_nav_item(label: String, href: Option<String>, parent_id: Option<i32>, display_order: i32, is_visible: bool) -> Result<(), ServerFnError> {
+pub async fn add_nav_item(
+    label: String,
+    href: Option<String>,
+    parent_id: Option<i32>,
+    display_order: i32,
+    is_visible: bool,
+) -> Result<(), ServerFnError> {
     use crate::auth::check_session;
     use axum::Extension;
     use leptos_axum::extract;
-    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    if !check_session().await.unwrap_or(false) {
+        return Err(ServerFnError::ServerError("Unauthorized".into()));
+    }
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
     sqlx::query("INSERT INTO nav_items (label, href, parent_id, display_order, is_visible) VALUES ($1, $2, $3, $4, $5)")
         .bind(label).bind(href).bind(parent_id).bind(display_order).bind(is_visible)
@@ -195,11 +222,20 @@ pub async fn add_nav_item(label: String, href: Option<String>, parent_id: Option
 }
 
 #[server(UpdateNavItem, "/api")]
-pub async fn update_nav_item(id: i32, label: String, href: Option<String>, parent_id: Option<i32>, display_order: i32, is_visible: bool) -> Result<(), ServerFnError> {
+pub async fn update_nav_item(
+    id: i32,
+    label: String,
+    href: Option<String>,
+    parent_id: Option<i32>,
+    display_order: i32,
+    is_visible: bool,
+) -> Result<(), ServerFnError> {
     use crate::auth::check_session;
     use axum::Extension;
     use leptos_axum::extract;
-    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    if !check_session().await.unwrap_or(false) {
+        return Err(ServerFnError::ServerError("Unauthorized".into()));
+    }
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
     sqlx::query("UPDATE nav_items SET label = $1, href = $2, parent_id = $3, display_order = $4, is_visible = $5 WHERE id = $6")
         .bind(label).bind(href).bind(parent_id).bind(display_order).bind(is_visible).bind(id)
@@ -212,9 +248,14 @@ pub async fn delete_nav_item(id: i32) -> Result<(), ServerFnError> {
     use crate::auth::check_session;
     use axum::Extension;
     use leptos_axum::extract;
-    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    if !check_session().await.unwrap_or(false) {
+        return Err(ServerFnError::ServerError("Unauthorized".into()));
+    }
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    sqlx::query("DELETE FROM nav_items WHERE id = $1").bind(id).execute(&state.pool).await?;
+    sqlx::query("DELETE FROM nav_items WHERE id = $1")
+        .bind(id)
+        .execute(&state.pool)
+        .await?;
     Ok(())
 }
 
@@ -222,13 +263,14 @@ pub async fn delete_nav_item(id: i32) -> Result<(), ServerFnError> {
 pub fn Nav() -> impl IntoView {
     let (tick, set_tick) = create_signal(0);
     let (mobile_menu_open, set_mobile_menu_open) = create_signal(false);
-    
+
     create_effect(move |_| {
         let handle = set_interval_with_handle(
             move || set_tick.update(|t| *t += 1),
             Duration::from_secs(60),
-        ).ok();
-        
+        )
+        .ok();
+
         on_cleanup(move || {
             if let Some(h) = handle {
                 h.clear();
@@ -251,12 +293,12 @@ pub fn Nav() -> impl IntoView {
                 <Suspense fallback=move || view! { <div class="w-24 h-4 bg-slate-200 dark:bg-slate-700 animate-pulse rounded"></div> }>
                     {move || {
                         let items = nav_resource.get().unwrap_or(Ok(vec![])).unwrap_or_default();
-                        
+
                         let root_items: Vec<_> = items.iter().filter(|i| i.parent_id.is_none()).collect();
-                        
+
                         root_items.into_iter().map(|root| {
                             let children: Vec<_> = items.iter().filter(|i| i.parent_id == Some(root.id)).collect();
-                            
+
                             if children.is_empty() {
                                 view! {
                                     <a href=root.href.clone().unwrap_or_else(|| "#".to_string()) class="text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100/50 dark:hover:bg-slate-800/50 transition-colors uppercase">
@@ -270,7 +312,7 @@ pub fn Nav() -> impl IntoView {
                                             {root.label.clone()}
                                         </a>
                                         <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 group-hover:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-                                        
+
                                         <div class="absolute top-full left-0 mt-0 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl opacity-0 invisible group-hover:visible group-hover:opacity-100 transition-all flex flex-col pointer-events-none group-hover:pointer-events-auto">
                                             {children.into_iter().map(|child| {
                                                 view! {
@@ -288,7 +330,7 @@ pub fn Nav() -> impl IntoView {
                 </Suspense>
             </div>
             <div class="flex items-center space-x-4 md:space-x-6 z-50">
-                <button 
+                <button
                     on:click=move |_| set_mobile_menu_open.update(|o| *o = !*o)
                     class="md:hidden text-primary focus:outline-none flex items-center justify-center p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 >
@@ -297,7 +339,7 @@ pub fn Nav() -> impl IntoView {
                     </span>
                 </button>
                 <a href="/admin" class="material-symbols-outlined text-primary cursor-pointer hover:opacity-80 transition-opacity hidden sm:block">"terminal"</a>
-                <Suspense fallback=move || view! { 
+                <Suspense fallback=move || view! {
                     <a href="#" class="bg-surface border border-outline-variant/30 px-6 py-2 jetbrains text-[0.65rem] font-bold tracking-wider opacity-50 block whitespace-nowrap">
                         <div class="flex flex-col items-center leading-none justify-center">
                             <span class="text-[0.55rem] text-on-surface-variant uppercase font-medium">"CURRENT BLOCK"</span>
@@ -324,9 +366,9 @@ pub fn Nav() -> impl IntoView {
                     }}
                 </Suspense>
             </div>
-            
+
             // Mobile Menu Overlay
-            <div 
+            <div
                 class="fixed inset-0 bg-white dark:bg-slate-900 z-40 flex flex-col pt-32 px-6 transition-transform duration-300 ease-in-out md:hidden"
                 class:translate-x-0=move || mobile_menu_open.get()
                 class:translate-x-full=move || !mobile_menu_open.get()
@@ -335,12 +377,12 @@ pub fn Nav() -> impl IntoView {
                     <Suspense fallback=move || view! { <div class="w-24 h-4 bg-slate-200 dark:bg-slate-700 animate-pulse rounded"></div> }>
                         {move || {
                             let items = nav_resource.get().unwrap_or(Ok(vec![])).unwrap_or_default();
-                            
+
                             let root_items: Vec<_> = items.iter().filter(|i| i.parent_id.is_none()).collect();
-                            
+
                             root_items.into_iter().map(|root| {
                                 let children: Vec<_> = items.iter().filter(|i| i.parent_id == Some(root.id)).collect();
-                                
+
                                 if children.is_empty() {
                                     view! {
                                         <a href=root.href.clone().unwrap_or_else(|| "#".to_string()) on:click=move |_| set_mobile_menu_open.set(false) class="text-3xl font-bold text-slate-800 dark:text-slate-100 uppercase hover:text-primary transition-colors">

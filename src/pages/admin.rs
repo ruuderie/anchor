@@ -11,7 +11,7 @@ use wasm_bindgen::prelude::*;
 extern "C" {
     #[wasm_bindgen(catch)]
     async fn registerDevice(optionsJson: &str) -> Result<JsValue, JsValue>;
-    
+
     #[wasm_bindgen(catch)]
     async fn authenticateDevice(optionsJson: &str) -> Result<JsValue, JsValue>;
 }
@@ -28,7 +28,7 @@ pub fn Admin() -> impl IntoView {
     let (modal_state, set_modal_state) = create_signal(ModalState::None);
     provide_context(modal_state);
     provide_context(set_modal_state);
-    
+
     let (refresh, set_refresh) = create_signal(0);
     provide_context(refresh);
     provide_context(set_refresh);
@@ -43,19 +43,21 @@ pub fn Admin() -> impl IntoView {
 
     let login_action = create_action(move |_: &()| async move {
         let uname = username.get_untracked();
-        if uname.is_empty() { 
+        if uname.is_empty() {
             set_auth_error.set("Identity Hash (Username) is required.".to_string());
-            return; 
+            return;
         }
         set_is_loading.set(true);
         set_auth_error.set(String::new());
-        
+
         match login_start(uname.clone()).await {
             Ok(_payload) => {
                 #[cfg(target_arch = "wasm32")]
                 {
                     if let Ok(val) = serde_json::from_str::<serde_json::Value>(&_payload) {
-                        if let (Some(c_str), Some(o_str)) = (val["challenge_id"].as_str(), val["options"].as_str()) {
+                        if let (Some(c_str), Some(o_str)) =
+                            (val["challenge_id"].as_str(), val["options"].as_str())
+                        {
                             if let Ok(challenge_id) = uuid::Uuid::parse_str(c_str) {
                                 match authenticateDevice(o_str).await {
                                     Ok(cred_js) => {
@@ -74,13 +76,14 @@ pub fn Admin() -> impl IntoView {
                                 set_auth_error.set("Internal error: Bad challenge ID".to_string());
                             }
                         } else {
-                            set_auth_error.set("Internal error: Malformed server payload".to_string());
+                            set_auth_error
+                                .set("Internal error: Malformed server payload".to_string());
                         }
                     } else {
                         set_auth_error.set("Internal error: JSON parse failed".to_string());
                     }
                 }
-            },
+            }
             Err(e) => set_auth_error.set(format!("Identity not recognized: {:?}", e)),
         }
         set_is_loading.set(false);
@@ -88,13 +91,13 @@ pub fn Admin() -> impl IntoView {
 
     let register_action = create_action(move |_: &()| async move {
         let uname = username.get_untracked();
-        if uname.is_empty() { 
+        if uname.is_empty() {
             set_auth_error.set("Identity Hash (Username) is required.".to_string());
-            return; 
+            return;
         }
         set_is_loading.set(true);
         set_auth_error.set(String::new());
-        
+
         let token = setup_token.get_untracked();
         let token_opt = if token.is_empty() { None } else { Some(token) };
         match register_start(uname.clone(), token_opt).await {
@@ -102,32 +105,42 @@ pub fn Admin() -> impl IntoView {
                 #[cfg(target_arch = "wasm32")]
                 {
                     if let Ok(val) = serde_json::from_str::<serde_json::Value>(&_payload) {
-                        if let (Some(c_str), Some(o_str)) = (val["challenge_id"].as_str(), val["options"].as_str()) {
+                        if let (Some(c_str), Some(o_str)) =
+                            (val["challenge_id"].as_str(), val["options"].as_str())
+                        {
                             if let Ok(challenge_id) = uuid::Uuid::parse_str(c_str) {
                                 match registerDevice(o_str).await {
                                     Ok(cred_js) => {
                                         if let Some(cred_str) = cred_js.as_string() {
-                                            match register_finish(uname, challenge_id, cred_str).await {
+                                            match register_finish(uname, challenge_id, cred_str)
+                                                .await
+                                            {
                                                 Ok(_) => set_authenticated.set(true),
-                                                Err(e) => set_auth_error.set(format!("Validation failed: {:?}", e)),
+                                                Err(e) => set_auth_error
+                                                    .set(format!("Validation failed: {:?}", e)),
                                             }
                                         } else {
-                                            set_auth_error.set("Invalid credential format from browser.".to_string());
+                                            set_auth_error.set(
+                                                "Invalid credential format from browser."
+                                                    .to_string(),
+                                            );
                                         }
-                                    },
-                                    Err(_) => set_auth_error.set("Device setup rejected or cancelled.".to_string()),
+                                    }
+                                    Err(_) => set_auth_error
+                                        .set("Device setup rejected or cancelled.".to_string()),
                                 }
                             } else {
                                 set_auth_error.set("Internal error: Bad challenge ID".to_string());
                             }
                         } else {
-                            set_auth_error.set("Internal error: Malformed server payload".to_string());
+                            set_auth_error
+                                .set("Internal error: Malformed server payload".to_string());
                         }
                     } else {
                         set_auth_error.set("Internal error: JSON parse failed".to_string());
                     }
                 }
-            },
+            }
             Err(e) => set_auth_error.set(format!("Server refused registration: {:?}", e)),
         }
         set_is_loading.set(false);
@@ -148,21 +161,21 @@ pub fn Admin() -> impl IntoView {
                                 <div class="space-y-12">
                                     <div class="relative w-full group">
                                         <label class="jetbrains text-[0.65rem] uppercase tracking-[0.1em] text-outline text-left block mb-2">"Identity Hash"</label>
-                                        <input 
-                                            type="text" 
-                                            placeholder="admin" 
+                                        <input
+                                            type="text"
+                                            placeholder="admin"
                                             on:input=move |ev| set_username.set(event_target_value(&ev))
                                             prop:value=username
-                                            class="w-full bg-transparent border-none border-b-2 border-outline-variant focus:border-primary focus:ring-0 px-0 py-4 jetbrains text-lg text-on-surface transition-all placeholder:text-outline-variant/50" 
+                                            class="w-full bg-transparent border-none border-b-2 border-outline-variant focus:border-primary focus:ring-0 px-0 py-4 jetbrains text-lg text-on-surface transition-all placeholder:text-outline-variant/50"
                                         />
                                     </div>                                    <div class="relative w-full group mt-6">
                                         <label class="jetbrains text-[0.65rem] uppercase tracking-[0.1em] text-outline text-left block mb-2">"Setup Token (First-Run Only)"</label>
-                                        <input 
-                                            type="text" 
-                                            placeholder="..." 
+                                        <input
+                                            type="text"
+                                            placeholder="..."
                                             on:input=move |ev| set_setup_token.set(event_target_value(&ev))
                                             prop:value=setup_token
-                                            class="w-full bg-transparent border-none border-b-2 border-outline-variant focus:border-primary focus:ring-0 px-0 py-4 jetbrains text-lg text-on-surface transition-all placeholder:text-outline-variant/50" 
+                                            class="w-full bg-transparent border-none border-b-2 border-outline-variant focus:border-primary focus:ring-0 px-0 py-4 jetbrains text-lg text-on-surface transition-all placeholder:text-outline-variant/50"
                                         />
                                     </div>
 
@@ -172,8 +185,8 @@ pub fn Admin() -> impl IntoView {
                                                 {move || auth_error.get()}
                                             </div>
                                         </Show>
-                                        
-                                        <button 
+
+                                        <button
                                             on:click=move |_| login_action.dispatch(())
                                             disabled=is_loading
                                             class="w-full bg-primary text-white py-6 jetbrains font-bold text-sm tracking-[0.2em] uppercase hover:bg-primary-container disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-3"
@@ -184,7 +197,7 @@ pub fn Admin() -> impl IntoView {
                                             <span class="inline-block translate-y-[1px]">"Authenticate // Passkey"</span>
                                         </button>
 
-                                        <button 
+                                        <button
                                             on:click=move |_| register_action.dispatch(())
                                             disabled=is_loading
                                             class="w-full border border-primary/20 text-primary py-4 jetbrains font-bold text-sm tracking-[0.2em] uppercase hover:bg-surface-container disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -207,7 +220,7 @@ pub fn Admin() -> impl IntoView {
                             {["DASHBOARD", "SERVICES", "CASE STUDIES", "HIGHLIGHTS", "MAILING LIST", "SETTINGS", "NAVIGATION", "FOOTER", "PAGE HEADERS", "BLOG", "RESUME PROFILES", "RESUME ENTRIES", "LANDING PAGES", "SECURITY"].iter().map(|&t| {
                                             let tab = t; // Capture `t` for the closure
                                             view! {
-                                                <button 
+                                                <button
                                                     on:click=move |_| set_active_tab.set(tab)
                                                     class=move || format!(
                                                         "w-full text-left px-4 py-3 jetbrains text-sm font-bold tracking-wider transition-colors {}",
@@ -224,8 +237,8 @@ pub fn Admin() -> impl IntoView {
                                         }
                                     ).collect_view()}
                                 </div>
-                            
-                            <button 
+
+                            <button
                                 on:click=move |_| set_authenticated.set(false)
                                 class="text-error text-xs jetbrains font-bold uppercase tracking-widest hover:underline"
                             >
@@ -246,7 +259,7 @@ pub fn Admin() -> impl IntoView {
                                             {move || active_tab.get()}
                                         </h2>
                                     </div>
-                                    <button 
+                                    <button
                                         on:click=move |_| {
                                             let state = match active_tab.get() {
                                                 "SETTINGS" => ModalState::Settings,
@@ -288,10 +301,10 @@ pub fn Admin() -> impl IntoView {
                                         "RESUME ENTRIES" => view! { <BaseResumeEntryTable /> }.into_view(),
                                         "LANDING PAGES" => view! { <LandingPageTable /> }.into_view(),
                                         "SECURITY" => view! { <PasskeyTable /> }.into_view(),
-                                        _ => view! { 
+                                        _ => view! {
                                             <div class="h-64 flex items-center justify-center border-2 border-dashed border-outline-variant text-outline">
                                                 <span class="jetbrains text-sm">"MODULE_OFFLINE"</span>
-                                            </div> 
+                                            </div>
                                         }.into_view(),
                                     }}
                                 </div>
@@ -318,12 +331,23 @@ pub async fn get_dashboard_stats() -> Result<DashboardStats, ServerFnError> {
     use axum::Extension;
     use leptos_axum::extract;
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    
+
     let mempool: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM api_requests_log WHERE endpoint = 'mempool_api' AND created_at > NOW() - INTERVAL '24 hours'").fetch_one(&state.pool).await.unwrap_or(0);
-    let signups: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users").fetch_one(&state.pool).await.unwrap_or(0);
-    let mailing: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM mailing_list").fetch_one(&state.pool).await.unwrap_or(0);
-    let views: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM page_views WHERE created_at > NOW() - INTERVAL '24 hours'").fetch_one(&state.pool).await.unwrap_or(0);
-    
+    let signups: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users")
+        .fetch_one(&state.pool)
+        .await
+        .unwrap_or(0);
+    let mailing: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM mailing_list")
+        .fetch_one(&state.pool)
+        .await
+        .unwrap_or(0);
+    let views: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM page_views WHERE created_at > NOW() - INTERVAL '24 hours'",
+    )
+    .fetch_one(&state.pool)
+    .await
+    .unwrap_or(0);
+
     Ok(DashboardStats {
         mempool_requests_24h: mempool,
         total_signups: signups,
@@ -336,9 +360,10 @@ pub async fn get_dashboard_stats() -> Result<DashboardStats, ServerFnError> {
 fn PageHeaderTable() -> impl IntoView {
     use crate::components::dynamic_header::get_all_page_headers;
     let refresh = expect_context::<ReadSignal<i32>>();
-    let set_modal_state = expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
+    let set_modal_state =
+        expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
     let headers_resource = create_resource(move || refresh.get(), |_| get_all_page_headers());
-    
+
     view! {
         <Transition fallback=move || view! { <div class="jetbrains text-sm text-outline">"QUERYING_DB..."</div> }>
             <table class="w-full text-left jetbrains text-sm">
@@ -412,14 +437,17 @@ fn DashboardView() -> impl IntoView {
 #[component]
 fn SettingsReadView() -> impl IntoView {
     let refresh = expect_context::<ReadSignal<i32>>();
-    let settings_res = create_resource(move || refresh.get(), |_| crate::pages::landing::get_site_settings());
+    let settings_res = create_resource(
+        move || refresh.get(),
+        |_| crate::pages::landing::get_site_settings(),
+    );
 
     view! {
         <Transition fallback=move || view! { <div class="jetbrains text-sm text-outline">"LOADING SETTINGS..."</div> }>
             {move || match settings_res.get() {
                 Some(Ok(s)) => view! {
                     <div class="grid grid-cols-1 gap-4 text-left jetbrains text-sm">
-                        
+
                         <div class="grid grid-cols-3 border-b-2 border-outline-variant/30 pb-2 mb-4">
                             <div class="font-label text-[0.65rem] uppercase tracking-widest text-outline">"KEY"</div>
                             <div class="col-span-2 font-label text-[0.65rem] uppercase tracking-widest text-outline">"VALUE"</div>
@@ -470,8 +498,8 @@ fn SettingsReadView() -> impl IntoView {
                             <div class="text-secondary uppercase tracking-widest text-xs">"LC BTN"</div>
                             <div class="col-span-2 text-on-surface font-medium">{&s.lc_btn}</div>
                         </div>
-                        
-                        
+
+
                         // Landing Pages Settings
                         <div class="grid grid-cols-3 py-2 border-b border-outline-variant/10 hover:bg-surface-container/30 mt-4">
                             <div class="text-outline uppercase tracking-widest text-xs">"BOOKING URL"</div>
@@ -507,7 +535,7 @@ fn SettingsReadView() -> impl IntoView {
                                 {if s.b2b_enabled { "ENABLED (PUBLIC)" } else { "STEALTH (HIDDEN)" }}
                             </div>
                         </div>
-                        
+
                     </div>
                 }.into_view(),
                 _ => view! { <div class="text-error">"Failed to load settings"</div> }.into_view()
@@ -518,11 +546,12 @@ fn SettingsReadView() -> impl IntoView {
 
 #[component]
 fn ResumeProfileTable() -> impl IntoView {
-    use crate::resume_engine::{get_resume_profiles, delete_resume_profile, download_resume};
+    use crate::resume_engine::{delete_resume_profile, download_resume, get_resume_profiles};
     let refresh = expect_context::<ReadSignal<i32>>();
     let set_refresh = expect_context::<WriteSignal<i32>>();
-    let set_modal_state = expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
-    
+    let set_modal_state =
+        expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
+
     let items_res = create_resource(move || refresh.get(), |_| get_resume_profiles());
 
     view! {
@@ -545,20 +574,20 @@ fn ResumeProfileTable() -> impl IntoView {
                                     <td class="py-4 text-outline-variant font-medium">#{id_val}</td>
                                     <td class="py-4 font-bold text-on-surface">{&item.name}</td>
                                     <td class="py-4 text-right space-x-4">
-                                        <button 
+                                        <button
                                             on:click=move |_| {
                                                 spawn_local(async move {
                                                     if let Ok(bytes) = download_resume(id_val).await {
                                                         use web_sys::js_sys::{Array, Uint8Array};
                                                         use web_sys::{Blob, BlobPropertyBag, Url};
-                                                        
+
                                                         let uint8_arr = Uint8Array::from(bytes.as_slice());
                                                         let parts = Array::new();
                                                         parts.push(&uint8_arr);
-                                                        
-                                                        let mut props = BlobPropertyBag::new();
+
+                                                        let props = BlobPropertyBag::new();
                                                         props.set_type("application/pdf");
-                                                        
+
                                                         if let Ok(blob) = Blob::new_with_u8_array_sequence_and_options(&parts, &props) {
                                                             if let Ok(url) = Url::create_object_url_with_blob(&blob) {
                                                                 if let Some(window) = web_sys::window() {
@@ -571,20 +600,20 @@ fn ResumeProfileTable() -> impl IntoView {
                                             }
                                             class="text-primary hover:text-primary-container font-medium tracking-wide"
                                         >"[PREVIEW]"</button>
-                                        <button 
+                                        <button
                                             on:click=move |_| {
                                                 spawn_local(async move {
                                                     if let Ok(bytes) = download_resume(id_val).await {
                                                         use web_sys::js_sys::{Array, Uint8Array};
                                                         use web_sys::{Blob, BlobPropertyBag, Url};
-                                                        
+
                                                         let uint8_arr = Uint8Array::from(bytes.as_slice());
                                                         let parts = Array::new();
                                                         parts.push(&uint8_arr);
-                                                        
-                                                        let mut props = BlobPropertyBag::new();
+
+                                                        let props = BlobPropertyBag::new();
                                                         props.set_type("application/pdf");
-                                                        
+
                                                         if let Ok(blob) = Blob::new_with_u8_array_sequence_and_options(&parts, &props) {
                                                             if let Ok(url) = Url::create_object_url_with_blob(&blob) {
                                                                 let document = leptos::document();
@@ -603,7 +632,7 @@ fn ResumeProfileTable() -> impl IntoView {
                                             class="text-primary hover:text-primary-container font-medium tracking-wide"
                                         >"[DOWNLOAD]"</button>
                                         <button on:click=move |_| set_modal_state.set(crate::components::admin_modal::ModalState::Profile(Some(clone_item.clone()))) class="text-secondary hover:text-on-secondary-fixed-variant font-medium tracking-wide">"[EDIT]"</button>
-                                        <button 
+                                        <button
                                             on:click=move |_| {
                                                 spawn_local(async move {
                                                     let _ = delete_resume_profile(id_val).await;
@@ -626,11 +655,12 @@ fn ResumeProfileTable() -> impl IntoView {
 
 #[component]
 fn BaseResumeEntryTable() -> impl IntoView {
-    use crate::resume_engine::{get_all_base_entries, delete_base_entry, ResumeCategory};
+    use crate::resume_engine::{delete_base_entry, get_all_base_entries, ResumeCategory};
     let refresh = expect_context::<ReadSignal<i32>>();
     let set_refresh = expect_context::<WriteSignal<i32>>();
-    let set_modal_state = expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
-    
+    let set_modal_state =
+        expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
+
     let items_res = create_resource(move || refresh.get(), |_| get_all_base_entries());
 
     view! {
@@ -664,7 +694,7 @@ fn BaseResumeEntryTable() -> impl IntoView {
                                             <div class="inline-block bg-secondary-container/20 px-3 py-1 border border-secondary/30">
                                                 <span class="font-label text-[0.6875rem] text-secondary font-bold tracking-tighter uppercase">{category_str.clone()} " ENTRIES"</span>
                                             </div>
-                                            <button 
+                                            <button
                                                 on:click=move |_| set_modal_state.set(crate::components::admin_modal::ModalState::BaseEntry(None, Some(cat)))
                                                 class="bg-surface-container-high hover:bg-surface-container-highest text-primary px-3 py-1 text-xs font-bold font-label uppercase transition-colors border border-outline-variant/30 flex items-center gap-2"
                                             >
@@ -690,7 +720,7 @@ fn BaseResumeEntryTable() -> impl IntoView {
                                                             <td class="py-4 font-bold text-on-surface truncate">{&item.title}</td>
                                                             <td class="py-4 text-right space-x-4">
                                                                 <button on:click=move |_| set_modal_state.set(crate::components::admin_modal::ModalState::BaseEntry(Some(clone_item.clone()), Some(clone_item.category))) class="text-secondary hover:text-on-secondary-fixed-variant font-medium tracking-wide">"[EDIT]"</button>
-                                                                <button 
+                                                                <button
                                                                     on:click=move |_| {
                                                                         spawn_local(async move {
                                                                             let _ = delete_base_entry(id_val).await;
@@ -732,9 +762,9 @@ pub async fn get_mailing_list() -> Result<Vec<MailingListRecord>, ServerFnError>
     use leptos_axum::extract;
     use sqlx::Row;
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    
+
     let rows = sqlx::query("SELECT id, email, list_type, preferences::text as prefs, created_at FROM mailing_list ORDER BY created_at DESC").fetch_all(&state.pool).await?;
-    
+
     let mut records = Vec::new();
     for row in rows {
         let created_at: chrono::DateTime<chrono::Utc> = row.get("created_at");
@@ -746,7 +776,7 @@ pub async fn get_mailing_list() -> Result<Vec<MailingListRecord>, ServerFnError>
             created_at: created_at.format("%Y-%m-%d %H:%M").to_string(),
         });
     }
-    
+
     Ok(records)
 }
 
@@ -755,9 +785,14 @@ pub async fn delete_mailing_list(id: i32) -> Result<(), ServerFnError> {
     use crate::auth::check_session;
     use axum::Extension;
     use leptos_axum::extract;
-    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    if !check_session().await.unwrap_or(false) {
+        return Err(ServerFnError::ServerError("Unauthorized".into()));
+    }
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    sqlx::query("DELETE FROM mailing_list WHERE id = $1").bind(id).execute(&state.pool).await?;
+    sqlx::query("DELETE FROM mailing_list WHERE id = $1")
+        .bind(id)
+        .execute(&state.pool)
+        .await?;
     Ok(())
 }
 
@@ -765,7 +800,7 @@ pub async fn delete_mailing_list(id: i32) -> Result<(), ServerFnError> {
 fn MailingListTable() -> impl IntoView {
     let refresh = expect_context::<ReadSignal<i32>>();
     let list_resource = create_resource(move || refresh.get(), |_| get_mailing_list());
-    
+
     view! {
         <Transition fallback=move || view! { <div class="jetbrains text-sm text-outline">"QUERYING_DB..."</div> }>
             <table class="w-full text-left jetbrains text-sm">
@@ -788,7 +823,7 @@ fn MailingListTable() -> impl IntoView {
                                 <td class="py-4 px-4 text-outline-variant">{i.created_at}</td>
                                 <td class="py-4 px-4">
                                     <div class="flex space-x-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button 
+                                        <button
                                             on:click=move |_| {
                                                 let id = i.id;
                                                 let r = refresh;
@@ -814,7 +849,6 @@ fn MailingListTable() -> impl IntoView {
     }
 }
 
-
 #[component]
 fn PostTable() -> impl IntoView {
     use crate::pages::blog::get_posts;
@@ -822,7 +856,7 @@ fn PostTable() -> impl IntoView {
     let set_refresh = expect_context::<WriteSignal<i32>>();
     let set_modal_state = expect_context::<WriteSignal<ModalState>>();
     let posts_resource = create_resource(move || refresh.get(), |_| get_posts());
-    
+
     view! {
         <Transition fallback=move || view! { <div class="jetbrains text-sm text-outline">"QUERYING_DB..."</div> }>
             <table class="w-full text-left jetbrains text-sm">
@@ -846,13 +880,13 @@ fn PostTable() -> impl IntoView {
                                 <td class="py-4 px-4 text-primary font-bold">{p.title.clone()}</td>
                                 <td class="py-4 px-4">
                                     <div class="flex space-x-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button 
+                                        <button
                                             on:click=move |_| set_modal_state.set(ModalState::Post(Some(p_clone.clone())))
                                             class="text-secondary hover:underline uppercase text-xs"
                                         >
                                             "Edit"
                                         </button>
-                                        <button 
+                                        <button
                                             on:click=move |_| {
                                                 spawn_local(async move {
                                                     if let Ok(_) = crate::pages::blog::delete_post(del_id).await {
@@ -883,7 +917,7 @@ fn PasskeyTable() -> impl IntoView {
     let refresh = expect_context::<ReadSignal<i32>>();
     let set_refresh = expect_context::<WriteSignal<i32>>();
     let users_resource = create_resource(move || refresh.get(), |_| get_users());
-    
+
     view! {
         <Transition fallback=move || view! { <div class="jetbrains text-sm text-outline">"QUERYING_DB..."</div> }>
             <table class="w-full text-left jetbrains text-sm">
@@ -904,7 +938,7 @@ fn PasskeyTable() -> impl IntoView {
                                 <td class="py-4 px-4 text-outline">{u.created_at}</td>
                                 <td class="py-4 px-4">
                                     <div class="flex space-x-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button 
+                                        <button
                                             on:click=move |_| {
                                                 let id = u.id;
                                                 spawn_local(async move {
@@ -931,12 +965,13 @@ fn PasskeyTable() -> impl IntoView {
 
 #[component]
 pub fn LandingPageTable() -> impl IntoView {
-    use crate::pages::dynamic_landing::{get_all_landing_pages, delete_landing_page};
+    use crate::pages::dynamic_landing::{delete_landing_page, get_all_landing_pages};
     let refresh = expect_context::<ReadSignal<i32>>();
     let set_refresh = expect_context::<WriteSignal<i32>>();
-    let set_modal_state = expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
+    let set_modal_state =
+        expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
     let pages_resource = create_resource(move || refresh.get(), |_| get_all_landing_pages());
-    
+
     view! {
         <Transition fallback=move || view! { <div class="jetbrains text-sm text-outline">"QUERYING_DB..."</div> }>
             <table class="w-full text-left jetbrains text-sm">
@@ -957,13 +992,13 @@ pub fn LandingPageTable() -> impl IntoView {
                                 <td class="py-4 px-4 text-outline">{p.title}</td>
                                 <td class="py-4 px-4">
                                     <div class="flex space-x-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button 
+                                        <button
                                             on:click=move |_| set_modal_state.set(crate::components::admin_modal::ModalState::LandingPage(Some(p_clone.clone())))
                                             class="text-secondary hover:underline uppercase text-xs"
                                         >
                                             "Edit"
                                         </button>
-                                        <button 
+                                        <button
                                             on:click=move |_| {
                                                 let id = p.id;
                                                 spawn_local(async move {
@@ -990,12 +1025,13 @@ pub fn LandingPageTable() -> impl IntoView {
 
 #[component]
 pub fn NavTable() -> impl IntoView {
-    use crate::components::nav::{get_all_nav_items, delete_nav_item};
+    use crate::components::nav::{delete_nav_item, get_all_nav_items};
     let refresh = expect_context::<ReadSignal<i32>>();
     let set_refresh = expect_context::<WriteSignal<i32>>();
-    let set_modal_state = expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
+    let set_modal_state =
+        expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
     let nav_resource = create_resource(move || refresh.get(), |_| get_all_nav_items());
-    
+
     view! {
         <Transition fallback=move || view! { <div class="jetbrains text-sm text-outline">"QUERYING_DB..."</div> }>
             <table class="w-full text-left jetbrains text-sm">
@@ -1021,13 +1057,13 @@ pub fn NavTable() -> impl IntoView {
                                 <td class="py-4 px-4 text-outline">{n.href.clone().unwrap_or_default()}</td>
                                 <td class="py-4 px-4">
                                     <div class="flex space-x-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button 
+                                        <button
                                             on:click=move |_| set_modal_state.set(crate::components::admin_modal::ModalState::NavItem(Some(n_clone.clone())))
                                             class="text-secondary hover:underline uppercase text-xs"
                                         >
                                             "Edit"
                                         </button>
-                                        <button 
+                                        <button
                                             on:click=move |_| {
                                                 let id = n.id;
                                                 spawn_local(async move {
@@ -1054,12 +1090,13 @@ pub fn NavTable() -> impl IntoView {
 
 #[component]
 pub fn FooterTable() -> impl IntoView {
-    use crate::components::footer::{get_all_footer_items, delete_footer_item};
+    use crate::components::footer::{delete_footer_item, get_all_footer_items};
     let refresh = expect_context::<ReadSignal<i32>>();
     let set_refresh = expect_context::<WriteSignal<i32>>();
-    let set_modal_state = expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
+    let set_modal_state =
+        expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
     let footer_resource = create_resource(move || refresh.get(), |_| get_all_footer_items());
-    
+
     view! {
         <Transition fallback=move || view! { <div class="jetbrains text-sm text-outline">"QUERYING_DB..."</div> }>
             <table class="w-full text-left jetbrains text-sm">
@@ -1084,13 +1121,13 @@ pub fn FooterTable() -> impl IntoView {
                                 <td class="py-4 px-4 text-outline">{n.href.unwrap_or_else(|| "DROPDOWN [null]".to_string())}</td>
                                 <td class="py-4 px-4">
                                     <div class="flex space-x-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button 
+                                        <button
                                             on:click=move |_| set_modal_state.set(crate::components::admin_modal::ModalState::FooterItem(Some(n_clone.clone())))
                                             class="text-secondary hover:underline uppercase text-xs"
                                         >
                                             "Edit"
                                         </button>
-                                        <button 
+                                        <button
                                             on:click=move |_| {
                                                 let id = n.id;
                                                 spawn_local(async move {
@@ -1117,12 +1154,13 @@ pub fn FooterTable() -> impl IntoView {
 
 #[component]
 pub fn ServiceTable() -> impl IntoView {
-    use crate::b2b::{get_services, delete_service};
+    use crate::b2b::{delete_service, get_services};
     let refresh = expect_context::<ReadSignal<i32>>();
     let set_refresh = expect_context::<WriteSignal<i32>>();
-    let set_modal_state = expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
+    let set_modal_state =
+        expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
     let data_res = create_resource(move || refresh.get(), |_| get_services(false));
-    
+
     view! {
         <Transition fallback=move || view! { <div class="jetbrains text-sm text-outline">"QUERYING_DB..."</div> }>
             <table class="w-full text-left jetbrains text-sm">
@@ -1157,12 +1195,13 @@ pub fn ServiceTable() -> impl IntoView {
 
 #[component]
 pub fn CaseStudyTable() -> impl IntoView {
-    use crate::b2b::{get_case_studies, delete_case_study};
+    use crate::b2b::{delete_case_study, get_case_studies};
     let refresh = expect_context::<ReadSignal<i32>>();
     let set_refresh = expect_context::<WriteSignal<i32>>();
-    let set_modal_state = expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
+    let set_modal_state =
+        expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
     let data_res = create_resource(move || refresh.get(), |_| get_case_studies(false));
-    
+
     view! {
         <Transition fallback=move || view! { <div class="jetbrains text-sm text-outline">"QUERYING_DB..."</div> }>
             <table class="w-full text-left jetbrains text-sm">
@@ -1197,12 +1236,13 @@ pub fn CaseStudyTable() -> impl IntoView {
 
 #[component]
 pub fn HighlightTable() -> impl IntoView {
-    use crate::b2b::{get_highlights, delete_highlight};
+    use crate::b2b::{delete_highlight, get_highlights};
     let refresh = expect_context::<ReadSignal<i32>>();
     let set_refresh = expect_context::<WriteSignal<i32>>();
-    let set_modal_state = expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
+    let set_modal_state =
+        expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
     let data_res = create_resource(move || refresh.get(), |_| get_highlights(false));
-    
+
     view! {
         <Transition fallback=move || view! { <div class="jetbrains text-sm text-outline">"QUERYING_DB..."</div> }>
             <table class="w-full text-left jetbrains text-sm">

@@ -22,12 +22,12 @@ pub async fn get_landing_page(slug: String) -> Result<Option<LandingPageRecord>,
     use leptos_axum::extract;
     use sqlx::Row;
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    
+
     let row_opt = sqlx::query("SELECT * FROM landing_pages WHERE slug = $1")
         .bind(&slug)
         .fetch_optional(&state.pool)
         .await?;
-        
+
     if let Some(row) = row_opt {
         Ok(Some(LandingPageRecord {
             id: row.get("id"),
@@ -52,33 +52,48 @@ pub async fn get_all_landing_pages() -> Result<Vec<LandingPageRecord>, ServerFnE
     use leptos_axum::extract;
     use sqlx::Row;
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    
+
     let rows = sqlx::query("SELECT * FROM landing_pages ORDER BY id DESC")
         .fetch_all(&state.pool)
         .await?;
-        
-    let pages = rows.into_iter().map(|row| LandingPageRecord {
-        id: row.get("id"),
-        slug: row.get("slug"),
-        title: row.get("title"),
-        description: row.get("description"),
-        hero_title: row.get("hero_title"),
-        hero_subtitle: row.get("hero_subtitle"),
-        lead_capture_title: row.get("lead_capture_title"),
-        lead_capture_desc: row.get("lead_capture_desc"),
-        lead_capture_btn: row.get("lead_capture_btn"),
-        options_json: row.get("options_json"),
-    }).collect();
-    
+
+    let pages = rows
+        .into_iter()
+        .map(|row| LandingPageRecord {
+            id: row.get("id"),
+            slug: row.get("slug"),
+            title: row.get("title"),
+            description: row.get("description"),
+            hero_title: row.get("hero_title"),
+            hero_subtitle: row.get("hero_subtitle"),
+            lead_capture_title: row.get("lead_capture_title"),
+            lead_capture_desc: row.get("lead_capture_desc"),
+            lead_capture_btn: row.get("lead_capture_btn"),
+            options_json: row.get("options_json"),
+        })
+        .collect();
+
     Ok(pages)
 }
 
 #[server(AddLandingPage, "/api")]
-pub async fn add_landing_page(slug: String, title: String, description: String, hero_title: String, hero_subtitle: String, lead_capture_title: String, lead_capture_desc: String, lead_capture_btn: String, options_json: String) -> Result<(), ServerFnError> {
+pub async fn add_landing_page(
+    slug: String,
+    title: String,
+    description: String,
+    hero_title: String,
+    hero_subtitle: String,
+    lead_capture_title: String,
+    lead_capture_desc: String,
+    lead_capture_btn: String,
+    options_json: String,
+) -> Result<(), ServerFnError> {
     use crate::auth::check_session;
     use axum::Extension;
     use leptos_axum::extract;
-    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    if !check_session().await.unwrap_or(false) {
+        return Err(ServerFnError::ServerError("Unauthorized".into()));
+    }
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
 
     sqlx::query("INSERT INTO landing_pages (slug, title, description, hero_title, hero_subtitle, lead_capture_title, lead_capture_desc, lead_capture_btn, options_json) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)")
@@ -88,11 +103,24 @@ pub async fn add_landing_page(slug: String, title: String, description: String, 
 }
 
 #[server(UpdateLandingPage, "/api")]
-pub async fn update_landing_page(id: i32, slug: String, title: String, description: String, hero_title: String, hero_subtitle: String, lead_capture_title: String, lead_capture_desc: String, lead_capture_btn: String, options_json: String) -> Result<(), ServerFnError> {
+pub async fn update_landing_page(
+    id: i32,
+    slug: String,
+    title: String,
+    description: String,
+    hero_title: String,
+    hero_subtitle: String,
+    lead_capture_title: String,
+    lead_capture_desc: String,
+    lead_capture_btn: String,
+    options_json: String,
+) -> Result<(), ServerFnError> {
     use crate::auth::check_session;
     use axum::Extension;
     use leptos_axum::extract;
-    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    if !check_session().await.unwrap_or(false) {
+        return Err(ServerFnError::ServerError("Unauthorized".into()));
+    }
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
 
     sqlx::query("UPDATE landing_pages SET slug = $1, title = $2, description = $3, hero_title = $4, hero_subtitle = $5, lead_capture_title = $6, lead_capture_desc = $7, lead_capture_btn = $8, options_json = $9 WHERE id = $10")
@@ -106,14 +134,23 @@ pub async fn delete_landing_page(id: i32) -> Result<(), ServerFnError> {
     use crate::auth::check_session;
     use axum::Extension;
     use leptos_axum::extract;
-    if !check_session().await.unwrap_or(false) { return Err(ServerFnError::ServerError("Unauthorized".into())); }
+    if !check_session().await.unwrap_or(false) {
+        return Err(ServerFnError::ServerError("Unauthorized".into()));
+    }
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
-    sqlx::query("DELETE FROM landing_pages WHERE id = $1").bind(id).execute(&state.pool).await?;
+    sqlx::query("DELETE FROM landing_pages WHERE id = $1")
+        .bind(id)
+        .execute(&state.pool)
+        .await?;
     Ok(())
 }
 
 #[server(HandleDynamicLead, "/api")]
-pub async fn handle_dynamic_lead(slug: String, email: String, options: Vec<String>) -> Result<(), ServerFnError> {
+pub async fn handle_dynamic_lead(
+    slug: String,
+    email: String,
+    options: Vec<String>,
+) -> Result<(), ServerFnError> {
     use axum::Extension;
     use leptos_axum::extract;
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
@@ -133,7 +170,8 @@ pub fn DynamicLanding() -> impl IntoView {
     let slug = move || params.with(|p| p.get("slug").cloned().unwrap_or_default());
 
     let (email, set_email) = create_signal(String::new());
-    let (selected_options, set_selected_options) = create_signal(std::collections::HashSet::<String>::new());
+    let (selected_options, set_selected_options) =
+        create_signal(std::collections::HashSet::<String>::new());
     let (submitted, set_submitted) = create_signal(false);
 
     let submit_action = create_action(move |_: &()| {
@@ -156,7 +194,7 @@ pub fn DynamicLanding() -> impl IntoView {
                         let options_map: std::collections::HashMap<String, String> = serde_json::from_str(&page.options_json).unwrap_or_default();
                         let options_stored = store_value(options_map);
                         let has_options = options_stored.with_value(|v| !v.is_empty());
-                        
+
                         view! {
                             <section class="max-w-4xl mx-auto items-start">
                                 <div class="inline-block bg-surface-container-high px-3 py-1 jetbrains text-[0.625rem] font-medium tracking-widest text-on-surface-variant mb-8 uppercase">
@@ -167,7 +205,7 @@ pub fn DynamicLanding() -> impl IntoView {
                                 <p class="text-xl md:text-2xl font-medium tracking-tight text-on-surface-variant leading-relaxed mb-8">
                                     {&page.hero_subtitle}
                                 </p>
-                                
+
                                 <div class="bg-surface-container-low p-8 border-l-4 border-primary my-12">
                                     {if submitted.get() {
                                         view! {
@@ -190,18 +228,18 @@ pub fn DynamicLanding() -> impl IntoView {
                                                 </div>
                                                 <div class="space-y-4 w-full bg-transparent border-0 outline-none">
                                                     <div class="relative w-full group">
-                                                        <input type="email" prop:value=email on:input=move |ev| set_email.set(event_target_value(&ev)) 
-                                                            placeholder="Email Address" 
+                                                        <input type="email" prop:value=email on:input=move |ev| set_email.set(event_target_value(&ev))
+                                                            placeholder="Email Address"
                                                             class="w-full bg-transparent border-none border-b-2 border-outline-variant focus:border-primary focus:ring-0 px-0 py-4 jetbrains text-lg text-on-surface placeholder:text-outline-variant/50 transition-all rounded-none" />
                                                     </div>
-                                                    
+
                                                     <Show when=move || has_options>
                                                         <div class="space-y-4 text-left border border-outline-variant/30 p-6 bg-surface-container-lowest/50 mt-4">
                                                             {move || options_stored.with_value(|map| map.clone().into_iter().map(|(key, label)| {
                                                                 view! {
                                                                 <label class="flex items-center space-x-3 cursor-pointer group">
-                                                                    <input type="checkbox" 
-                                                                        class="w-5 h-5 bg-transparent border-2 border-outline-variant text-primary focus:ring-primary focus:ring-offset-surface-container-low" 
+                                                                    <input type="checkbox"
+                                                                        class="w-5 h-5 bg-transparent border-2 border-outline-variant text-primary focus:ring-primary focus:ring-offset-surface-container-low"
                                                                         on:change=move |ev| {
                                                                             let k = key.clone();
                                                                             if event_target_checked(&ev) {
