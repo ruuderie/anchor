@@ -181,15 +181,8 @@ pub fn Resume() -> impl IntoView {
 
     view! {
         <main class="pt-32 pb-24 px-6 md:px-[8.5rem] bg-surface-container-low min-h-screen">
-            <header class="mb-24 flex flex-col md:flex-row justify-between md:items-end max-w-4xl border-b-2 border-outline-variant/30 pb-8">
-                <div>
-                    <div class="inline-block bg-secondary-container/20 px-3 py-1 mb-6 uppercase">
-                        <span class="font-label text-[0.6875rem] text-secondary font-bold tracking-tighter">"CAREER TRAJECTORY & CLIENTS"</span>
-                    </div>
-                    <h1 class="text-5xl md:text-7xl font-extrabold text-primary tracking-[-0.02em] leading-none mb-4 uppercase">
-                        "EXPERIENCE LOG"
-                    </h1>
-                </div>
+            <div class="mb-24 flex flex-col md:flex-row justify-between md:items-end max-w-4xl border-b-2 border-outline-variant/30 pb-8">
+                <crate::components::dynamic_header::DynamicPageHeader route_path="/resume".to_string() badge_color="primary".to_string() />
 
                 <div class="mt-8 md:mt-0 flex flex-col items-start md:items-end">
                     <button
@@ -201,7 +194,7 @@ pub fn Resume() -> impl IntoView {
                     </button>
                     <div class="text-[0.6rem] text-outline mt-2 jetbrains text-left md:text-right">"GENERATES LATEX >> PDF VIA TECTONIC"</div>
                 </div>
-            </header>
+            </div>
 
             <div class="max-w-4xl mb-16">
                 <Suspense fallback=move || view! { <div class="text-xs jetbrains text-outline uppercase animate-pulse">"Loading profiles..."</div> }>

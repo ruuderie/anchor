@@ -22,6 +22,8 @@ RUN rustup target add wasm32-unknown-unknown
 # Copy source code
 RUN mkdir -p /app
 WORKDIR /app
+ARG CACHEBUST=1
+ARG CACHEBUST=1
 COPY . .
 
 # Pre-compile Tailwind using NodeJS

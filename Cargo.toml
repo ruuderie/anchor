@@ -33,6 +33,7 @@ dotenvy = { version = "0.15", optional = true }
 url = "2.5.8"
 web-sys = { version = "0.3.91", features = ["HtmlElement", "Document", "Window", "HtmlAnchorElement", "Blob", "Url", "BlobPropertyBag"] }
 moka = { version = "0.12", optional = true, features = ["future"] }
+js-sys = "0.3.92"
 
 
 [features]

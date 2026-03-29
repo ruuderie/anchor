@@ -1,19 +1,9 @@
 use leptos::*;
 
-use serde::{Deserialize, Serialize};
-
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct PostRecord {
-    pub id: i32,
-    pub slug: String,
-    pub title: String,
-    pub content: String,
-    pub created_at: String,
-    pub tags: Vec<String>,
-}
+use crate::components::content_feed::{ContentNode, ContentFeed, LayoutMode};
 
 #[server(GetPosts, "/api")]
-pub async fn get_posts() -> Result<Vec<PostRecord>, ServerFnError> {
+pub async fn get_posts() -> Result<Vec<ContentNode>, ServerFnError> {
     use axum::Extension;
     use leptos_axum::extract;
     use sqlx::Row;
@@ -23,13 +13,23 @@ pub async fn get_posts() -> Result<Vec<PostRecord>, ServerFnError> {
         .fetch_all(&state.pool)
         .await?;
         
-    let posts = rows.into_iter().map(|row| PostRecord {
-        id: row.get("id"),
-        slug: row.get("slug"),
-        title: row.get("title"),
-        content: row.get("content"),
-        created_at: row.get("created_at"),
-        tags: row.get::<Vec<String>, _>("tags"),
+    let posts = rows.into_iter().map(|row| {
+        let id: i32 = row.get("id");
+        let slug: String = row.get("slug");
+        
+        ContentNode {
+            id: id.to_string(),
+            category: "blog_post".to_string(),
+            title: row.get("title"),
+            subtitle: Some(slug),
+            date_label: row.try_get("created_at").unwrap_or(None),
+            status: None,
+            tags: row.get::<Vec<String>, _>("tags"),
+            bullets: vec![],
+            markdown: Some(row.get("content")),
+            link_url: None,
+            is_highlight: false,
+        }
     }).collect();
     
     Ok(posts)
@@ -76,47 +76,13 @@ pub fn Blog() -> impl IntoView {
 
     view! {
         <main class="pt-32 pb-24 px-6 md:px-[8.5rem] bg-surface-container-low min-h-screen">
-            <header class="mb-24 max-w-4xl">
-                <div class="inline-block bg-secondary-container/20 px-3 py-1 mb-6 uppercase">
-                    <span class="font-label text-[0.6875rem] text-secondary font-bold tracking-tighter">"ENGINEERING DISSERTATIONS"</span>
-                </div>
-                <h1 class="text-5xl md:text-7xl font-extrabold text-primary tracking-[-0.02em] leading-none mb-8 uppercase">
-                    "TECHNICAL WRITING"
-                </h1>
-                <p class="text-lg text-on-surface-variant max-w-2xl leading-relaxed">
-                    "Internal documentation on distributed systems architecture, Bitcoin cryptography, Salesforce APEX algorithms, and low-latency infrastructure design."
-                </p>
-            </header>
+            <crate::components::dynamic_header::DynamicPageHeader route_path="/blog".to_string() badge_color="primary".to_string() />
 
             <Suspense fallback=move || view! { <div class="text-on-surface-variant font-bold jetbrains uppercase">"Fetching remote Markdown streams..."</div> }>
-                <div class="space-y-12 max-w-4xl">
-                    {move || {
-                        let posts = posts_resource.get().unwrap_or_default();
-                        posts.into_iter().map(|post| {
-                            // Convert markdown preview dynamically using pulldown-cmark
-                            let parser = pulldown_cmark::Parser::new(&post.content);
-                            let mut html_output = String::new();
-                            pulldown_cmark::html::push_html(&mut html_output, parser);
-
-                            view! {
-                                <article class="bg-surface-container p-8 hover:bg-surface-container-high transition-colors group cursor-pointer border-l-4 border-transparent hover:border-secondary">
-                                    <div class="flex flex-col md:flex-row md:justify-between items-start mb-4 gap-4">
-                                        <h3 class="text-2xl font-bold text-primary group-hover:text-secondary transition-colors truncate">{post.title}</h3>
-                                        <span class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider whitespace-nowrap pt-1">
-                                            {post.created_at} " // " {post.slug}
-                                        </span>
-                                    </div>
-                                    <div class="text-on-surface-variant leading-relaxed text-sm mb-6 max-w-2xl prose prose-invert prose-p:text-sm prose-a:text-secondary prose-a:no-underline hover:prose-a:underline" inner_html=html_output></div>
-                                    <div class="flex flex-wrap gap-4">
-                                        {post.tags.into_iter().map(|tag| view! {
-                                            <span class="bg-surface-container-highest px-3 py-1 jetbrains text-[0.65rem] font-bold text-on-surface-variant uppercase">{tag}</span>
-                                        }).collect_view()}
-                                    </div>
-                                </article>
-                            }
-                        }).collect_view()
-                    }}
-                </div>
+                {move || {
+                    let posts = posts_resource.get().unwrap_or_default();
+                    view! { <ContentFeed nodes=posts layout=LayoutMode::List /> }
+                }}
             </Suspense>
         </main>
     }

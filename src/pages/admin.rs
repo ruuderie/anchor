@@ -204,7 +204,7 @@ pub fn Admin() -> impl IntoView {
                         <aside class="w-full md:w-64 shrink-0 space-y-2">
                             <div class="mb-12">
                                 <span class="font-label text-[0.6875rem] text-outline font-bold tracking-widest uppercase block mb-4">"Navigation"</span>
-                            {["DASHBOARD", "MAILING LIST", "SETTINGS", "NAVIGATION", "FOOTER", "BLOG", "RESUME PROFILES", "RESUME ENTRIES", "LANDING PAGES", "SECURITY"].iter().map(|&t| {
+                            {["DASHBOARD", "SERVICES", "CASE STUDIES", "HIGHLIGHTS", "MAILING LIST", "SETTINGS", "NAVIGATION", "FOOTER", "PAGE HEADERS", "BLOG", "RESUME PROFILES", "RESUME ENTRIES", "LANDING PAGES", "SECURITY"].iter().map(|&t| {
                                             let tab = t; // Capture `t` for the closure
                                             view! {
                                                 <button 
@@ -250,12 +250,15 @@ pub fn Admin() -> impl IntoView {
                                         on:click=move |_| {
                                             let state = match active_tab.get() {
                                                 "SETTINGS" => ModalState::Settings,
+                                                "SERVICES" => ModalState::Service(None),
+                                                "CASE STUDIES" => ModalState::CaseStudy(None),
+                                                "HIGHLIGHTS" => ModalState::Highlight(None),
                                                 "BLOG" => ModalState::Post(None),
                                                 "RESUME PROFILES" => ModalState::Profile(None),
                                                 "RESUME ENTRIES" => ModalState::BaseEntry(None, None),
                                                 "LANDING PAGES" => ModalState::LandingPage(None),
-                                                "NAVIGATION" => ModalState::NavItem(None),
                                                 "FOOTER" => ModalState::FooterItem(None),
+                                                "PAGE HEADERS" => ModalState::PageHeader(None),
                                                 "MAILING LIST" => ModalState::MailingList(None),
                                                 "SECURITY" => ModalState::Passkey,
                                                 _ => ModalState::None,
@@ -272,9 +275,13 @@ pub fn Admin() -> impl IntoView {
                                 <div class="flex-1 overflow-x-auto">
                                     {move || match active_tab.get() {
                                         "DASHBOARD" => view! { <DashboardView /> }.into_view(),
+                                        "SERVICES" => view! { <ServiceTable /> }.into_view(),
+                                        "CASE STUDIES" => view! { <CaseStudyTable /> }.into_view(),
+                                        "HIGHLIGHTS" => view! { <HighlightTable /> }.into_view(),
                                         "MAILING LIST" => view! { <MailingListTable /> }.into_view(),
                                         "NAVIGATION" => view! { <NavTable /> }.into_view(),
                                         "FOOTER" => view! { <FooterTable /> }.into_view(),
+                                        "PAGE HEADERS" => view! { <PageHeaderTable /> }.into_view(),
                                         "SETTINGS" => view! { <SettingsReadView /> }.into_view(),
                                         "BLOG" => view! { <PostTable /> }.into_view(),
                                         "RESUME PROFILES" => view! { <ResumeProfileTable /> }.into_view(),
@@ -323,6 +330,49 @@ pub async fn get_dashboard_stats() -> Result<DashboardStats, ServerFnError> {
         total_mailing_list: mailing,
         recent_page_views: views,
     })
+}
+
+#[component]
+fn PageHeaderTable() -> impl IntoView {
+    use crate::components::dynamic_header::get_all_page_headers;
+    let refresh = expect_context::<ReadSignal<i32>>();
+    let set_modal_state = expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
+    let headers_resource = create_resource(move || refresh.get(), |_| get_all_page_headers());
+    
+    view! {
+        <Transition fallback=move || view! { <div class="jetbrains text-sm text-outline">"QUERYING_DB..."</div> }>
+            <table class="w-full text-left jetbrains text-sm">
+                <thead>
+                    <tr class="text-outline border-b border-outline-variant/30">
+                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Route"</th>
+                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Badge"</th>
+                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Title"</th>
+                        <th class="py-4 px-4 font-normal tracking-widest uppercase">"Actions"</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-outline-variant/20">
+                    {move || match headers_resource.get() {
+                        Some(Ok(headers)) => headers.into_iter().map(|h| {
+                            let h_clone = h.clone();
+                            view! {
+                            <tr class="hover:bg-surface-container-high transition-colors group">
+                                <td class="py-4 px-4 font-bold text-outline">{h.route_path.clone()}</td>
+                                <td class="py-4 px-4 text-outline-variant">{h.badge_text.clone().unwrap_or_default()}</td>
+                                <td class="py-4 px-4 text-on-surface">{h.title.clone()}</td>
+                                <td class="py-4 px-4">
+                                    <div class="flex space-x-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button on:click=move |_| set_modal_state.set(crate::components::admin_modal::ModalState::PageHeader(Some(h_clone.clone()))) class="text-secondary hover:underline uppercase text-xs">"Edit"</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            }
+                        }).collect_view(),
+                        _ => view! { <tr><td colspan="4" class="py-8 text-center text-error">"ERR_NO_DATA"</td></tr> }.into_view(),
+                    }}
+                </tbody>
+            </table>
+        </Transition>
+    }
 }
 
 #[component]
@@ -421,6 +471,42 @@ fn SettingsReadView() -> impl IntoView {
                             <div class="col-span-2 text-on-surface font-medium">{&s.lc_btn}</div>
                         </div>
                         
+                        
+                        // Landing Pages Settings
+                        <div class="grid grid-cols-3 py-2 border-b border-outline-variant/10 hover:bg-surface-container/30 mt-4">
+                            <div class="text-outline uppercase tracking-widest text-xs">"BOOKING URL"</div>
+                            <div class="col-span-2 text-on-surface font-medium truncate">{&s.booking_url}</div>
+                        </div>
+                        <div class="grid grid-cols-3 py-2 border-b border-outline-variant/10 hover:bg-surface-container/30 mt-4">
+                            <div class="text-outline uppercase tracking-widest text-xs">"TERMS HTML (MD)"</div>
+                            <div class="col-span-2 text-on-surface font-mono text-xs truncate max-h-24 overflow-hidden">{&s.terms_html}</div>
+                        </div>
+                        <div class="grid grid-cols-3 py-2 border-b border-outline-variant/10 hover:bg-surface-container/30 mt-4">
+                            <div class="text-outline uppercase tracking-widest text-xs">"PRIVACY HTML (MD)"</div>
+                            <div class="col-span-2 text-on-surface font-mono text-xs truncate max-h-24 overflow-hidden">{&s.privacy_html}</div>
+                        </div>
+
+                        // Social Media Links
+                        <div class="grid grid-cols-3 py-2 border-b border-outline-variant/10 hover:bg-surface-container/30 mt-4">
+                            <div class="text-outline uppercase tracking-widest text-xs">"GITHUB URL"</div>
+                            <div class="col-span-2 text-on-surface font-medium truncate">{&s.github_url}</div>
+                        </div>
+                        <div class="grid grid-cols-3 py-2 border-b border-outline-variant/10 hover:bg-surface-container/30">
+                            <div class="text-outline uppercase tracking-widest text-xs">"X (TWITTER) URL"</div>
+                            <div class="col-span-2 text-on-surface font-medium truncate">{&s.x_url}</div>
+                        </div>
+                        <div class="grid grid-cols-3 py-2 border-b border-outline-variant/10 hover:bg-surface-container/30">
+                            <div class="text-outline uppercase tracking-widest text-xs">"LINKEDIN URL"</div>
+                            <div class="col-span-2 text-on-surface font-medium truncate">{&s.linkedin_url}</div>
+                        </div>
+
+                        // Global B2B Settings
+                        <div class="grid grid-cols-3 py-2 border-b border-outline-variant/10 hover:bg-surface-container/30 mt-4 bg-tertiary/10 p-2">
+                            <div class="text-tertiary uppercase tracking-widest text-xs font-bold">"B2B CONSULTING MODE"</div>
+                            <div class="col-span-2 text-on-surface font-medium">
+                                {if s.b2b_enabled { "ENABLED (PUBLIC)" } else { "STEALTH (HIDDEN)" }}
+                            </div>
+                        </div>
                         
                     </div>
                 }.into_view(),
@@ -752,11 +838,12 @@ fn PostTable() -> impl IntoView {
                     {move || match posts_resource.get() {
                         Some(Ok(posts)) => posts.into_iter().map(|p| {
                             let p_clone = p.clone();
+                            let del_id = p.id.parse::<i32>().unwrap_or(0);
                             view! {
                             <tr class="hover:bg-surface-container-high transition-colors group">
-                                <td class="py-4 px-4 text-outline-variant">"#" {p.id}</td>
-                                <td class="py-4 px-4 font-bold text-outline">{p.slug}</td>
-                                <td class="py-4 px-4 text-primary font-bold">{p.title}</td>
+                                <td class="py-4 px-4 text-outline-variant">"#" {p.id.clone()}</td>
+                                <td class="py-4 px-4 font-bold text-outline">{p.subtitle.clone().unwrap_or_default()}</td>
+                                <td class="py-4 px-4 text-primary font-bold">{p.title.clone()}</td>
                                 <td class="py-4 px-4">
                                     <div class="flex space-x-4 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button 
@@ -767,9 +854,8 @@ fn PostTable() -> impl IntoView {
                                         </button>
                                         <button 
                                             on:click=move |_| {
-                                                let id = p.id;
                                                 spawn_local(async move {
-                                                    if let Ok(_) = crate::pages::blog::delete_post(id).await {
+                                                    if let Ok(_) = crate::pages::blog::delete_post(del_id).await {
                                                         set_refresh.set(refresh.get_untracked() + 1);
                                                     }
                                                 });
@@ -1029,3 +1115,122 @@ pub fn FooterTable() -> impl IntoView {
     }
 }
 
+#[component]
+pub fn ServiceTable() -> impl IntoView {
+    use crate::b2b::{get_services, delete_service};
+    let refresh = expect_context::<ReadSignal<i32>>();
+    let set_refresh = expect_context::<WriteSignal<i32>>();
+    let set_modal_state = expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
+    let data_res = create_resource(move || refresh.get(), |_| get_services(false));
+    
+    view! {
+        <Transition fallback=move || view! { <div class="jetbrains text-sm text-outline">"QUERYING_DB..."</div> }>
+            <table class="w-full text-left jetbrains text-sm">
+                <thead><tr class="text-outline border-b border-outline-variant/30">
+                    <th class="py-4 px-4 font-normal tracking-widest uppercase">"Weight"</th>
+                    <th class="py-4 px-4 font-normal tracking-widest uppercase">"Title"</th>
+                    <th class="py-4 px-4 font-normal tracking-widest uppercase">"Visible"</th>
+                    <th class="py-4 px-4 font-normal tracking-widest uppercase">"Actions"</th>
+                </tr></thead>
+                <tbody class="divide-y divide-outline-variant/20">
+                    {move || match data_res.get() {
+                        Some(Ok(items)) => items.into_iter().map(|item| { let c = item.clone(); view! {
+                            <tr class="hover:bg-surface-container-high transition-colors group">
+                                <td class="py-4 px-4 text-outline-variant">{item.display_order}</td>
+                                <td class="py-4 px-4 font-bold text-primary">{item.title}</td>
+                                <td class="py-4 px-4 text-outline">{if item.is_visible { "YES" } else { "NO" }}</td>
+                                <td class="py-4 px-4">
+                                    <div class="flex space-x-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button on:click=move |_| set_modal_state.set(crate::components::admin_modal::ModalState::Service(Some(c.clone()))) class="text-secondary hover:underline uppercase text-xs">"Edit"</button>
+                                        <button on:click=move |_| { let id = item.id; spawn_local(async move { if let Ok(_) = delete_service(id).await { set_refresh.set(refresh.get_untracked() + 1); } }); } class="text-error hover:underline uppercase text-xs">"Drop"</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }}).collect_view(),
+                        _ => view! { <tr><td colspan="4" class="py-8 text-center text-error">"ERR_NO_DATA"</td></tr> }.into_view(),
+                    }}
+                </tbody>
+            </table>
+        </Transition>
+    }
+}
+
+#[component]
+pub fn CaseStudyTable() -> impl IntoView {
+    use crate::b2b::{get_case_studies, delete_case_study};
+    let refresh = expect_context::<ReadSignal<i32>>();
+    let set_refresh = expect_context::<WriteSignal<i32>>();
+    let set_modal_state = expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
+    let data_res = create_resource(move || refresh.get(), |_| get_case_studies(false));
+    
+    view! {
+        <Transition fallback=move || view! { <div class="jetbrains text-sm text-outline">"QUERYING_DB..."</div> }>
+            <table class="w-full text-left jetbrains text-sm">
+                <thead><tr class="text-outline border-b border-outline-variant/30">
+                    <th class="py-4 px-4 font-normal tracking-widest uppercase">"Weight"</th>
+                    <th class="py-4 px-4 font-normal tracking-widest uppercase">"Client"</th>
+                    <th class="py-4 px-4 font-normal tracking-widest uppercase">"Visible"</th>
+                    <th class="py-4 px-4 font-normal tracking-widest uppercase">"Actions"</th>
+                </tr></thead>
+                <tbody class="divide-y divide-outline-variant/20">
+                    {move || match data_res.get() {
+                        Some(Ok(items)) => items.into_iter().map(|item| { let c = item.clone(); view! {
+                            <tr class="hover:bg-surface-container-high transition-colors group">
+                                <td class="py-4 px-4 text-outline-variant">{item.display_order}</td>
+                                <td class="py-4 px-4 font-bold text-primary">{item.client_name}</td>
+                                <td class="py-4 px-4 text-outline">{if item.is_visible { "YES" } else { "NO" }}</td>
+                                <td class="py-4 px-4">
+                                    <div class="flex space-x-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button on:click=move |_| set_modal_state.set(crate::components::admin_modal::ModalState::CaseStudy(Some(c.clone()))) class="text-secondary hover:underline uppercase text-xs">"Edit"</button>
+                                        <button on:click=move |_| { let id = item.id; spawn_local(async move { if let Ok(_) = delete_case_study(id).await { set_refresh.set(refresh.get_untracked() + 1); } }); } class="text-error hover:underline uppercase text-xs">"Drop"</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }}).collect_view(),
+                        _ => view! { <tr><td colspan="4" class="py-8 text-center text-error">"ERR_NO_DATA"</td></tr> }.into_view(),
+                    }}
+                </tbody>
+            </table>
+        </Transition>
+    }
+}
+
+#[component]
+pub fn HighlightTable() -> impl IntoView {
+    use crate::b2b::{get_highlights, delete_highlight};
+    let refresh = expect_context::<ReadSignal<i32>>();
+    let set_refresh = expect_context::<WriteSignal<i32>>();
+    let set_modal_state = expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
+    let data_res = create_resource(move || refresh.get(), |_| get_highlights(false));
+    
+    view! {
+        <Transition fallback=move || view! { <div class="jetbrains text-sm text-outline">"QUERYING_DB..."</div> }>
+            <table class="w-full text-left jetbrains text-sm">
+                <thead><tr class="text-outline border-b border-outline-variant/30">
+                    <th class="py-4 px-4 font-normal tracking-widest uppercase">"Weight"</th>
+                    <th class="py-4 px-4 font-normal tracking-widest uppercase">"Title"</th>
+                    <th class="py-4 px-4 font-normal tracking-widest uppercase">"Visible"</th>
+                    <th class="py-4 px-4 font-normal tracking-widest uppercase">"Actions"</th>
+                </tr></thead>
+                <tbody class="divide-y divide-outline-variant/20">
+                    {move || match data_res.get() {
+                        Some(Ok(items)) => items.into_iter().map(|item| { let c = item.clone(); view! {
+                            <tr class="hover:bg-surface-container-high transition-colors group">
+                                <td class="py-4 px-4 text-outline-variant">{item.display_order}</td>
+                                <td class="py-4 px-4 font-bold text-primary">{item.title}</td>
+                                <td class="py-4 px-4 text-outline">{if item.is_visible { "YES" } else { "NO" }}</td>
+                                <td class="py-4 px-4">
+                                    <div class="flex space-x-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button on:click=move |_| set_modal_state.set(crate::components::admin_modal::ModalState::Highlight(Some(c.clone()))) class="text-secondary hover:underline uppercase text-xs">"Edit"</button>
+                                        <button on:click=move |_| { let id = item.id; spawn_local(async move { if let Ok(_) = delete_highlight(id).await { set_refresh.set(refresh.get_untracked() + 1); } }); } class="text-error hover:underline uppercase text-xs">"Drop"</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }}).collect_view(),
+                        _ => view! { <tr><td colspan="4" class="py-8 text-center text-error">"ERR_NO_DATA"</td></tr> }.into_view(),
+                    }}
+                </tbody>
+            </table>
+        </Transition>
+    }
+}

@@ -1,5 +1,7 @@
 use leptos::*;
 
+use crate::pages::services::HighlightsGallery;
+
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct SiteSettings {
     pub current_focus: String,
@@ -19,6 +21,13 @@ pub struct SiteSettings {
     pub admin_email: String,
     pub landing_options_json: String,
     pub google_analytics_id: String,
+    pub booking_url: String,
+    pub terms_html: String,
+    pub privacy_html: String,
+    pub github_url: String,
+    pub x_url: String,
+    pub linkedin_url: String,
+    pub b2b_enabled: bool,
 }
 
 impl Default for SiteSettings {
@@ -41,6 +50,13 @@ impl Default for SiteSettings {
             admin_email: "".into(),
             landing_options_json: r#"{"resume": "Request Tailored CV", "mailing_list": "Join Mailing List"}"#.into(),
             google_analytics_id: "".into(),
+            booking_url: "".into(),
+            terms_html: "".into(),
+            privacy_html: "".into(),
+            github_url: "".into(),
+            x_url: "".into(),
+            linkedin_url: "".into(),
+            b2b_enabled: true,
         }
     }
 }
@@ -76,6 +92,13 @@ pub async fn get_site_settings() -> Result<SiteSettings, ServerFnError> {
         if key == "admin_email" { settings.admin_email = value.clone(); }
         if key == "landing_options_json" { settings.landing_options_json = value.clone(); }
         if key == "google_analytics_id" { settings.google_analytics_id = value.clone(); }
+        if key == "booking_url" { settings.booking_url = value.clone(); }
+        if key == "terms_html" { settings.terms_html = value.clone(); }
+        if key == "privacy_html" { settings.privacy_html = value.clone(); }
+        if key == "github_url" { settings.github_url = value.clone(); }
+        if key == "x_url" { settings.x_url = value.clone(); }
+        if key == "linkedin_url" { settings.linkedin_url = value.clone(); }
+        if key == "b2b_enabled" { settings.b2b_enabled = value == "true"; }
     }
 
     Ok(settings)
@@ -83,7 +106,7 @@ pub async fn get_site_settings() -> Result<SiteSettings, ServerFnError> {
 
 #[server(UpdateSiteSettings, "/api")]
 pub async fn update_site_settings(
-    current_focus: String, status: String, hero_quote: String, hero_subtitle: String, site_title: String, lc_title: String, lc_desc: String, lc_label: String, lc_placeholder: String, lc_btn: String, lc_footer: String, lc_endpoint: String, status_color: String, webhook_url: String, admin_email: String, landing_options_json: String, google_analytics_id: String
+    current_focus: String, status: String, hero_quote: String, hero_subtitle: String, site_title: String, lc_title: String, lc_desc: String, lc_label: String, lc_placeholder: String, lc_btn: String, lc_footer: String, lc_endpoint: String, status_color: String, webhook_url: String, admin_email: String, landing_options_json: String, google_analytics_id: String, booking_url: String, terms_html: String, privacy_html: String, github_url: String, x_url: String, linkedin_url: String, b2b_enabled: bool
 ) -> Result<(), ServerFnError> {
     use crate::auth::check_session;
     use axum::Extension;
@@ -108,6 +131,15 @@ pub async fn update_site_settings(
     sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'admin_email'").bind(admin_email).execute(&state.pool).await?;
     sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'landing_options_json'").bind(landing_options_json).execute(&state.pool).await?;
     sqlx::query("INSERT INTO site_settings (key, value) VALUES ('google_analytics_id', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(google_analytics_id).execute(&state.pool).await?;
+    sqlx::query("INSERT INTO site_settings (key, value) VALUES ('booking_url', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(booking_url).execute(&state.pool).await?;
+    sqlx::query("INSERT INTO site_settings (key, value) VALUES ('terms_html', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(terms_html).execute(&state.pool).await?;
+    sqlx::query("INSERT INTO site_settings (key, value) VALUES ('privacy_html', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(privacy_html).execute(&state.pool).await?;
+    sqlx::query("INSERT INTO site_settings (key, value) VALUES ('github_url', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(github_url).execute(&state.pool).await?;
+    sqlx::query("INSERT INTO site_settings (key, value) VALUES ('x_url', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(x_url).execute(&state.pool).await?;
+    sqlx::query("INSERT INTO site_settings (key, value) VALUES ('linkedin_url', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(linkedin_url).execute(&state.pool).await?;
+    
+    let b2b_str = if b2b_enabled { "true" } else { "false" };
+    sqlx::query("INSERT INTO site_settings (key, value) VALUES ('b2b_enabled', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(b2b_str).execute(&state.pool).await?;
     
     Ok(())
 }
@@ -344,6 +376,8 @@ pub fn Landing() -> impl IntoView {
                     }}
                 </div>
             </section>
+
+            <HighlightsGallery />
         </main>
     }
 }

@@ -28,6 +28,10 @@ INSERT INTO nav_items (label, href, parent_id, display_order) VALUES
 ('REAL ESTATE', '/investments/real-estate', (SELECT id FROM nav_items WHERE label = 'INVESTMENTS' LIMIT 1), 10),
 ('BITCOIN', '/investments/bitcoin', (SELECT id FROM nav_items WHERE label = 'INVESTMENTS' LIMIT 1), 20);
 
+INSERT INTO nav_items (label, href, display_order, is_visible) VALUES 
+('SERVICES', '/services', 15, true),
+('BOOK DISCOVERY', '/book', 25, true);
+
 INSERT INTO footer_items (label, href, display_order) VALUES
 ('TERMS OF SERVICE', '/terms', 10),
 ('PRIVACY POLICY', '/privacy', 20),
@@ -114,3 +118,15 @@ INSERT INTO resume_profiles (name, full_name, objective, is_public, target_role,
 
 INSERT INTO resume_profile_entries (profile_id, entry_id)
 SELECT (SELECT id FROM resume_profiles LIMIT 1), id FROM resume_entries;
+
+INSERT INTO page_headers (route_path, badge_text, title, subtitle) VALUES
+('/projects', 'CLIENT AND PERSONAL REPOSITORIES', 'TECHNICAL PORTFOLIO', 'Engineering resilient infrastructures across blockchains, decentralized cloud, and sub-millisecond Rust backends.'),
+('/certifications', 'INDEX_REF_07 // VERIFIED INFRA', 'CERTIFICATIONS', 'Cryptographically and institutionally verified architecture authorizations.'),
+('/blog', 'ENGINEERING DISSERTATIONS', 'TECHNICAL WRITING', 'Documentation on distributed systems architecture, Bitcoin cryptography, Salesforce APEX algorithms, and low-latency infrastructure design.'),
+('/resume', 'ARCHITECTURAL OVERVIEW', 'RESUME & CURRICULUM VITAE', 'Technical proficiencies and professional timeline documented for vendor qualification.'),
+('/services', 'RUUDERIE.AI // ADVISORY SERVICES', 'ARCHITECTURE & STRATEGY', 'Elite engineering consultation and systems design for the digital frontier.'),
+('/book', 'DISCOVERY // B2B', 'CONSULTATION', 'Schedule a preliminary systems architecture review.')
+ON CONFLICT (route_path) DO UPDATE SET
+    badge_text = EXCLUDED.badge_text,
+    title = EXCLUDED.title,
+    subtitle = EXCLUDED.subtitle;
