@@ -16,7 +16,7 @@ pub mod ssr {
 }
 
 #[server(RegisterStart, "/api")]
-pub async fn register_start(username: String) -> Result<String, ServerFnError> {
+pub async fn register_start(username: String, setup_token: Option<String>) -> Result<String, ServerFnError> {
     use self::ssr::*;
     use leptos_axum::extract;
     use axum::Extension;
@@ -24,7 +24,7 @@ pub async fn register_start(username: String) -> Result<String, ServerFnError> {
 
     let app_state = match extract::<Extension<AppState>>().await {
         Ok(state) => state,
-        Err(e) => return Err(ServerFnError::ServerError(e.to_string())),
+        Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
     };
     
     let user_exists: bool = match sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)")
@@ -33,7 +33,7 @@ pub async fn register_start(username: String) -> Result<String, ServerFnError> {
         .await
     {
         Ok(v) => v,
-        Err(e) => return Err(ServerFnError::ServerError(e.to_string())),
+        Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
     };
 
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users")
@@ -41,7 +41,13 @@ pub async fn register_start(username: String) -> Result<String, ServerFnError> {
         .await
         .unwrap_or(0);
     
-    if count > 0 && !user_exists {
+    if count == 0 {
+        let expected_token = std::env::var("SETUP_TOKEN")
+            .unwrap_or_else(|_| "CHANGEME".to_string());
+        if setup_token.unwrap_or_default() != expected_token {
+            return Err(ServerFnError::ServerError("Invalid setup token.".into()));
+        }
+    } else if !user_exists {
         if !crate::auth::check_session().await.unwrap_or(false) {
             return Err(ServerFnError::ServerError("Registration locked. Admin already exists.".into()));
         }
@@ -51,7 +57,7 @@ pub async fn register_start(username: String) -> Result<String, ServerFnError> {
     let webauthn = get_webauthn();
     let res = match webauthn.start_passkey_registration(user_unique_id.clone(), &username, &username, None) {
         Ok(r) => r,
-        Err(e) => return Err(ServerFnError::ServerError(e.to_string())),
+        Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
     };
     
     let (challenge, reg_state) = res;
@@ -63,7 +69,7 @@ pub async fn register_start(username: String) -> Result<String, ServerFnError> {
         .execute(&app_state.pool)
         .await
     {
-        return Err(ServerFnError::ServerError(e.to_string()));
+        return Err(ServerFnError::ServerError("Internal System Error".into()));
     }
 
     let challenge_json = serde_json::to_string(&challenge).unwrap();
@@ -84,7 +90,7 @@ pub async fn register_finish(username: String, challenge_id: Uuid, credential_js
 
     let app_state = match extract::<Extension<AppState>>().await {
         Ok(state) => state,
-        Err(e) => return Err(ServerFnError::ServerError(e.to_string())),
+        Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
     };
     
     let challenge_row: (serde_json::Value,) = match sqlx::query_as("SELECT challenge_data FROM auth_challenges WHERE id = $1")
@@ -98,17 +104,17 @@ pub async fn register_finish(username: String, challenge_id: Uuid, credential_js
 
     let reg_state: PasskeyRegistration = match serde_json::from_value(challenge_row.0) {
         Ok(s) => s,
-        Err(e) => return Err(ServerFnError::ServerError(e.to_string())),
+        Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
     };
     let credential: RegisterPublicKeyCredential = match serde_json::from_str(&credential_json) {
         Ok(c) => c,
-        Err(e) => return Err(ServerFnError::ServerError(e.to_string())),
+        Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
     };
     
     let webauthn = get_webauthn();
     let passkey = match webauthn.finish_passkey_registration(&credential, &reg_state) {
         Ok(p) => p,
-        Err(e) => return Err(ServerFnError::ServerError(e.to_string())),
+        Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
     };
 
     let session_token = Uuid::new_v4().to_string();
@@ -121,7 +127,7 @@ pub async fn register_finish(username: String, challenge_id: Uuid, credential_js
         .execute(&app_state.pool)
         .await
     {
-        return Err(ServerFnError::ServerError(e.to_string()));
+        return Err(ServerFnError::ServerError("Internal System Error".into()));
     }
 
     sqlx::query("DELETE FROM auth_challenges WHERE id = $1").bind(challenge_id).execute(&app_state.pool).await.ok();
@@ -143,7 +149,7 @@ pub async fn login_start(username: String) -> Result<String, ServerFnError> {
 
     let app_state = match extract::<Extension<AppState>>().await {
         Ok(state) => state,
-        Err(e) => return Err(ServerFnError::ServerError(e.to_string())),
+        Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
     };
     
     let user_row: (serde_json::Value,) = match sqlx::query_as("SELECT passkey FROM users WHERE username = $1")
@@ -157,13 +163,13 @@ pub async fn login_start(username: String) -> Result<String, ServerFnError> {
 
     let passkey: Passkey = match serde_json::from_value(user_row.0) {
         Ok(k) => k,
-        Err(e) => return Err(ServerFnError::ServerError(e.to_string())),
+        Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
     };
 
     let webauthn = get_webauthn();
     let res = match webauthn.start_passkey_authentication(&[passkey]) {
         Ok(r) => r,
-        Err(e) => return Err(ServerFnError::ServerError(e.to_string())),
+        Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
     };
     
     let (challenge, auth_state) = res;
@@ -176,7 +182,7 @@ pub async fn login_start(username: String) -> Result<String, ServerFnError> {
         .execute(&app_state.pool)
         .await
     {
-        return Err(ServerFnError::ServerError(e.to_string()));
+        return Err(ServerFnError::ServerError("Internal System Error".into()));
     }
 
     let challenge_json = serde_json::to_string(&challenge).unwrap();
@@ -197,7 +203,7 @@ pub async fn login_finish(username: String, challenge_id: Uuid, auth_json: Strin
 
     let app_state = match extract::<Extension<AppState>>().await {
         Ok(state) => state,
-        Err(e) => return Err(ServerFnError::ServerError(e.to_string())),
+        Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
     };
     
     let _user_row: (serde_json::Value,) = match sqlx::query_as("SELECT passkey FROM users WHERE username = $1")
@@ -220,17 +226,17 @@ pub async fn login_finish(username: String, challenge_id: Uuid, auth_json: Strin
 
     let auth_state: PasskeyAuthentication = match serde_json::from_value(challenge_row.0) {
         Ok(s) => s,
-        Err(e) => return Err(ServerFnError::ServerError(e.to_string())),
+        Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
     };
     let credential: PublicKeyCredential = match serde_json::from_str(&auth_json) {
         Ok(c) => c,
-        Err(e) => return Err(ServerFnError::ServerError(e.to_string())),
+        Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
     };
     
     let webauthn = get_webauthn();
     let _auth_res = match webauthn.finish_passkey_authentication(&credential, &auth_state) {
         Ok(r) => r,
-        Err(e) => return Err(ServerFnError::ServerError(e.to_string())),
+        Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
     };
 
     let session_token = Uuid::new_v4().to_string();
@@ -241,7 +247,7 @@ pub async fn login_finish(username: String, challenge_id: Uuid, auth_json: Strin
         .execute(&app_state.pool)
         .await
     {
-        return Err(ServerFnError::ServerError(e.to_string()));
+        return Err(ServerFnError::ServerError("Internal System Error".into()));
     }
 
     sqlx::query("DELETE FROM auth_challenges WHERE id = $1").bind(challenge_id).execute(&app_state.pool).await.ok();
@@ -269,7 +275,7 @@ pub async fn check_session() -> Result<bool, ServerFnError> {
     if let Some(cookie) = session_cookie {
         let app_state = match extract::<Extension<AppState>>().await {
             Ok(state) => state,
-            Err(e) => return Err(ServerFnError::ServerError(e.to_string())),
+            Err(e) => return Err(ServerFnError::ServerError("Internal System Error".into())),
         };
         let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE session_token = $1)")
             .bind(cookie.value())

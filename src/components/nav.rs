@@ -10,7 +10,7 @@ pub async fn get_block_height() -> Result<u64, ServerFnError> {
     let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
 
     use sqlx::Row;
-    let latest_db = sqlx::query("SELECT height, fetched_at FROM bitcoin_blocks ORDER BY height DESC LIMIT 1")
+    let latest_db = sqlx::query("SELECT height, timestamp, fetched_at FROM bitcoin_blocks ORDER BY height DESC LIMIT 1")
         .fetch_optional(&state.pool)
         .await?;
 
@@ -19,11 +19,17 @@ pub async fn get_block_height() -> Result<u64, ServerFnError> {
 
     if let Some(row) = latest_db {
         current_height = row.get::<i64, _>("height");
+        let block_timestamp = row.get::<i64, _>("timestamp");
         let fetched_at = row.get::<chrono::DateTime<Utc>, _>("fetched_at");
         let now = Utc::now();
-        let time_since_fetch = now.signed_duration_since(fetched_at).num_seconds();
         
-        if time_since_fetch < 120 {
+        let time_since_fetch = now.signed_duration_since(fetched_at).num_seconds();
+        let time_since_block = now.timestamp() - block_timestamp;
+        
+        // Skip fetching if either:
+        // 1. We just fetched within the last 60 seconds (prevents hammering API)
+        // 2. OR the block was mined less than 10 mins (600s) ago
+        if time_since_fetch < 60 || time_since_block < 600 {
             needs_fetch = false;
         }
     }
@@ -283,11 +289,11 @@ pub fn Nav() -> impl IntoView {
             <div class="flex items-center space-x-6">
                 <a href="/admin" class="material-symbols-outlined text-primary cursor-pointer hover:opacity-80 transition-opacity block">"terminal"</a>
                 <Suspense fallback=move || view! { 
-                    <a href="#" class="text-[#f7931a] bg-[#f7931a]/10 border border-[#f7931a]/30 px-6 py-2 jetbrains text-xs font-bold tracking-wider opacity-50 block whitespace-nowrap">
+                    <a href="#" class="bg-surface border border-outline-variant/30 px-6 py-2 jetbrains text-[0.65rem] font-bold tracking-wider opacity-50 block whitespace-nowrap">
                         <div class="flex flex-col items-center leading-none justify-center">
-                            <span class="text-[0.6rem] text-[#f7931a]/70 uppercase font-medium">"CURRENT BLOCK"</span>
-                            <div class="mt-1 flex items-center">
-                                <span class="material-symbols-outlined text-[0.8rem] inline mr-1 align-text-bottom">"currency_bitcoin"</span>
+                            <span class="text-[0.55rem] text-on-surface-variant uppercase font-medium">"CURRENT BLOCK"</span>
+                            <div class="mt-1 flex items-center text-on-surface">
+                                <span class="material-symbols-outlined text-[0.8rem] inline mr-1 text-[#f7931a] align-text-bottom">"currency_bitcoin"</span>
                                 <span>"..."</span>
                             </div>
                         </div>
@@ -296,11 +302,11 @@ pub fn Nav() -> impl IntoView {
                     {move || {
                         let h = height_resource.get().unwrap_or(Ok(0)).unwrap_or(0);
                         view! {
-                            <a href=format!("https://mempool.space/block/{}", h) target="_blank" rel="noopener noreferrer" class="text-[#f7931a] bg-[#f7931a]/10 border border-[#f7931a]/30 shadow-[0_0_10px_rgba(247,147,26,0.2)] px-6 py-2 jetbrains text-xs font-bold tracking-wider hover:opacity-80 transition-opacity block whitespace-nowrap">
+                            <a href=format!("https://mempool.space/block/{}", h) target="_blank" rel="noopener noreferrer" class="bg-surface border border-outline-variant/50 hover:border-[#f7931a]/50 shadow-sm px-6 py-2 jetbrains text-[0.65rem] font-bold tracking-wider hover:bg-surface-container-low transition-all block whitespace-nowrap">
                                 <div class="flex flex-col items-center leading-none justify-center">
-                                    <span class="text-[0.6rem] text-[#f7931a]/70 uppercase font-medium">"CURRENT BLOCK"</span>
-                                    <div class="mt-1 flex items-center">
-                                        <span class="material-symbols-outlined text-[0.8rem] inline mr-1 align-text-bottom">"currency_bitcoin"</span>
+                                    <span class="text-[0.55rem] text-on-surface-variant uppercase font-medium tracking-[0.1em]">"CURRENT BLOCK"</span>
+                                    <div class="mt-1 flex items-center text-on-surface">
+                                        <span class="material-symbols-outlined text-[0.8rem] inline mr-1 text-[#f7931a] align-text-bottom">"currency_bitcoin"</span>
                                         <span>"#" {h}</span>
                                     </div>
                                 </div>

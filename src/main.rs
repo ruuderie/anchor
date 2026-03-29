@@ -30,10 +30,24 @@ async fn main() {
         pool,
     };
 
-    let site_root = &leptos_options.site_root;
+    let site_root = leptos_options.site_root.clone();
 
     let app = Router::new()
         .route("/api/*fn_name", axum::routing::get(leptos_axum::handle_server_fns).post(leptos_axum::handle_server_fns))
+        .route("/robots.txt", axum::routing::get({
+            let site_root = site_root.clone();
+            move || {
+                let path = format!("{}/robots.txt", site_root);
+                async move { std::fs::read_to_string(path).unwrap_or_default() }
+            }
+        }))
+        .route("/sitemap.xml", axum::routing::get({
+            let site_root = site_root.clone();
+            move || {
+                let path = format!("{}/sitemap.xml", site_root);
+                async move { ([(axum::http::header::CONTENT_TYPE, "application/xml")], std::fs::read_to_string(path).unwrap_or_default()) }
+            }
+        }))
         .nest_service("/pkg", ServeDir::new(format!("{}/pkg", site_root)))
         .leptos_routes_with_context(
             &app_state,

@@ -21,6 +21,7 @@ pub fn Admin() -> impl IntoView {
     let (is_authenticated, set_authenticated) = create_signal(false);
     let (active_tab, set_active_tab) = create_signal("DASHBOARD");
     let (username, set_username) = create_signal(String::new());
+    let (setup_token, set_setup_token) = create_signal(String::new());
     let (is_loading, set_is_loading) = create_signal(false);
     let (auth_error, set_auth_error) = create_signal(String::new());
 
@@ -94,7 +95,9 @@ pub fn Admin() -> impl IntoView {
         set_is_loading.set(true);
         set_auth_error.set(String::new());
         
-        match register_start(uname.clone()).await {
+        let token = setup_token.get_untracked();
+        let token_opt = if token.is_empty() { None } else { Some(token) };
+        match register_start(uname.clone(), token_opt).await {
             Ok(_payload) => {
                 #[cfg(target_arch = "wasm32")]
                 {
@@ -152,9 +155,18 @@ pub fn Admin() -> impl IntoView {
                                             prop:value=username
                                             class="w-full bg-transparent border-none border-b-2 border-outline-variant focus:border-primary focus:ring-0 px-0 py-4 jetbrains text-lg text-on-surface transition-all placeholder:text-outline-variant/50" 
                                         />
+                                    </div>                                    <div class="relative w-full group mt-6">
+                                        <label class="jetbrains text-[0.65rem] uppercase tracking-[0.1em] text-outline text-left block mb-2">"Setup Token (First-Run Only)"</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="..." 
+                                            on:input=move |ev| set_setup_token.set(event_target_value(&ev))
+                                            prop:value=setup_token
+                                            class="w-full bg-transparent border-none border-b-2 border-outline-variant focus:border-primary focus:ring-0 px-0 py-4 jetbrains text-lg text-on-surface transition-all placeholder:text-outline-variant/50" 
+                                        />
                                     </div>
 
-                                    <div class="space-y-4">
+                                    <div class="space-y-4 pt-6">
                                         <Show when=move || !auth_error.get().is_empty()>
                                             <div class="bg-error/10 border-l-4 border-error p-4 mb-4 text-error jetbrains text-sm font-medium">
                                                 {move || auth_error.get()}
@@ -409,23 +421,6 @@ fn SettingsReadView() -> impl IntoView {
                             <div class="col-span-2 text-on-surface font-medium">{&s.lc_btn}</div>
                         </div>
                         
-                        // Real Estate
-                        <div class="grid grid-cols-3 py-2 border-b border-primary/20 hover:bg-surface-container/30 mt-4">
-                            <div class="text-primary uppercase tracking-widest text-xs">"RE TITLE"</div>
-                            <div class="col-span-2 text-on-surface font-medium">{&s.real_estate_title}</div>
-                        </div>
-                        <div class="grid grid-cols-3 py-2 border-b border-outline-variant/10 hover:bg-surface-container/30">
-                            <div class="text-primary uppercase tracking-widest text-xs">"RE DESC"</div>
-                            <div class="col-span-2 text-on-surface font-medium truncate">{&s.real_estate_desc}</div>
-                        </div>
-                        <div class="grid grid-cols-3 py-2 border-b border-outline-variant/10 hover:bg-surface-container/30">
-                            <div class="text-primary uppercase tracking-widest text-xs">"RE LC TITLE"</div>
-                            <div class="col-span-2 text-on-surface font-medium">{&s.re_lc_title}</div>
-                        </div>
-                        <div class="grid grid-cols-3 py-2 border-b border-outline-variant/10 hover:bg-surface-container/30">
-                            <div class="text-primary uppercase tracking-widest text-xs">"RE LC OPTIONS"</div>
-                            <div class="col-span-2 text-on-surface font-mono text-xs truncate">{&s.re_options_json}</div>
-                        </div>
                         
                     </div>
                 }.into_view(),

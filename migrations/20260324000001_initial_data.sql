@@ -2,34 +2,31 @@ INSERT INTO site_settings (key, value) VALUES
     ('current_focus', 'AI Agent Swarms (Agentforce / CrewAI)'),
     ('status', 'Available for Critical Ops'),
     ('hero_quote', 'Vires in Numeris. Systems architecture is not defined by lines, but by cryptographic proofs and immutable data flows.'),
-    ('hero_subtitle', 'SALESFORCE TECHNICAL ARCHITECT // SPECIALIZING IN ENTERPRISE CLOUD SOLUTIONS, LWC, APEX, AND RUST EXTERNAL MICROSERVICES.'),
+    ('hero_subtitle', 'TECHNICAL ARCHITECT AND BACKEND ENGINEER // SPECIALIZING IN ENTERPRISE CLOUD SOLUTIONS, SALESFORCE, AND RUST APPLICATIONS.'),
     ('site_title', 'RUUDERIE_AI'),
-    ('lead_capture_title', 'Request Tailored CV'),
-    ('lead_capture_desc', 'Input your protocol for a mission-specific credentials package.'),
-    ('lead_capture_label', 'Registry Email Address'),
+    ('lead_capture_title', 'Join My Newsletter'),
+    ('lead_capture_desc', 'Get insights on AI, Salesforce, Rust, and Real Estate.'),
+    ('lead_capture_label', 'Email Address'),
     ('lead_capture_placeholder', 'user@organization.domain'),
-    ('lead_capture_btn', 'Initialize Retrieval'),
-    ('lead_capture_footer', '* Check your email to confirm the request parameters.'),
+    ('lead_capture_btn', 'Subscribe'),
+    ('lead_capture_footer', '* Check your email to confirm your subscription.'),
     ('lead_capture_endpoint', '/api/DownloadResume'),
     ('status_color', '#ff5449'),
     ('webhook_url', ''),
     ('admin_email', ''),
-    ('landing_options_json', '{"resume": "Request Tailored CV", "mailing_list": "Join Mailing List"}'),
-    ('real_estate_title', 'Real Estate Ventures.'),
-    ('real_estate_desc', 'I am an active real estate investor and landlord always looking for the next deal or strategic partnership. Beyond acquiring properties, I leverage my network as a loan broker to structure investment capital.'),
-    ('re_lc_title', 'Let''s Connect'),
-    ('re_lc_desc', 'Join the deal flow or request financing. Select your areas of interest below.'),
-    ('re_lc_label', 'Registry Email Address'),
-    ('re_lc_placeholder', 'investor@domain.com'),
-    ('re_lc_btn', 'SUBMIT INQUIRY'),
-    ('re_options_json', '{"buying": "Buying a Home", "selling": "Selling a Home", "loan": "Getting a real estate investment loan", "networking": "Connecting with other investors"}')
+    ('landing_options_json', '{"resume": "Join Mailing List", "mailing_list": "Join Mailing List"}')
 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 
 INSERT INTO nav_items (label, href, display_order) VALUES
-('WORK', '/work', 10),
-('PROJECTS', '/projects', 20),
+('WORK', '#', 10),
 ('BLOG', '/blog', 30),
-('REAL ESTATE', '/real-estate', 40);
+('INVESTMENTS', '#', 40);
+
+INSERT INTO nav_items (label, href, parent_id, display_order) VALUES
+('EXPERIENCE', '/resume', (SELECT id FROM nav_items WHERE label = 'WORK' LIMIT 1), 10),
+('PROJECTS', '/projects', (SELECT id FROM nav_items WHERE label = 'WORK' LIMIT 1), 20),
+('REAL ESTATE', '/investments/real-estate', (SELECT id FROM nav_items WHERE label = 'INVESTMENTS' LIMIT 1), 10),
+('BITCOIN', '/investments/bitcoin', (SELECT id FROM nav_items WHERE label = 'INVESTMENTS' LIMIT 1), 20);
 
 INSERT INTO footer_items (label, href, display_order) VALUES
 ('TERMS OF SERVICE', '/terms', 10),

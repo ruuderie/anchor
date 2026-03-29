@@ -195,7 +195,7 @@ pub fn PasskeyForm() -> impl IntoView {
         set_auth_error.set(String::new());
 
         spawn_local(async move {
-            match crate::auth::register_start(uname.clone()).await {
+            match crate::auth::register_start(uname.clone(), None).await {
                 Ok(_payload) => {
                     #[cfg(target_arch = "wasm32")]
                     {
@@ -293,14 +293,8 @@ pub fn SettingsForm() -> impl IntoView {
     let (webhook_url, set_webhook_url) = create_signal(String::new());
     let (admin_email, set_admin_email) = create_signal(String::new());
     let (landing_options_json, set_landing_options_json) = create_signal(String::new());
-    let (real_estate_title, set_real_estate_title) = create_signal(String::new());
-    let (real_estate_desc, set_real_estate_desc) = create_signal(String::new());
-    let (re_lc_title, set_re_lc_title) = create_signal(String::new());
-    let (re_lc_desc, set_re_lc_desc) = create_signal(String::new());
-    let (re_lc_label, set_re_lc_label) = create_signal(String::new());
-    let (re_lc_placeholder, set_re_lc_placeholder) = create_signal(String::new());
-    let (re_lc_btn, set_re_lc_btn) = create_signal(String::new());
-    let (re_options_json, set_re_options_json) = create_signal(String::new());
+    let (google_analytics_id, set_google_analytics_id) = create_signal(String::new());
+
 
     create_effect(move |_| {
         if let Some(Ok(s)) = settings_res.get() {
@@ -320,14 +314,7 @@ pub fn SettingsForm() -> impl IntoView {
             set_webhook_url.set(s.webhook_url);
             set_admin_email.set(s.admin_email);
             set_landing_options_json.set(s.landing_options_json);
-            set_real_estate_title.set(s.real_estate_title);
-            set_real_estate_desc.set(s.real_estate_desc);
-            set_re_lc_title.set(s.re_lc_title);
-            set_re_lc_desc.set(s.re_lc_desc);
-            set_re_lc_label.set(s.re_lc_label);
-            set_re_lc_placeholder.set(s.re_lc_placeholder);
-            set_re_lc_btn.set(s.re_lc_btn);
-            set_re_options_json.set(s.re_options_json);
+            set_google_analytics_id.set(s.google_analytics_id);
         }
     });
 
@@ -348,17 +335,11 @@ pub fn SettingsForm() -> impl IntoView {
         let wu = webhook_url.get_untracked();
         let ae = admin_email.get_untracked();
         let loj = landing_options_json.get_untracked();
-        let ret = real_estate_title.get_untracked();
-        let red = real_estate_desc.get_untracked();
-        let rlt = re_lc_title.get_untracked();
-        let rld = re_lc_desc.get_untracked();
-        let rll = re_lc_label.get_untracked();
-        let rlp = re_lc_placeholder.get_untracked();
-        let rlb = re_lc_btn.get_untracked();
-        let roj = re_options_json.get_untracked();
+        let gai = google_analytics_id.get_untracked();
+
 
         spawn_local(async move {
-            let _ = crate::pages::landing::update_site_settings(cf, st, hq, hs, sttl, lt, ld, ll, lp, lb, lf, le, sc, wu, ae, loj, ret, red, rlt, rld, rll, rlp, rlb, roj).await;
+            let _ = crate::pages::landing::update_site_settings(cf, st, hq, hs, sttl, lt, ld, ll, lp, lb, lf, le, sc, wu, ae, loj, gai).await;
             set_modal_state.set(ModalState::None);
         });
     };
@@ -391,14 +372,7 @@ pub fn SettingsForm() -> impl IntoView {
                     <label class="jetbrains text-[0.65rem] uppercase text-secondary tracking-wider mt-4">"Lead Capture Parameter // Site Title"</label>
                     <input type="text" prop:value=site_title on:input=move |ev| set_site_title.set(event_target_value(&ev)) class="bg-surface p-3 border border-secondary/50 focus:border-secondary focus:ring-0 text-sm jetbrains" />
                 </div>
-                <div class="flex flex-col gap-2">
-                    <label class="jetbrains text-[0.65rem] uppercase text-secondary tracking-wider mt-4">"Real Estate Parameter // Title"</label>
-                    <input type="text" prop:value=real_estate_title on:input=move |ev| set_real_estate_title.set(event_target_value(&ev)) class="bg-surface p-3 border border-secondary/50 focus:border-secondary focus:ring-0 text-sm jetbrains" />
-                </div>
-                <div class="flex flex-col gap-2">
-                    <label class="jetbrains text-[0.65rem] uppercase text-secondary tracking-wider mt-4">"Real Estate Parameter // Description"</label>
-                    <textarea prop:value=real_estate_desc on:input=move |ev| set_real_estate_desc.set(event_target_value(&ev)) rows="3" class="bg-surface p-3 border border-secondary/50 focus:border-secondary focus:ring-0 text-sm jetbrains resize-y"></textarea>
-                </div>
+
                 <div class="grid grid-cols-2 gap-4">
                     <div class="flex flex-col gap-2">
                         <label class="jetbrains text-[0.65rem] uppercase text-secondary tracking-wider">"Lead Capture Parameter // Title"</label>
@@ -465,38 +439,12 @@ pub fn SettingsForm() -> impl IntoView {
                     <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Landing Options (JSON Checkboxes)"</label>
                     <textarea prop:value=landing_options_json on:input=move |ev| set_landing_options_json.set(event_target_value(&ev)) rows="3" class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains font-mono resize-y" placeholder="{{ \"option_id\": \"Option Label\" }}"></textarea>
                 </div>
-                
-                <div class="pt-6 border-t border-outline-variant/30 space-y-6">
-                    <h3 class="font-label text-sm font-bold text-primary tracking-widest uppercase">"Real Estate Lead Capture Configuration"</h3>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="flex flex-col gap-2">
-                            <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"LC Title"</label>
-                            <input type="text" prop:value=re_lc_title on:input=move |ev| set_re_lc_title.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" />
-                        </div>
-                        <div class="flex flex-col gap-2">
-                            <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"LC Input Label"</label>
-                            <input type="text" prop:value=re_lc_label on:input=move |ev| set_re_lc_label.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" />
-                        </div>
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"LC Description"</label>
-                        <textarea prop:value=re_lc_desc on:input=move |ev| set_re_lc_desc.set(event_target_value(&ev)) rows="2" class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains resize-y"></textarea>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="flex flex-col gap-2">
-                            <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"LC Input Placeholder"</label>
-                            <input type="text" prop:value=re_lc_placeholder on:input=move |ev| set_re_lc_placeholder.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" />
-                        </div>
-                        <div class="flex flex-col gap-2">
-                            <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"LC Button Text"</label>
-                            <input type="text" prop:value=re_lc_btn on:input=move |ev| set_re_lc_btn.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" />
-                        </div>
-                    </div>
-                    <div class="flex flex-col gap-2">
-                        <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Checkboxes (JSON Map: value => label)"</label>
-                        <textarea prop:value=re_options_json on:input=move |ev| set_re_options_json.set(event_target_value(&ev)) rows="3" class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains font-mono resize-y text-secondary text-xs"></textarea>
-                    </div>
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Google Analytics Tag ID"</label>
+                    <input type="text" prop:value=google_analytics_id on:input=move |ev| set_google_analytics_id.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains font-mono uppercase" placeholder="G-XXXXXX" />
                 </div>
+                
+
 
                 <button on:click=save class="mt-8 bg-primary text-on-primary font-bold jetbrains uppercase w-full py-4 tracking-widest hover:bg-primary-container transition-colors">
                     "OVERWRITE GLOBAL SETTINGS"

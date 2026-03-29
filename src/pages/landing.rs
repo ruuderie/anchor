@@ -18,14 +18,7 @@ pub struct SiteSettings {
     pub webhook_url: String,
     pub admin_email: String,
     pub landing_options_json: String,
-    pub real_estate_title: String,
-    pub real_estate_desc: String,
-    pub re_lc_title: String,
-    pub re_lc_desc: String,
-    pub re_lc_label: String,
-    pub re_lc_placeholder: String,
-    pub re_lc_btn: String,
-    pub re_options_json: String,
+    pub google_analytics_id: String,
 }
 
 impl Default for SiteSettings {
@@ -47,14 +40,7 @@ impl Default for SiteSettings {
             webhook_url: "".into(),
             admin_email: "".into(),
             landing_options_json: r#"{"resume": "Request Tailored CV", "mailing_list": "Join Mailing List"}"#.into(),
-            real_estate_title: "Real Estate Ventures.".into(),
-            real_estate_desc: "I am an active real estate investor and landlord always looking for the next deal or strategic partnership. Beyond acquiring properties, I leverage my network as a loan broker to structure investment capital.".into(),
-            re_lc_title: "Let's Connect".into(),
-            re_lc_desc: "Join the deal flow or request financing. Select your areas of interest below.".into(),
-            re_lc_label: "Registry Email Address".into(),
-            re_lc_placeholder: "investor@domain.com".into(),
-            re_lc_btn: "SUBMIT INQUIRY".into(),
-            re_options_json: r#"{"buying": "Buying a Home", "selling": "Selling a Home", "loan": "Getting a real estate investment loan", "networking": "Connecting with other investors"}"#.into(),
+            google_analytics_id: "".into(),
         }
     }
 }
@@ -89,14 +75,7 @@ pub async fn get_site_settings() -> Result<SiteSettings, ServerFnError> {
         if key == "webhook_url" { settings.webhook_url = value.clone(); }
         if key == "admin_email" { settings.admin_email = value.clone(); }
         if key == "landing_options_json" { settings.landing_options_json = value.clone(); }
-        if key == "real_estate_title" { settings.real_estate_title = value.clone(); }
-        if key == "real_estate_desc" { settings.real_estate_desc = value.clone(); }
-        if key == "re_lc_title" { settings.re_lc_title = value.clone(); }
-        if key == "re_lc_desc" { settings.re_lc_desc = value.clone(); }
-        if key == "re_lc_label" { settings.re_lc_label = value.clone(); }
-        if key == "re_lc_placeholder" { settings.re_lc_placeholder = value.clone(); }
-        if key == "re_lc_btn" { settings.re_lc_btn = value.clone(); }
-        if key == "re_options_json" { settings.re_options_json = value.clone(); }
+        if key == "google_analytics_id" { settings.google_analytics_id = value.clone(); }
     }
 
     Ok(settings)
@@ -104,7 +83,7 @@ pub async fn get_site_settings() -> Result<SiteSettings, ServerFnError> {
 
 #[server(UpdateSiteSettings, "/api")]
 pub async fn update_site_settings(
-    current_focus: String, status: String, hero_quote: String, hero_subtitle: String, site_title: String, lc_title: String, lc_desc: String, lc_label: String, lc_placeholder: String, lc_btn: String, lc_footer: String, lc_endpoint: String, status_color: String, webhook_url: String, admin_email: String, landing_options_json: String, real_estate_title: String, real_estate_desc: String, re_lc_title: String, re_lc_desc: String, re_lc_label: String, re_lc_placeholder: String, re_lc_btn: String, re_options_json: String
+    current_focus: String, status: String, hero_quote: String, hero_subtitle: String, site_title: String, lc_title: String, lc_desc: String, lc_label: String, lc_placeholder: String, lc_btn: String, lc_footer: String, lc_endpoint: String, status_color: String, webhook_url: String, admin_email: String, landing_options_json: String, google_analytics_id: String
 ) -> Result<(), ServerFnError> {
     use crate::auth::check_session;
     use axum::Extension;
@@ -128,14 +107,7 @@ pub async fn update_site_settings(
     sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'webhook_url'").bind(webhook_url).execute(&state.pool).await?;
     sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'admin_email'").bind(admin_email).execute(&state.pool).await?;
     sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'landing_options_json'").bind(landing_options_json).execute(&state.pool).await?;
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'real_estate_title'").bind(real_estate_title).execute(&state.pool).await?;
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'real_estate_desc'").bind(real_estate_desc).execute(&state.pool).await?;
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 're_lc_title'").bind(re_lc_title).execute(&state.pool).await?;
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 're_lc_desc'").bind(re_lc_desc).execute(&state.pool).await?;
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 're_lc_label'").bind(re_lc_label).execute(&state.pool).await?;
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 're_lc_placeholder'").bind(re_lc_placeholder).execute(&state.pool).await?;
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 're_lc_btn'").bind(re_lc_btn).execute(&state.pool).await?;
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 're_options_json'").bind(re_options_json).execute(&state.pool).await?;
+    sqlx::query("INSERT INTO site_settings (key, value) VALUES ('google_analytics_id', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(google_analytics_id).execute(&state.pool).await?;
     
     Ok(())
 }
@@ -157,11 +129,31 @@ pub async fn handle_lead_capture(email: String, options: Vec<String>) -> Result<
         .execute(&state.pool)
         .await;
         
-    // Log to console per user request (webhook/email pending)
     if !settings.webhook_url.is_empty() {
-        println!("TRIGGER WEBHOOK to {}: Lead capture for {} with options {:?}", settings.webhook_url, email, options);
+        let payload = serde_json::json!({
+            "email": &email,
+            "options": &options
+        });
+        let client = reqwest::Client::new();
+        match client.post(&settings.webhook_url).json(&payload).send().await {
+            Ok(res) if res.status().is_success() => {
+                println!("Webhook successfully triggered for {}", email);
+            },
+            Ok(res) => {
+                println!("Webhook returned non-success for {}: {}", email, res.status());
+            },
+            Err(e) => {
+                println!("Failed to trigger webhook for {}: {:?}", email, e);
+            }
+        }
     } else {
-        println!("NEW LEAD CAPTURE: {} requested {:?}", email, options);
+        println!("NEW LEAD CAPTURE (NO WEBHOOK CONFIGURED): {} requested {:?}", email, options);
+    }
+    
+    if !settings.admin_email.is_empty() {
+        let subject = format!("New Lead Capture: {}", email);
+        let body = format!("<h3>New lead captured!</h3><p><strong>Email:</strong> {}</p><p><strong>Options requested:</strong> {:?}</p>", email, options);
+        let _ = crate::email::send_email(settings.admin_email.clone(), subject, body).await;
     }
 
     Ok(())
