@@ -86,7 +86,7 @@ pub fn App() -> impl IntoView {
             "mermaid.run({ querySelector: '.mermaid' }); } catch(e) {} }, 100); };"
         </Script>
 
-        <Stylesheet id="leptos" href="/pkg/ruuderie_ai.css"/>
+        <Stylesheet id="leptos" href="/pkg/anchor.css"/>
 
         {
             let settings_resource = create_resource(|| (), |_| crate::pages::landing::get_site_settings());

@@ -4,8 +4,8 @@ async fn main() {
     use axum::Router;
     use leptos::*;
     use leptos_axum::{generate_route_list, LeptosRoutes};
-    use ruuderie_ai::app::*;
-    use ruuderie_ai::state::AppState;
+    use anchor::app::*;
+    use anchor::state::AppState;
     use sqlx::PgPool;
     use tower_http::services::ServeDir;
 
@@ -16,7 +16,7 @@ async fn main() {
 
     // Initialize Database
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-        "postgres://ruud_admin:R3sUm3_S3cUr3@localhost:5432/ruuderie_ai".into()
+        "postgres://ruud_admin:R3sUm3_S3cUr3@localhost:5432/anchor".into()
     });
     let pool = PgPool::connect(&database_url)
         .await
