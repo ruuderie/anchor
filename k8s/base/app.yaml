@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ruuderie-app
-  namespace: ruuderie-ai
+  name: anchor-app
+  namespace: anchor
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: ruuderie-app
+      app: anchor-app
   template:
     metadata:
       labels:
-        app: ruuderie-app
+        app: anchor-app
     spec:
       containers:
-      - name: ruuderie-app
-        image: ruuderie_ai-app:latest
+      - name: anchor-app
+        image: anchor-app:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3000
@@ -26,11 +26,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: ruuderie-app
-  namespace: ruuderie-ai
+  name: anchor-app
+  namespace: anchor
 spec:
   selector:
-    app: ruuderie-app
+    app: anchor-app
   ports:
   - port: 80
     targetPort: 3000
