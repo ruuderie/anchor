@@ -1,5 +1,6 @@
 use leptos::*;
 use std::time::Duration;
+use leptos_router::A;
 
 #[server(GetBlockHeight, "/api")]
 pub async fn get_block_height() -> Result<u64, ServerFnError> {
@@ -283,12 +284,12 @@ pub fn Nav() -> impl IntoView {
     let nav_resource = create_resource(|| (), |_| get_nav_items());
 
     view! {
-        <nav class="fixed top-0 left-0 w-full flex justify-between items-center px-4 md:px-[8.5rem] py-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-[20px] z-50">
-            <a href="/" class="text-xl font-bold font-mono text-cyan-800 dark:text-cyan-400 truncate">
+        <nav class="fixed top-0 left-0 w-full flex justify-between items-center px-4 md:px-[8.5rem] py-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-[20px] z-[60]">
+            <A href="/" class="text-xl font-bold font-mono text-cyan-800 dark:text-cyan-400 truncate relative z-[70]">
                 <Suspense fallback=move || view! { <span>"RUUDERIE_AI"</span> }>
                     {move || settings_resource.get().unwrap_or(Ok(crate::pages::landing::SiteSettings::default())).unwrap_or(crate::pages::landing::SiteSettings::default()).site_title}
                 </Suspense>
-            </a>
+            </A>
             <div class="hidden md:flex items-center space-x-8">
                 <Suspense fallback=move || view! { <div class="w-24 h-4 bg-slate-200 dark:bg-slate-700 animate-pulse rounded"></div> }>
                     {move || {
