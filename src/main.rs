@@ -57,8 +57,7 @@ async fn main() {
                 move || leptos::provide_context(app_state.clone())
             },
             {
-                let leptos_options = leptos_options.clone();
-                move || shell(leptos_options.clone())
+                move || view! { <App/> }
             },
         )
         .layer(axum::Extension(app_state.clone()))

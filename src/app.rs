@@ -61,6 +61,20 @@ pub fn App() -> impl IntoView {
     provide_meta_context();
 
     view! {
+        <Html lang="en"/>
+        <Body class="text-on-surface selection:bg-secondary-container selection:text-on-secondary-container"/>
+        <Link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500&display=swap" />
+        <Link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" />
+        <Script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"/>
+        <Script>
+            "window.addEventListener('load', () => { mermaid.initialize({ startOnLoad: false, theme: 'dark' }); });"
+            "window.renderMermaid = function() { setTimeout(function() { try { "
+            "document.querySelectorAll('pre > code.language-mermaid').forEach(el => { "
+            "let div = document.createElement('div'); div.className = 'mermaid'; div.textContent = el.textContent; "
+            "el.parentElement.replaceWith(div); }); "
+            "mermaid.run({ querySelector: '.mermaid' }); } catch(e) {} }, 100); };"
+        </Script>
+
         <Stylesheet id="leptos" href="/pkg/ruuderie_ai.css"/>
         <Title text="Ruud Salym Erie - Technical Architect"/>
         <Meta name="description" content="Technical Architect and Software Engineer specializing in Rust, Salesforce, and high-performance enterprise applications."/>
@@ -130,37 +144,4 @@ pub fn PageViewTracker() -> impl IntoView {
         });
     });
     view! { <div class="hidden"></div> }
-}
-
-pub fn shell(_options: leptos::LeptosOptions) -> impl IntoView {
-    view! {
-        <!DOCTYPE html>
-        <html lang="en">
-            <head>
-                <meta charset="utf-8"/>
-                <meta name="viewport" content="width=device-width, initial-scale=1"/>
-                <link rel="stylesheet" id="leptos" href="/pkg/ruuderie_ai.css"/>
-                <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500&display=swap" />
-                <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" />
-                <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
-                <script>
-                    "window.addEventListener('load', () => { mermaid.initialize({ startOnLoad: false, theme: 'dark' }); });"
-                    "window.renderMermaid = function() { setTimeout(function() { try { "
-                    "document.querySelectorAll('pre > code.language-mermaid').forEach(el => { "
-                    "let div = document.createElement('div'); div.className = 'mermaid'; div.textContent = el.textContent; "
-                    "el.parentElement.replaceWith(div); }); "
-                    "mermaid.run({ querySelector: '.mermaid' }); } catch(e) {} }, 100); };"
-                </script>
-            </head>
-            <body class="text-on-surface selection:bg-secondary-container selection:text-on-secondary-container">
-                <App/>
-                <script type="module">
-                    r#"
-                    import init from '/pkg/ruuderie_ai.js';
-                    init('/pkg/ruuderie_ai.wasm');
-                    "#
-                </script>
-            </body>
-        </html>
-    }
 }
