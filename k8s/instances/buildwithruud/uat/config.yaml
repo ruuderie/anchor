@@ -10,4 +10,4 @@ stringData:
   RP_ORIGIN: "https://uat.buildwithruud.com"
   RP_ID: "uat.buildwithruud.com"
   LEPTOS_SITE_ADDR: "0.0.0.0:3000"
-  LEPTOS_ENV: "UAT"
+  LEPTOS_ENV: "production"

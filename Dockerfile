@@ -1,5 +1,5 @@
 # Get started with a build env with Rust nightly
-FROM rustlang/rust:nightly-bullseye AS builder
+FROM rustlang/rust:nightly-bookworm AS builder
 
 RUN apt-get update -y && \
   apt-get install -y pkg-config make g++ libssl-dev libc++-dev build-essential curl && \
@@ -38,7 +38,7 @@ RUN sed -i '/tailwind-config-file/d' Cargo.toml
 RUN cargo leptos build --release -vv
 
 # Runtime Environment
-FROM debian:bullseye-slim AS runner
+FROM debian:bookworm-slim AS runner
 
 # Install OpenSSL for reqwest and sqlx
 RUN apt-get update -y \
