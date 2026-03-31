@@ -5,9 +5,9 @@ CREATE TABLE IF NOT EXISTS system_secrets (
 );
 
 INSERT INTO system_secrets (key, value) VALUES
-    ('smtp_host', ''),
+    ('smtp_host', 'smtp.protonmail.ch'),
     ('smtp_port', '587'),
-    ('smtp_username', ''),
+    ('smtp_username', 'ruud@oply.co'),
     ('smtp_token', ''),
     ('smtp_from', 'ruud@oply.co')
 ON CONFLICT (key) DO NOTHING;

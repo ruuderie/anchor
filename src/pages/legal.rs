@@ -19,8 +19,8 @@ pub fn Terms() -> impl IntoView {
     let settings_res = create_resource(|| (), |_| get_site_settings());
 
     view! {
-        <Title text="Terms of Service | Ruuderie" />
-        <Meta name="description" content="Terms of Service and conditions for engaging with Ruuderie AI and OPLYST INTERNATIONAL, LLC."/>
+        <Title text="Terms of Service | Anchor" />
+        <Meta name="description" content="Terms of Service and conditions for engaging with Anchor and OPLYST INTERNATIONAL, LLC."/>
         <main class="min-h-screen pt-32 pb-24 px-6 md:px-12 max-w-4xl mx-auto">
             <Transition fallback=move || view! { <div class="text-outline jetbrains">"Loading terms..."</div> }>
                 {move || match settings_res.get() {
@@ -54,8 +54,8 @@ pub fn Privacy() -> impl IntoView {
     let settings_res = create_resource(|| (), |_| get_site_settings());
 
     view! {
-        <Title text="Privacy Policy | Ruuderie" />
-        <Meta name="description" content="Privacy Policy covering data handling, cookies, and digital security at Ruuderie AI."/>
+        <Title text="Privacy Policy | Anchor" />
+        <Meta name="description" content="Privacy Policy covering data handling, cookies, and digital security at Anchor."/>
         <main class="min-h-screen pt-32 pb-24 px-6 md:px-12 max-w-4xl mx-auto">
             <Transition fallback=move || view! { <div class="text-outline jetbrains">"Loading privacy policy..."</div> }>
                 {move || match settings_res.get() {

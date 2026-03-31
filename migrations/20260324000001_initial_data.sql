@@ -1,9 +1,9 @@
 INSERT INTO site_settings (key, value) VALUES 
-    ('current_focus', 'AI Agent Swarms (Agentforce / CrewAI)'),
-    ('status', 'Available for Critical Ops'),
+    ('current_focus', 'Technical Architect @ Hipten'),
+    ('status', 'Unavailable For New Projects'),
     ('hero_quote', 'Vires in Numeris. Systems architecture is not defined by lines, but by cryptographic proofs and immutable data flows.'),
     ('hero_subtitle', 'TECHNICAL ARCHITECT AND BACKEND ENGINEER // SPECIALIZING IN ENTERPRISE CLOUD SOLUTIONS, SALESFORCE, AND RUST APPLICATIONS.'),
-    ('site_title', 'RUUDERIE_AI'),
+    ('site_title', 'BuildWithRuud'),
     ('lead_capture_title', 'Join My Newsletter'),
     ('lead_capture_desc', 'Get insights on AI, Salesforce, Rust, and Real Estate.'),
     ('lead_capture_label', 'Email Address'),
@@ -13,8 +13,16 @@ INSERT INTO site_settings (key, value) VALUES
     ('lead_capture_endpoint', '/api/DownloadResume'),
     ('status_color', '#ff5449'),
     ('webhook_url', ''),
-    ('admin_email', ''),
-    ('landing_options_json', '{"resume": "Join Mailing List", "mailing_list": "Join Mailing List"}')
+    ('admin_email', 'ruud@oply.co'),
+    ('booking_url', 'https://cal.com/ruuderie/15min'),
+    ('terms_html', '# Terms of Service\n\nPlease review our terms.'),
+    ('privacy_html', '# Privacy Policy\n\nWe respect your digital privacy.'),
+    ('github_url', 'https://github.com/ruuderie'),
+    ('x_url', 'https://x.com/ruud_awakening'),
+    ('linkedin_url', 'https://linkedin.com/in/ruudsalymerie'),
+    ('meta_title', 'Ruud Salym Erie - Technical Architect'),
+    ('meta_description', 'Technical Architect and Software Engineer specializing in Rust, Salesforce, and high-performance enterprise applications.'),
+    ('og_image', '')
 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 
 INSERT INTO nav_items (label, href, display_order) VALUES

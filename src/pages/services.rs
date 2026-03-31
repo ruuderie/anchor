@@ -35,9 +35,9 @@ pub fn Services() -> impl IntoView {
                         }.into_view()
                     } else {
                         view! {
-                            <Title text="Services & Consulting | Ruuderie" />
+                            <Title text="Services & Consulting | Anchor" />
                             <Meta name="description" content="Strategic engineering and technical architecture consulting by Ruud Salym Erie. High-stakes platform modernization, SaaS delivery, and rigorous Rust solutions."/>
-                            <Meta property="og:title" content="Services & Consulting | Ruuderie"/>
+                            <Meta property="og:title" content="Services & Consulting | Anchor"/>
                             <Meta property="og:description" content="Strategic engineering and technical architecture consulting by Ruud Salym Erie. High-stakes platform modernization, SaaS delivery, and rigorous Rust solutions."/>
                             <main class="min-h-screen pt-32 pb-24 px-6 md:px-12 max-w-7xl mx-auto space-y-32">
             // Header Section

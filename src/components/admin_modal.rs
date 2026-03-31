@@ -17,6 +17,7 @@ pub enum ModalState {
     Service(Option<crate::b2b::ServiceRecord>),
     CaseStudy(Option<crate::b2b::CaseStudyRecord>),
     Highlight(Option<crate::b2b::HighlightRecord>),
+    LeadOption(Option<crate::pages::landing::LeadCaptureOption>),
     Passkey,
     Settings,
 }
@@ -66,6 +67,8 @@ pub fn AdminEditorModal() -> impl IntoView {
                                     ModalState::CaseStudy(Some(_)) => "EDIT CASE STUDY",
                                     ModalState::Highlight(None) => "NEW HIGHLIGHT SNAP",
                                     ModalState::Highlight(Some(_)) => "EDIT HIGHLIGHT SNAP",
+                                    ModalState::LeadOption(None) => "NEW LEAD OPTION",
+                                    ModalState::LeadOption(Some(_)) => "EDIT LEAD OPTION",
                                     ModalState::Passkey => "REGISTER NEW PASSKEY",
                                     ModalState::Settings => "EDIT SITE SETTINGS",
                                     ModalState::None => "",
@@ -99,6 +102,7 @@ pub fn AdminEditorModal() -> impl IntoView {
                                 ModalState::Service(s) => view! { <ServiceForm initial_item=s /> }.into_view(),
                                 ModalState::CaseStudy(c) => view! { <CaseStudyForm initial_item=c /> }.into_view(),
                                 ModalState::Highlight(h) => view! { <HighlightForm initial_item=h /> }.into_view(),
+                                ModalState::LeadOption(h) => view! { <LeadOptionForm initial_item=h /> }.into_view(),
                                 ModalState::Passkey => view! { <PasskeyForm /> }.into_view(),
                                 ModalState::Settings => view! { <SettingsForm /> }.into_view(),
                                 ModalState::None => view! { <div/> }.into_view(),
@@ -353,7 +357,6 @@ pub fn SettingsForm() -> impl IntoView {
     let (status_color, set_status_color) = create_signal(String::new());
     let (webhook_url, set_webhook_url) = create_signal(String::new());
     let (admin_email, set_admin_email) = create_signal(String::new());
-    let (landing_options_json, set_landing_options_json) = create_signal(String::new());
     let (google_analytics_id, set_google_analytics_id) = create_signal(String::new());
     let (booking_url, set_booking_url) = create_signal(String::new());
     let (terms_html, set_terms_html) = create_signal(String::new());
@@ -390,7 +393,6 @@ pub fn SettingsForm() -> impl IntoView {
             set_status_color.set(s.status_color);
             set_webhook_url.set(s.webhook_url);
             set_admin_email.set(s.admin_email);
-            set_landing_options_json.set(s.landing_options_json);
             set_google_analytics_id.set(s.google_analytics_id);
             set_booking_url.set(s.booking_url);
             set_terms_html.set(s.terms_html);
@@ -428,7 +430,6 @@ pub fn SettingsForm() -> impl IntoView {
         let sc = status_color.get_untracked();
         let wu = webhook_url.get_untracked();
         let ae = admin_email.get_untracked();
-        let loj = landing_options_json.get_untracked();
         let gai = google_analytics_id.get_untracked();
         let bu = booking_url.get_untracked();
         let th = terms_html.get_untracked();
@@ -449,7 +450,7 @@ pub fn SettingsForm() -> impl IntoView {
 
         spawn_local(async move {
             let _ = crate::pages::landing::update_site_settings(
-                cf, st, hq, hs, sttl, lt, ld, ll, lp, lb, lf, le, sc, wu, ae, loj, gai, bu, th, ph,
+                cf, st, hq, hs, sttl, lt, ld, ll, lp, lb, lf, le, sc, wu, ae, gai, bu, th, ph,
                 gu, xu, lu, b2b, mt, md, og,
             )
             .await;
@@ -565,10 +566,6 @@ pub fn SettingsForm() -> impl IntoView {
                 <div class="flex flex-col gap-2">
                     <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Admin Notification Email"</label>
                     <input type="text" prop:value=admin_email on:input=move |ev| set_admin_email.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" placeholder="admin@domain.com" />
-                </div>
-                <div class="flex flex-col gap-2">
-                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Landing Options (JSON Checkboxes)"</label>
-                    <textarea prop:value=landing_options_json on:input=move |ev| set_landing_options_json.set(event_target_value(&ev)) rows="3" class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains font-mono resize-y" placeholder="{{ \"option_id\": \"Option Label\" }}"></textarea>
                 </div>
                 <div class="flex flex-col gap-2">
                     <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Google Analytics Tag ID"</label>
@@ -2319,6 +2316,95 @@ pub fn PageHeaderForm(
 
             <button on:click=save class="mt-8 bg-primary text-on-primary font-bold jetbrains uppercase w-full py-4 tracking-widest hover:bg-primary-container transition-colors">
                 "SAVE HEADER_NODE"
+            </button>
+        </div>
+    }
+}
+
+// -----------------------------------------
+// Lead Option Form
+// -----------------------------------------
+#[component]
+pub fn LeadOptionForm(
+    initial_item: Option<crate::pages::landing::LeadCaptureOption>,
+) -> impl IntoView {
+    let set_modal_state = expect_context::<WriteSignal<ModalState>>();
+    let set_refresh = expect_context::<WriteSignal<i32>>();
+    let refresh = expect_context::<ReadSignal<i32>>();
+
+    let is_edit = initial_item.is_some();
+    let id_val = initial_item.as_ref().map(|o| o.id);
+
+    let (value_key, set_value_key) = create_signal(
+        initial_item
+            .as_ref()
+            .map(|o| o.value_key.clone())
+            .unwrap_or_default(),
+    );
+    let (label, set_label) = create_signal(
+        initial_item
+            .as_ref()
+            .map(|o| o.label.clone())
+            .unwrap_or_default(),
+    );
+    let (is_active, set_is_active) = create_signal(
+        initial_item
+            .as_ref()
+            .map(|o| o.is_active)
+            .unwrap_or(true),
+    );
+    let (display_order, set_display_order) = create_signal(
+        initial_item
+            .as_ref()
+            .map(|o| o.display_order)
+            .unwrap_or(10),
+    );
+
+    let save = move |_| {
+        let pk = value_key.get_untracked();
+        let l = label.get_untracked();
+        let ia = is_active.get_untracked();
+        let ord = display_order.get_untracked();
+
+        spawn_local(async move {
+            let _ = crate::pages::landing::upsert_lead_option(id_val, pk, l, ia, ord).await;
+            set_refresh.set(refresh.get_untracked() + 1);
+            set_modal_state.set(ModalState::None);
+        });
+    };
+
+    view! {
+        <div class="space-y-6">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Option Key (No spaces)"</label>
+                    <input type="text" prop:value=value_key on:input=move |ev| set_value_key.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains font-mono" placeholder="my_option_key" />
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Display Label"</label>
+                    <input type="text" prop:value=label on:input=move |ev| set_label.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" placeholder="Front-End Text Display" />
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 mt-4">
+                <div class="flex flex-col gap-2">
+                    <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Display Order"</label>
+                    <input type="number" prop:value=display_order on:input=move |ev| set_display_order.set(event_target_value(&ev).parse().unwrap_or(0)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains font-mono" />
+                </div>
+                <div class="flex items-center gap-4 pt-6">
+                    <label class="flex items-center space-x-3 cursor-pointer group">
+                        <input type="checkbox"
+                            class="w-5 h-5 bg-transparent border-2 border-outline-variant text-primary focus:ring-primary focus:ring-offset-surface-container-low"
+                            prop:checked=is_active
+                            on:change=move |ev| set_is_active.set(event_target_checked(&ev))
+                        />
+                        <span class="jetbrains text-sm font-bold tracking-widest text-on-surface uppercase group-hover:text-primary transition-colors">"Is Active?"</span>
+                    </label>
+                </div>
+            </div>
+
+            <button on:click=save class="mt-8 bg-primary text-on-primary font-bold jetbrains uppercase w-full py-4 tracking-widest hover:bg-primary-container transition-colors">
+                {if is_edit { "UPDATE LEAD OPTION" } else { "CREATE LEAD OPTION" }}
             </button>
         </div>
     }

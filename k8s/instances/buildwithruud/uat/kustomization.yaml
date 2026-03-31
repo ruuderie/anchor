@@ -15,3 +15,6 @@ images:
 # Apply the patch to inject the pull secrets credential into the deployment
 patches:
   - path: deployment-patch.yaml
+    target:
+      kind: Deployment
+      name: anchor-app

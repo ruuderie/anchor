@@ -19,7 +19,6 @@ pub struct SiteSettings {
     pub status_color: String,
     pub webhook_url: String,
     pub admin_email: String,
-    pub landing_options_json: String,
     pub google_analytics_id: String,
     pub booking_url: String,
     pub terms_html: String,
@@ -40,7 +39,7 @@ impl Default for SiteSettings {
             status: "Available for Critical Ops".into(),
             hero_quote: "Vires in Numeris. Systems architecture is not defined by lines, but by cryptographic proofs and immutable data flows.".into(),
             hero_subtitle: "SALESFORCE TECHNICAL ARCHITECT // SPECIALIZING IN ENTERPRISE CLOUD SOLUTIONS, LWC, APEX, AND RUST EXTERNAL MICROSERVICES.".into(),
-            site_title: "RUUDERIE_AI".into(),
+            site_title: "ANCHOR".into(),
             lc_title: "Request Tailored CV".into(),
             lc_desc: "Input your protocol for a mission-specific credentials package.".into(),
             lc_label: "Registry Email Address".into(),
@@ -51,7 +50,6 @@ impl Default for SiteSettings {
             status_color: "#ff5449".into(),
             webhook_url: "".into(),
             admin_email: "".into(),
-            landing_options_json: r#"{"resume": "Request Tailored CV", "mailing_list": "Join Mailing List"}"#.into(),
             google_analytics_id: "".into(),
             booking_url: "".into(),
             terms_html: "".into(),
@@ -128,9 +126,6 @@ pub async fn get_site_settings() -> Result<SiteSettings, ServerFnError> {
         if key == "admin_email" {
             settings.admin_email = value.clone();
         }
-        if key == "landing_options_json" {
-            settings.landing_options_json = value.clone();
-        }
         if key == "google_analytics_id" {
             settings.google_analytics_id = value.clone();
         }
@@ -186,7 +181,6 @@ pub async fn update_site_settings(
     status_color: String,
     webhook_url: String,
     admin_email: String,
-    landing_options_json: String,
     google_analytics_id: String,
     booking_url: String,
     terms_html: String,
@@ -265,10 +259,6 @@ pub async fn update_site_settings(
         .await?;
     sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'admin_email'")
         .bind(admin_email)
-        .execute(&state.pool)
-        .await?;
-    sqlx::query("UPDATE site_settings SET value = $1 WHERE key = 'landing_options_json'")
-        .bind(landing_options_json)
         .execute(&state.pool)
         .await?;
     sqlx::query("INSERT INTO site_settings (key, value) VALUES ('google_analytics_id', $1) ON CONFLICT (key) DO UPDATE SET value = $1").bind(google_analytics_id).execute(&state.pool).await?;
@@ -490,29 +480,32 @@ pub fn Landing() -> impl IntoView {
                                 </div>
                                 <Suspense fallback=move || view! { <div class="jetbrains text-xs">"Loading options..."</div> }>
                                     {move || {
-                                        let settings = settings_resource.get().unwrap_or(Ok(SiteSettings::default())).unwrap_or(SiteSettings::default());
-                                        let parsed_opts: std::collections::HashMap<String, String> = serde_json::from_str(&settings.landing_options_json).unwrap_or_default();
-
+                                        let options_res = create_resource(|| (), |_| get_lead_options());
                                         view! {
                                             <div class="space-y-4 text-left border border-outline-variant/30 p-6 bg-surface-container-lowest/50">
-                                                {parsed_opts.into_iter().map(|(key, label)| {
-                                                    let k = key.clone();
-                                                    view! {
-                                                    <label class="flex items-center space-x-3 cursor-pointer group">
-                                                        <input type="checkbox"
-                                                            class="w-5 h-5 bg-transparent border-2 border-outline-variant text-primary focus:ring-primary focus:ring-offset-surface-container-low"
-                                                            on:change=move |ev| {
-                                                                if event_target_checked(&ev) {
-                                                                    set_selected_options.update(|set| { set.insert(k.clone()); });
-                                                                } else {
-                                                                    set_selected_options.update(|set| { set.remove(&k); });
+                                                <Transition fallback=move || view! { <div>"..."</div> }>
+                                                {move || match options_res.get() {
+                                                    Some(Ok(options)) => options.into_iter().map(|opt| {
+                                                        let k = opt.value_key.clone();
+                                                        view! {
+                                                        <label class="flex items-center space-x-3 cursor-pointer group">
+                                                            <input type="checkbox"
+                                                                class="w-5 h-5 bg-transparent border-2 border-outline-variant text-primary focus:ring-primary focus:ring-offset-surface-container-low"
+                                                                on:change=move |ev| {
+                                                                    if event_target_checked(&ev) {
+                                                                        set_selected_options.update(|set| { set.insert(k.clone()); });
+                                                                    } else {
+                                                                        set_selected_options.update(|set| { set.remove(&k); });
+                                                                    }
                                                                 }
-                                                            }
-                                                        />
-                                                        <span class="jetbrains text-sm text-on-surface group-hover:text-primary transition-colors">{label}</span>
-                                                    </label>
-                                                    }
-                                                }).collect_view()}
+                                                            />
+                                                            <span class="jetbrains text-sm text-on-surface group-hover:text-primary transition-colors">{opt.label}</span>
+                                                        </label>
+                                                        }
+                                                    }).collect_view(),
+                                                    _ => view! { <div>"No options available."</div> }.into_view(),
+                                                }}
+                                                </Transition>
                                             </div>
                                         }
                                     }}
@@ -538,4 +531,111 @@ pub fn Landing() -> impl IntoView {
             <HighlightsGallery />
         </main>
     }
+}
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct LeadCaptureOption {
+    pub id: i32,
+    pub value_key: String,
+    pub label: String,
+    pub is_active: bool,
+    pub display_order: i32,
+}
+
+#[server(GetLeadOptions, "/api")]
+pub async fn get_lead_options() -> Result<Vec<LeadCaptureOption>, ServerFnError> {
+    use axum::Extension;
+    use leptos_axum::extract;
+    use sqlx::Row;
+
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    let rows = sqlx::query("SELECT id, value_key, label, is_active, display_order FROM lead_capture_options WHERE is_active = true ORDER BY display_order ASC")
+        .fetch_all(&state.pool)
+        .await?;
+
+    Ok(rows.into_iter().map(|row| LeadCaptureOption {
+        id: row.get("id"),
+        value_key: row.get("value_key"),
+        label: row.get("label"),
+        is_active: row.get("is_active"),
+        display_order: row.get("display_order"),
+    }).collect())
+}
+
+#[server(GetAllLeadOptions, "/api")]
+pub async fn get_all_lead_options() -> Result<Vec<LeadCaptureOption>, ServerFnError> {
+    use crate::auth::check_session;
+    use axum::Extension;
+    use leptos_axum::extract;
+    use sqlx::Row;
+    
+    if !check_session().await.unwrap_or(false) {
+        return Err(ServerFnError::ServerError("Unauthorized".into()));
+    }
+
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    let rows = sqlx::query("SELECT id, value_key, label, is_active, display_order FROM lead_capture_options ORDER BY display_order ASC")
+        .fetch_all(&state.pool)
+        .await?;
+
+    Ok(rows.into_iter().map(|row| LeadCaptureOption {
+        id: row.get("id"),
+        value_key: row.get("value_key"),
+        label: row.get("label"),
+        is_active: row.get("is_active"),
+        display_order: row.get("display_order"),
+    }).collect())
+}
+
+#[server(UpsertLeadOption, "/api")]
+pub async fn upsert_lead_option(
+    id: Option<i32>,
+    value_key: String,
+    label: String,
+    is_active: bool,
+    display_order: i32,
+) -> Result<(), ServerFnError> {
+    use crate::auth::check_session;
+    use axum::Extension;
+    use leptos_axum::extract;
+    if !check_session().await.unwrap_or(false) {
+        return Err(ServerFnError::ServerError("Unauthorized".into()));
+    }
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+
+    if let Some(option_id) = id {
+        sqlx::query("UPDATE lead_capture_options SET value_key = $1, label = $2, is_active = $3, display_order = $4 WHERE id = $5")
+            .bind(value_key)
+            .bind(label)
+            .bind(is_active)
+            .bind(display_order)
+            .bind(option_id)
+            .execute(&state.pool)
+            .await?;
+    } else {
+        sqlx::query("INSERT INTO lead_capture_options (value_key, label, is_active, display_order) VALUES ($1, $2, $3, $4)")
+            .bind(value_key)
+            .bind(label)
+            .bind(is_active)
+            .bind(display_order)
+            .execute(&state.pool)
+            .await?;
+    }
+    Ok(())
+}
+
+#[server(DeleteLeadOption, "/api")]
+pub async fn delete_lead_option(id: i32) -> Result<(), ServerFnError> {
+    use crate::auth::check_session;
+    use axum::Extension;
+    use leptos_axum::extract;
+    if !check_session().await.unwrap_or(false) {
+        return Err(ServerFnError::ServerError("Unauthorized".into()));
+    }
+    let Extension(state) = extract::<Extension<crate::state::AppState>>().await?;
+    sqlx::query("DELETE FROM lead_capture_options WHERE id = $1")
+        .bind(id)
+        .execute(&state.pool)
+        .await?;
+    Ok(())
 }

@@ -4,9 +4,9 @@ metadata:
   name: anchor-app-ingress
   namespace: buildwithruud-uat
   annotations:
-    kubernetes.io/ingress.class: "nginx"
     cert-manager.io/cluster-issuer: "letsencrypt-staging"
 spec:
+  ingressClassName: nginx
   tls:
   - hosts:
     - uat.buildwithruud.com

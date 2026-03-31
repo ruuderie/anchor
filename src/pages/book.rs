@@ -8,9 +8,9 @@ pub fn BookDiscovery() -> impl IntoView {
     let settings_res = create_resource(|| (), |_| get_site_settings());
 
     view! {
-        <Title text="Book Discovery | Ruuderie" />
+        <Title text="Book Discovery | Anchor" />
         <Meta name="description" content="Schedule a discovery call with Ruud Salym Erie to discuss technical architecture, software engineering, and infrastructure modernization."/>
-        <Meta property="og:title" content="Book Discovery | Ruuderie"/>
+        <Meta property="og:title" content="Book Discovery | Anchor"/>
         <Meta property="og:description" content="Schedule a discovery call with Ruud Salym Erie to discuss technical architecture, software engineering, and infrastructure modernization."/>
         <main class="min-h-screen pt-32 pb-24 px-6 md:px-12 max-w-7xl mx-auto flex flex-col items-center">
 

@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This document outlines the end-to-end process for deploying the Ruuderie AI application in both local development environments (using OrbStack/Docker Desktop) and production Kubernetes clusters.
+This document outlines the end-to-end process for deploying the Anchor application in both local development environments (using OrbStack/Docker Desktop) and production Kubernetes clusters.
 
 ## Architecture Overview
 
@@ -8,15 +8,15 @@ The system runs as a Rust/Leptos application backed by a PostgreSQL database. It
 
 **Configuration Structure (`k8s/`)**
 - `k8s/base/`: Contains the core `Deployment`, `Service`, and `Namespace` components.
-- `k8s/overlays/local/`: Environment overlay for local dev, including local Postgres, Secrets, and Ingress routing.
-- `k8s/overlays/prod/`: Environment overlay for production environments.
+- `k8s/instances/buildwithruud/local/`: Environment overlay for local dev, including local Postgres, Secrets, and Ingress routing.
+- `k8s/instances/buildwithruud/prod/`: Environment overlay for production environments.
 
 ## Prerequisite: Building the Docker Image
 Before deploying to any environment, the application must be compiled and bundled into a Docker image.
 
 ```bash
 # From the root of the repository
-docker build -t ruuderie_ai-app:latest .
+docker build -t anchor-app:latest .
 ```
 > [!NOTE]
 > If using OrbStack locally, you do not need to push this image to an external registry. OrbStack's Kubernetes engine automatically shares and pulls images from its native Docker engine. For production, you will need to tag and push this to a registry (e.g., ECR, Docker Hub) and update the `k8s/base/app.yaml` image reference.
@@ -34,11 +34,11 @@ The local environment is configured to run flawlessly on your machine using stri
    ```
 2. Apply the Kustomize local overlay:
    ```bash
-   kubectl apply -k k8s/overlays/local
+   kubectl apply -k k8s/instances/buildwithruud/local
    ```
-3. Watch the pods initialize until both your database and the `ruuderie-app` show as `Running`:
+3. Watch the pods initialize until both your database and the `anchor-app` show as `Running`:
    ```bash
-   kubectl get pods -n ruuderie-ai -w
+   kubectl get pods -n buildwithruud-local -w
    ```
 
 ### Accessing the Local Environment (Passkeys Requirement)
@@ -48,7 +48,7 @@ The local environment is configured to run flawlessly on your machine using stri
 To securely route traffic to `localhost` and perfectly match your `config.yaml` environment variables:
 1. Initialize a port-forward tunnel into the application service:
    ```bash
-   kubectl port-forward svc/ruuderie-app 3000:80 -n ruuderie-ai
+   kubectl port-forward svc/anchor-app 3000:80 -n buildwithruud-local
    ```
 2. Keep the terminal running, and open your browser to **http://localhost:3000**.
 
@@ -60,26 +60,26 @@ Whenever you make code changes, you must manually rebuild the Docker container a
 
 1. Rebuild the local Docker image:
    ```bash
-   docker build -t ruuderie_ai-app:latest .
+   docker build -t anchor-app:latest .
    ```
 2. Force Kubernetes to restart the pods to pull the fresh `latest` image:
    ```bash
-   kubectl rollout restart deployment/ruuderie-app -n ruuderie-ai
+   kubectl rollout restart deployment/anchor-app -n buildwithruud-local
    ```
 
 ---
 
 ## 2. Production Deployment
 
-In a production setting, you will have an external HTTPS domain (e.g., `https://ruuderie.ai`) and likely an external managed database (e.g., AWS RDS).
+In a production setting, you will have an external HTTPS domain (e.g., `https://anchor.com`) and likely an external managed database (e.g., AWS RDS).
 
 ### Step 1: Configure Production Secrets
-Ensure your `k8s/overlays/prod/config.yaml` or equivalent secret manager (like ExternalSecrets) is configured with your production variables.
+Ensure your `k8s/instances/buildwithruud/prod/config.yaml` or equivalent secret manager (like ExternalSecrets) is configured with your production variables.
 
 You **must** update the Passkey environment variables to align exactly with your production domain:
 ```yaml
 stringData:
-  DATABASE_URL: "postgres://user:password@production-db-host:5432/ruuderie_ai"
+  DATABASE_URL: "postgres://user:password@production-db-host:5432/anchor"
   RP_ORIGIN: "https://your-production-domain.com"
   RP_ID: "your-production-domain.com"
   LEPTOS_SITE_ADDR: "0.0.0.0:3000"
@@ -99,14 +99,14 @@ stringData:
 kubectl config use-context your-production-cluster
 
 # Apply the manifests
-kubectl apply -k k8s/overlays/prod
+kubectl apply -k k8s/instances/buildwithruud/prod
 ```
 
 ### Step 3: Zero-Downtime Rollouts
-If you update your application code and push a new `ruuderie_ai-app:latest` image, you must restart the deployment so your pods pull the fresh code. Because your `app.yaml` references `latest`, rolling out a restart is the standard update process:
+If you update your application code and push a new `anchor-app:latest` image, you must restart the deployment so your pods pull the fresh code. Because your `app.yaml` references `latest`, rolling out a restart is the standard update process:
 
 ```bash
-kubectl rollout restart deployment/ruuderie-app -n ruuderie-ai
+kubectl rollout restart deployment/anchor-app -n buildwithruud-prod
 ```
 > [!TIP]
 > You may see `Error` states on your old terminating pods during a rollout. This is perfectly normal. By default, this Rust app does not catch `SIGTERM` signals for graceful shutdowns, so Kubernetes cleanly `SIGKILL`s them after an automatic 30-second timeout.

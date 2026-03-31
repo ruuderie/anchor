@@ -217,7 +217,7 @@ pub fn Admin() -> impl IntoView {
                         <aside class="w-full md:w-64 shrink-0 space-y-2">
                             <div class="mb-12">
                                 <span class="font-label text-[0.6875rem] text-outline font-bold tracking-widest uppercase block mb-4">"Navigation"</span>
-                            {["DASHBOARD", "SERVICES", "CASE STUDIES", "HIGHLIGHTS", "MAILING LIST", "SETTINGS", "NAVIGATION", "FOOTER", "PAGE HEADERS", "BLOG", "RESUME PROFILES", "RESUME ENTRIES", "LANDING PAGES", "SECURITY"].iter().map(|&t| {
+                            {["DASHBOARD", "SERVICES", "CASE STUDIES", "HIGHLIGHTS", "MAILING LIST", "SETTINGS", "LEAD OPTIONS", "NAVIGATION", "FOOTER", "PAGE HEADERS", "BLOG", "RESUME PROFILES", "RESUME ENTRIES", "LANDING PAGES", "SECURITY"].iter().map(|&t| {
                                             let tab = t; // Capture `t` for the closure
                                             view! {
                                                 <button
@@ -273,6 +273,7 @@ pub fn Admin() -> impl IntoView {
                                                 "FOOTER" => ModalState::FooterItem(None),
                                                 "PAGE HEADERS" => ModalState::PageHeader(None),
                                                 "MAILING LIST" => ModalState::MailingList(None),
+                                                "LEAD OPTIONS" => ModalState::LeadOption(None),
                                                 "SECURITY" => ModalState::Passkey,
                                                 _ => ModalState::None,
                                             };
@@ -292,6 +293,7 @@ pub fn Admin() -> impl IntoView {
                                         "CASE STUDIES" => view! { <CaseStudyTable /> }.into_view(),
                                         "HIGHLIGHTS" => view! { <HighlightTable /> }.into_view(),
                                         "MAILING LIST" => view! { <MailingListTable /> }.into_view(),
+                                        "LEAD OPTIONS" => view! { <LeadOptionTable /> }.into_view(),
                                         "NAVIGATION" => view! { <NavTable /> }.into_view(),
                                         "FOOTER" => view! { <FooterTable /> }.into_view(),
                                         "PAGE HEADERS" => view! { <PageHeaderTable /> }.into_view(),
@@ -794,6 +796,69 @@ pub async fn delete_mailing_list(id: i32) -> Result<(), ServerFnError> {
         .execute(&state.pool)
         .await?;
     Ok(())
+}
+
+#[component]
+fn LeadOptionTable() -> impl IntoView {
+    use crate::pages::landing::{get_all_lead_options, delete_lead_option};
+    let refresh = expect_context::<ReadSignal<i32>>();
+    let set_refresh = expect_context::<WriteSignal<i32>>();
+    let set_modal_state =
+        expect_context::<WriteSignal<crate::components::admin_modal::ModalState>>();
+
+    let items_res = create_resource(move || refresh.get(), |_| get_all_lead_options());
+
+    view! {
+        <Transition fallback=move || view! { <div class="jetbrains text-sm text-outline">"LOADING DATA..."</div> }>
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b-2 border-outline-variant/30">
+                        <th class="py-4 font-label text-[0.65rem] uppercase tracking-widest text-outline">"ID"</th>
+                        <th class="py-4 font-label text-[0.65rem] uppercase tracking-widest text-outline">"Order"</th>
+                        <th class="py-4 font-label text-[0.65rem] uppercase tracking-widest text-outline">"Key"</th>
+                        <th class="py-4 font-label text-[0.65rem] uppercase tracking-widest text-outline">"Label"</th>
+                        <th class="py-4 font-label text-[0.65rem] uppercase tracking-widest text-outline">"Status"</th>
+                        <th class="py-4 font-label text-[0.65rem] uppercase tracking-widest text-outline text-right">"Actions"</th>
+                    </tr>
+                </thead>
+                <tbody class="jetbrains text-sm">
+                    {move || match items_res.get() {
+                        Some(Ok(items)) => items.into_iter().map(|item| {
+                            let id_val = item.id;
+                            let clone_item = item.clone();
+                            view! {
+                                <tr class="border-b border-outline-variant/10 hover:bg-surface-container/50 transition-colors">
+                                    <td class="py-4 text-outline-variant font-medium">#{id_val}</td>
+                                    <td class="py-4 text-on-surface font-medium">{item.display_order}</td>
+                                    <td class="py-4 text-on-surface font-mono text-xs">{item.value_key.clone()}</td>
+                                    <td class="py-4 font-bold text-on-surface truncate">{item.label.clone()}</td>
+                                    <td class="py-4 font-medium">
+                                        <div class="inline-flex items-center gap-2">
+                                            <div class="w-1.5 h-1.5 rounded-full" style=if item.is_active { "background-color: #4ade80" } else { "background-color: #f87171" }></div>
+                                            {if item.is_active { "ACTIVE" } else { "INACTIVE" }}
+                                        </div>
+                                    </td>
+                                    <td class="py-4 text-right space-x-4">
+                                        <button on:click=move |_| set_modal_state.set(crate::components::admin_modal::ModalState::LeadOption(Some(clone_item.clone()))) class="text-secondary hover:text-on-secondary-fixed-variant font-medium tracking-wide">"[EDIT]"</button>
+                                        <button
+                                            on:click=move |_| {
+                                                spawn_local(async move {
+                                                    let _ = delete_lead_option(id_val).await;
+                                                    set_refresh.set(refresh.get_untracked() + 1);
+                                                });
+                                            }
+                                            class="text-error hover:text-error/80 font-medium tracking-wide"
+                                        >"[DEL]"</button>
+                                    </td>
+                                </tr>
+                            }
+                        }).collect_view(),
+                        _ => view! { <tr><td colspan="6" class="py-8 text-center text-error">"ERR_NO_DATA"</td></tr> }.into_view(),
+                    }}
+                </tbody>
+            </table>
+        </Transition>
+    }
 }
 
 #[component]

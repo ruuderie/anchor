@@ -12,7 +12,7 @@ pub mod ssr {
         let rp_origin = Url::parse(&origin_str).expect("Invalid RP_ORIGIN URL");
         let builder = WebauthnBuilder::new(&id_str, &rp_origin)
             .expect("Invalid RP_ID or RP_ORIGIN configuration")
-            .rp_name("RuudErie_ai");
+            .rp_name("Anchor");
         builder.build().unwrap()
     }
 }
@@ -403,9 +403,9 @@ mod tests {
 
     #[test]
     fn test_webauthn_builder_initialization_env() {
-        std::env::set_var("RP_ORIGIN", "https://ruuderie.com");
-        std::env::set_var("RP_ID", "ruuderie.com");
+        std::env::set_var("RP_ORIGIN", "https://anchor.com");
+        std::env::set_var("RP_ID", "anchor.com");
         let webauthn = ssr::get_webauthn();
-        assert_eq!(webauthn.get_rp_id(), "ruuderie.com");
+        assert_eq!(webauthn.get_rp_id(), "anchor.com");
     }
 }
