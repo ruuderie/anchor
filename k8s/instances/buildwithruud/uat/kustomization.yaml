@@ -5,3 +5,13 @@ resources:
   - ../../../base
   - config.yaml
   - ingress.yaml
+
+# Kustomize natively swaps the image URI from the 'base' config to your remote registry URI
+images:
+  - name: anchor-app:latest
+    newName: ghcr.io/ruuderie/anchor-app
+    newTag: latest
+
+# Apply the patch to inject the pull secrets credential into the deployment
+patches:
+  - path: deployment-patch.yaml

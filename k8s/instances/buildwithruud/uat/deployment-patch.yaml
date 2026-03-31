@@ -1,0 +1,10 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: anchor-app
+spec:
+  template:
+    spec:
+      # We append the imagePullSecrets parameter so K8s knows how to parse GHCR!
+      imagePullSecrets:
+      - name: ghcr-login-secret
