@@ -388,7 +388,7 @@ pub async fn delete_user(id: i32) -> Result<(), ServerFnError> {
     Ok(())
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "ssr"))]
 mod tests {
     use super::*;
 

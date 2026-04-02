@@ -864,6 +864,8 @@ mod tests {
             bullets: vec!["Did things & stuff".into()],
             display_order: 0,
             is_visible: true,
+            metadata: None,
+            overrides: None,
         }];
 
         let tex = generate_latex_string(&profile, &entries);
@@ -901,6 +903,8 @@ mod tests {
                 bullets: vec![],
                 display_order: 0,
                 is_visible: false, // Target should hide inherently
+                metadata: None,
+                overrides: None,
             },
             ResumeEntry {
                 id: 2,
@@ -912,6 +916,8 @@ mod tests {
                 bullets: vec![],
                 display_order: 1,
                 is_visible: true, // Should hide because master JSON hides Education
+                metadata: None,
+                overrides: None,
             },
         ];
 
