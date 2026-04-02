@@ -18,6 +18,7 @@ steps:
   # [NEW] CI Step: Package the binary into a Docker Image and push it to GitHub Container Registry
   publish_image:
     image: woodpeckerci/plugin-docker-buildx
+    privileged: true
     settings:
       repo: ghcr.io/YOUR_GITHUB_USERNAME/anchor-app # Replace with your GitHub Username
       tags: latest
@@ -64,6 +65,7 @@ steps:
         *Pipeline Logs:* {{build.link}}
     when:
       status: [ success, failure ]
+    failure: ignore
 
   notify_telegram:
     image: appleboy/drone-telegram
@@ -83,6 +85,7 @@ steps:
         🔍 <a href="{{build.link}}">View Pipeline Logs</a>
     when:
       status: [ success, failure ]
+    failure: ignore
 
   notify_email:
     image: drillster/drone-email
@@ -104,6 +107,7 @@ steps:
         Build Link: {{build.link}}
     when:
       status: [ success, failure ]
+    failure: ignore
 
   notify_teams:
     image: jrollet/drone-teams
@@ -117,3 +121,5 @@ steps:
         **Logs:** [View Logs Here]({{build.link}})
     when:
       status: [ success, failure ]
+    failure: ignore
+
