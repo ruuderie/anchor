@@ -30,7 +30,7 @@ steps:
 
   # [NEW] CD Step: Tell the UAT Kubernetes server to update to the new image
   deploy_uat:
-    image: bitnami/kubectl:latest
+    image: rancher/k3s:latest
     # Because Woodpecker runs ON the manager server, we can securely mount the internal Kubeconfig!
     volumes:
       - /etc/rancher/k3s/k3s.yaml:/kubeconfig.yaml:ro
