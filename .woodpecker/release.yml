@@ -31,14 +31,13 @@ steps:
   # [NEW] CD Step: Tell the UAT Kubernetes server to update to the new image
   deploy_uat:
     image: rancher/k3s:latest
-    network_mode: host
     # Because Woodpecker runs ON the manager server, we can securely mount the internal Kubeconfig!
     volumes:
       - /etc/rancher/k3s/k3s.yaml:/kubeconfig.yaml:ro
     environment:
       KUBECONFIG: /kubeconfig.yaml
     commands:
-      - kubectl rollout restart deployment/anchor-app -n buildwithruud-uat
+      - kubectl --server=https://host.containers.internal:6443 --insecure-skip-tls-verify rollout restart deployment/anchor-app -n buildwithruud-uat
 
   # ===================================================================
   # [NEW] NOTIFICATIONS
