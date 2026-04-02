@@ -45,64 +45,6 @@ steps:
   # added via the Woodpecker Web UI and are NEVER stored in git.
   # ===================================================================
 
-  notify_discord:
-    image: appleboy/drone-discord
-    settings:
-      webhook_id:
-        from_secret: discord_webhook_id
-      webhook_token:
-        from_secret: discord_webhook_token
-      message: >
-        **{{repo.owner}}/{{repo.name}} CI/CD Update**
-        {{#success build.status}}
-          ✅ Build #{{build.number}} successfully passed tests and was deployed!
-          🚀 **Deployed URL:** https://uat.anchor.buildwithruud.com
-        {{else}}
-          ❌ Build #{{build.number}} failed at step `{{build.failed_steps}}`.
-          Fix required before deployment permitted.
-        {{/success}}
-        *Pipeline Logs:* {{build.link}}
-  notify_telegram:
-    image: appleboy/drone-telegram
-    settings:
-      token:
-        from_secret: telegram_token
-      to:
-        from_secret: telegram_chat_id
-      message: >
-        📦 <b>{{repo.owner}}/{{repo.name}}</b> Update
-        {{#success build.status}}
-        ✅ Build #{{build.number}} deployed successfully.
-        🚀 <b>URL:</b> https://uat.anchor.buildwithruud.com
-        {{else}}
-        ❌ Build #{{build.number}} failed at step {{build.failed_steps}}.
-        {{/success}}
-        🔍 <a href="{{build.link}}">View Pipeline Logs</a>
-  notify_email:
-    image: drillster/drone-email
-    settings:
-      host: smtp.protonmail.ch
-      port: 587
-      from: alerts@oply.co
-      username:
-        from_secret: smtp_username
-      password:
-        from_secret: smtp_password
-      recipients:
-        - admin@oply.co
-      subject: "[{{build.status}}] Deployment for {{repo.name}}"
-      body: >
-        Project: {{repo.owner}}/{{repo.name}}
-        Status: {{build.status}}
-        Deployed URL: https://uat.anchor.buildwithruud.com
-        Build Link: {{build.link}}
-  notify_teams:
-    image: jrollet/drone-teams
-    settings:
-      webhook:
-        from_secret: teams_webhook_url
-      title: "CI/CD Pipeline Update: {{repo.name}}"
-      message: >
-        **Status:** {{build.status}}
-        **Deployed URL:** [UAT Environment](https://uat.anchor.buildwithruud.com)
-        **Logs:** [View Logs Here]({{build.link}})
+  # To activate notifications (Discord, Email, Telegram, Teams), securely inject 
+  # their Webhook tokens via your Woodpecker CI Dashboard Settings > Secrets tab.
+  # View the Woodpecker Documentation for syntax details when ready.
