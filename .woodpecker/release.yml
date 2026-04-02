@@ -3,13 +3,13 @@ when:
 
 steps:
   test:
-    image: rust:1.76-slim
+    image: rust:1.85-slim
     commands:
       - apt-get update && apt-get install -y pkg-config libssl-dev
       - cargo test --workspace
 
   build_linux:
-    image: rust:1.76-slim
+    image: rust:1.85-slim
     commands:
       - apt-get update && apt-get install -y pkg-config libssl-dev
       - cargo build --release
