@@ -57,8 +57,10 @@ steps:
         {{else}}
           ❌ Build #{{build.number}} failed at step `{{build.failed_steps}}`.
           Fix required before deployment permitted.
-        {{/success}}
         *Pipeline Logs:* {{build.link}}
+    when:
+      status: [ success, failure ]
+    failure: ignore
   notify_telegram:
     image: appleboy/drone-telegram
     settings:
@@ -75,6 +77,9 @@ steps:
         ❌ Build #{{build.number}} failed at step {{build.failed_steps}}.
         {{/success}}
         🔍 <a href="{{build.link}}">View Pipeline Logs</a>
+    when:
+      status: [ success, failure ]
+    failure: ignore
   notify_email:
     image: drillster/drone-email
     settings:
@@ -93,6 +98,9 @@ steps:
         Status: {{build.status}}
         Deployed URL: https://uat.anchor.buildwithruud.com
         Build Link: {{build.link}}
+    when:
+      status: [ success, failure ]
+    failure: ignore
   notify_teams:
     image: jrollet/drone-teams
     settings:
@@ -103,3 +111,6 @@ steps:
         **Status:** {{build.status}}
         **Deployed URL:** [UAT Environment](https://uat.anchor.buildwithruud.com)
         **Logs:** [View Logs Here]({{build.link}})
+    when:
+      status: [ success, failure ]
+    failure: ignore
