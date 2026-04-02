@@ -34,7 +34,11 @@ async fn main() {
 
     let site_root = leptos_options.site_root.clone();
 
+    let (prometheus_layer, metric_handle) = axum_prometheus::PrometheusMetricLayer::pair();
+
     let app = Router::new()
+        // Export the open metrics endpoint
+        .route("/metrics", axum::routing::get(|| async move { metric_handle.render() }))
         .route(
             "/api/*fn_name",
             axum::routing::get(leptos_axum::handle_server_fns).post(leptos_axum::handle_server_fns),
@@ -74,6 +78,7 @@ async fn main() {
             },
             { move || view! { <App/> } },
         )
+        .layer(prometheus_layer)
         .layer(axum::Extension(app_state.clone()))
         .with_state(app_state);
 

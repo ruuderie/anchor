@@ -1,6 +1,6 @@
 # Get started with a build env with Rust nightly
 FROM rustlang/rust:nightly-bookworm AS builder
-
+ARG TARGETARCH
 RUN apt-get update -y && \
   apt-get install -y pkg-config make g++ libssl-dev libc++-dev build-essential curl && \
   curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
@@ -9,9 +9,14 @@ RUN apt-get update -y && \
 
 # Install cargo-binstall, which makes it easier to install other
 # cargo extensions like cargo-leptos
-RUN wget https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz
-RUN tar -xvf cargo-binstall-x86_64-unknown-linux-musl.tgz
-RUN cp cargo-binstall /usr/local/cargo/bin
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+      BINSTALL_URL="https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-aarch64-unknown-linux-musl.tgz"; \
+    else \
+      BINSTALL_URL="https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz"; \
+    fi && \
+    wget -O cargo-binstall.tgz "$BINSTALL_URL" && \
+    tar -xvf cargo-binstall.tgz && \
+    cp cargo-binstall /usr/local/cargo/bin
 
 # Install cargo-leptos
 RUN cargo binstall cargo-leptos -y
@@ -39,14 +44,18 @@ RUN cargo leptos build --release -vv
 
 # Runtime Environment
 FROM debian:bookworm-slim AS runner
-
-# Install OpenSSL for reqwest and sqlx
+ARG TARGETARCH# Install OpenSSL for reqwest and sqlx
 RUN apt-get update -y \
   && apt-get install -y --no-install-recommends openssl ca-certificates libc-bin wget tar \
-  && wget https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.15.0/tectonic-0.15.0-x86_64-unknown-linux-musl.tar.gz \
-  && tar -xzf tectonic-0.15.0-x86_64-unknown-linux-musl.tar.gz \
+  && if [ "$TARGETARCH" = "arm64" ]; then \
+       TECTONIC_URL="https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.15.0/tectonic-0.15.0-aarch64-unknown-linux-musl.tar.gz"; \
+     else \
+       TECTONIC_URL="https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.15.0/tectonic-0.15.0-x86_64-unknown-linux-musl.tar.gz"; \
+     fi \
+  && wget -O tectonic.tar.gz "$TECTONIC_URL" \
+  && tar -xzf tectonic.tar.gz \
   && mv tectonic /usr/local/bin/ \
-  && rm tectonic-0.15.0-x86_64-unknown-linux-musl.tar.gz \
+  && rm tectonic.tar.gz \
   && apt-get clean \
   && rm -f /var/lib/apt/lists/*_*
 

@@ -4,3 +4,4 @@ namespace: anchor
 resources:
   - namespace.yaml
   - app.yaml
+  - otel-collector.yaml
