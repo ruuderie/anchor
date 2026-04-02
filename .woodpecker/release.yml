@@ -19,7 +19,7 @@ steps:
     image: woodpeckerci/plugin-docker-buildx
     privileged: true
     settings:
-      repo: ghcr.io/YOUR_GITHUB_USERNAME/anchor-app # Replace with your GitHub Username
+      repo: ghcr.io/ruuderie/anchor-app # Replace with your GitHub Username
       tags: latest
       registry: ghcr.io
       # We will need to save docker_username and docker_password securely in Woodpecker's UI later
@@ -41,10 +41,10 @@ steps:
 
   # ===================================================================
   # [NEW] NOTIFICATIONS
-  # All secrets listed below (e.g. discord_webhook_id) are securely 
+  # All secrets listed below (e.g. discord_webhook_id) are securely
   # added via the Woodpecker Web UI and are NEVER stored in git.
   # ===================================================================
 
-  # To activate notifications (Discord, Email, Telegram, Teams), securely inject 
+  # To activate notifications (Discord, Email, Telegram, Teams), securely inject
   # their Webhook tokens via your Woodpecker CI Dashboard Settings > Secrets tab.
   # View the Woodpecker Documentation for syntax details when ready.
