@@ -89,3 +89,13 @@ creation_rules:
       - age1_prod_public_key_here
 ```
 This isolates blast radiuses: A compromise of the Dev pipeline key physically cannot decrypt the Production client configurations. 
+
+---
+
+## 10. SOPS Decryption on Stripped K3s Containers
+**Issue:** When attempting to install the `sops` binary dynamically within our Woodpecker CI deployment step using native package managers (`apt-get update`), the shell crashed heavily reporting `/bin/sh: apt-get: not found`. Even when migrating to download it physically via `wget`, it threw an enigmatic TLS rejection `wget: not an http or ftp url`.
+**Cause:** The target execution image, `rancher/k3s:latest`, structurally relies on incredibly minimal, hyper-hardened `BusyBox` layers. It completely strips standard Linux package managers (`apt`, `apk`) to prevent cross-contamination and dramatically drops the binary size. Most notably, its built-in internal `wget` executable is rigorously compiled statically to completely exclude TLS/HTTPS support! This violently prevented securely pulling the compiled SOPS Go-binary directly from GitHub.
+**Correction:** 
+Instead of hacking TLS constraints inside stripped cluster interfaces, the architecture was fully decoupled sequentially using Woodpecker multi-image bindings:
+1. Created an isolated preceding pipeline step (`decrypt_secrets_uat`) leveraging a generic `alpine:latest` container. Because this image possesses native root trust, it installed a fully-fledged `curl` dynamically, pulled the literal statically linked AMD64 SOPS binary perfectly out of Github over TLS, explicitly handled the `secret.enc.yaml` cryptographic decryption, and saved the parsed credential variables out transparently inside the shared CI-volume (`/woodpecker/src/`).
+2. Dropped the existing deployment step back completely into the trusted `rancher/k3s:latest` layer to ingest that natively processed YAML file organically via `kubectl apply -f`, immediately wiping the unencrypted ghost state from the deployment disk before continuing.
