@@ -373,14 +373,13 @@ pub fn Nav() -> impl IntoView {
 
         // Mobile Menu Overlay
         <div
-            class=move || {
-                let base = "fixed inset-0 bg-surface dark:bg-slate-900 z-50 flex flex-col pt-32 px-6 transition-all duration-300 ease-in-out md:hidden";
-                if mobile_menu_open.get() {
-                    format!("{} translate-x-0 opacity-100 pointer-events-auto", base)
-                } else {
-                    format!("{} translate-x-full opacity-0 pointer-events-none", base)
-                }
-            }
+            class="fixed inset-0 bg-surface dark:bg-slate-900 z-50 flex flex-col pt-32 px-6 transition-all duration-300 ease-in-out md:hidden"
+            class:translate-x-0=move || mobile_menu_open.get()
+            class:opacity-100=move || mobile_menu_open.get()
+            class:pointer-events-auto=move || mobile_menu_open.get()
+            class:translate-x-full=move || !mobile_menu_open.get()
+            class:opacity-0=move || !mobile_menu_open.get()
+            class:pointer-events-none=move || !mobile_menu_open.get()
         >
             <div class="flex flex-col space-y-8 overflow-y-auto pb-24 h-full">
                 <Suspense fallback=move || view! { <div class="w-24 h-4 bg-slate-200 dark:bg-slate-700 animate-pulse rounded"></div> }>
@@ -400,14 +399,14 @@ pub fn Nav() -> impl IntoView {
                                 }.into_view()
                             } else {
                                 view! {
-                                    <div class="flex flex-col space-y-3 pt-2">
-                                        <div class="text-2xl sm:text-3xl font-bold text-slate-400 dark:text-slate-500 uppercase bg-transparent w-full text-left break-words leading-tight whitespace-normal">
+                                    <div class="flex flex-col space-y-3 pt-4">
+                                        <div class="text-2xl sm:text-3xl font-bold text-slate-400 dark:text-slate-500 uppercase bg-transparent w-full text-left">
                                             {root.label.clone()}
                                         </div>
                                         <div class="flex flex-col space-y-2 pl-4 border-l-2 border-slate-200 dark:border-slate-800">
                                             {children.into_iter().map(|child| {
                                                 view! {
-                                                    <a href=child.href.clone().unwrap_or_else(|| "#".to_string()) on:click=move |_| set_mobile_menu_open.set(false) class="text-lg sm:text-xl font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors block py-2 border-b border-outline-variant/20 last:border-0 w-full text-left break-words leading-tight whitespace-normal">
+                                                    <a href=child.href.clone().unwrap_or_else(|| "#".to_string()) on:click=move |_| set_mobile_menu_open.set(false) class="text-xl font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors block py-4 border-b border-outline-variant/20 last:border-0 w-full text-left">
                                                         {child.label.clone()}
                                                     </a>
                                                 }

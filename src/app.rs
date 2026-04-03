@@ -95,6 +95,7 @@ pub fn App() -> impl IntoView {
             let og_image_sig = move || settings_resource.get().and_then(Result::ok).map(|s| s.og_image).unwrap_or("".into());
 
             view! {
+                <Meta name="viewport" content="width=device-width, initial-scale=1.0"/>
                 <Title text=title_sig/>
                 <Meta name="description" content=desc_sig/>
                 <Meta property="og:title" content=title_sig/>
