@@ -284,6 +284,7 @@ pub fn Nav() -> impl IntoView {
     let nav_resource = create_resource(|| (), |_| get_nav_items());
 
     view! {
+        <>
         <nav class="fixed top-0 left-0 w-full flex justify-between items-center px-4 md:px-[8.5rem] py-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-[20px] z-[60]">
             <A href="/" class="text-xl font-bold font-mono text-cyan-800 dark:text-cyan-400 truncate relative z-[70]">
                 <Suspense fallback=move || view! { <span>"Build With Ruud"</span> }>
@@ -368,55 +369,57 @@ pub fn Nav() -> impl IntoView {
                 </Suspense>
             </div>
 
-            // Mobile Menu Overlay
-            <div
-                class="fixed inset-0 bg-white dark:bg-slate-900 z-40 flex flex-col pt-32 px-6 transition-transform duration-300 ease-in-out md:hidden"
-                class:translate-x-0=move || mobile_menu_open.get()
-                class:translate-x-full=move || !mobile_menu_open.get()
-            >
-                <div class="flex flex-col space-y-8 overflow-y-auto pb-24 h-full">
-                    <Suspense fallback=move || view! { <div class="w-24 h-4 bg-slate-200 dark:bg-slate-700 animate-pulse rounded"></div> }>
-                        {move || {
-                            let items = nav_resource.get().unwrap_or(Ok(vec![])).unwrap_or_default();
-
-                            let root_items: Vec<_> = items.iter().filter(|i| i.parent_id.is_none()).collect();
-
-                            root_items.into_iter().map(|root| {
-                                let children: Vec<_> = items.iter().filter(|i| i.parent_id == Some(root.id)).collect();
-
-                                if children.is_empty() {
-                                    view! {
-                                        <a href=root.href.clone().unwrap_or_else(|| "#".to_string()) on:click=move |_| set_mobile_menu_open.set(false) class="text-3xl font-bold text-slate-800 dark:text-slate-100 uppercase hover:text-primary transition-colors">
-                                            {root.label.clone()}
-                                        </a>
-                                    }.into_view()
-                                } else {
-                                    view! {
-                                        <div class="flex flex-col space-y-3 pt-2">
-                                            <div class="text-2xl sm:text-3xl font-bold text-slate-400 dark:text-slate-500 uppercase bg-transparent w-full text-left break-words leading-tight whitespace-normal">
-                                                {root.label.clone()}
-                                            </div>
-                                            <div class="flex flex-col space-y-2 pl-4 border-l-2 border-slate-200 dark:border-slate-800">
-                                                {children.into_iter().map(|child| {
-                                                    view! {
-                                                        <a href=child.href.clone().unwrap_or_else(|| "#".to_string()) on:click=move |_| set_mobile_menu_open.set(false) class="text-lg sm:text-xl font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors block py-2 border-b border-outline-variant/20 last:border-0 w-full text-left break-words leading-tight whitespace-normal">
-                                                            {child.label.clone()}
-                                                        </a>
-                                                    }
-                                                }).collect_view()}
-                                            </div>
-                                        </div>
-                                    }.into_view()
-                                }
-                            }).collect_view()
-                        }}
-                    </Suspense>
-                    <a href="/admin" on:click=move |_| set_mobile_menu_open.set(false) class="mt-8 flex items-center space-x-2 text-primary text-xl font-bold uppercase transition-opacity border p-4 border-outline-variant/30 text-center justify-center">
-                        <span class="material-symbols-outlined">"terminal"</span>
-                        <span>"Admin Terminal"</span>
-                    </a>
-                </div>
-            </div>
         </nav>
+
+        // Mobile Menu Overlay
+        <div
+            class="fixed inset-0 bg-surface dark:bg-slate-900 z-[55] flex flex-col pt-32 px-6 transition-transform duration-300 ease-in-out md:hidden"
+            class:translate-x-0=move || mobile_menu_open.get()
+            class:translate-x-full=move || !mobile_menu_open.get()
+        >
+            <div class="flex flex-col space-y-8 overflow-y-auto pb-24 h-full">
+                <Suspense fallback=move || view! { <div class="w-24 h-4 bg-slate-200 dark:bg-slate-700 animate-pulse rounded"></div> }>
+                    {move || {
+                        let items = nav_resource.get().unwrap_or(Ok(vec![])).unwrap_or_default();
+
+                        let root_items: Vec<_> = items.iter().filter(|i| i.parent_id.is_none()).collect();
+
+                        root_items.into_iter().map(|root| {
+                            let children: Vec<_> = items.iter().filter(|i| i.parent_id == Some(root.id)).collect();
+
+                            if children.is_empty() {
+                                view! {
+                                    <a href=root.href.clone().unwrap_or_else(|| "#".to_string()) on:click=move |_| set_mobile_menu_open.set(false) class="text-3xl font-bold text-slate-800 dark:text-slate-100 uppercase hover:text-primary transition-colors">
+                                        {root.label.clone()}
+                                    </a>
+                                }.into_view()
+                            } else {
+                                view! {
+                                    <div class="flex flex-col space-y-3 pt-2">
+                                        <div class="text-2xl sm:text-3xl font-bold text-slate-400 dark:text-slate-500 uppercase bg-transparent w-full text-left break-words leading-tight whitespace-normal">
+                                            {root.label.clone()}
+                                        </div>
+                                        <div class="flex flex-col space-y-2 pl-4 border-l-2 border-slate-200 dark:border-slate-800">
+                                            {children.into_iter().map(|child| {
+                                                view! {
+                                                    <a href=child.href.clone().unwrap_or_else(|| "#".to_string()) on:click=move |_| set_mobile_menu_open.set(false) class="text-lg sm:text-xl font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors block py-2 border-b border-outline-variant/20 last:border-0 w-full text-left break-words leading-tight whitespace-normal">
+                                                        {child.label.clone()}
+                                                    </a>
+                                                }
+                                            }).collect_view()}
+                                        </div>
+                                    </div>
+                                }.into_view()
+                            }
+                        }).collect_view()
+                    }}
+                </Suspense>
+                <a href="/admin" on:click=move |_| set_mobile_menu_open.set(false) class="mt-8 flex items-center space-x-2 text-primary text-xl font-bold uppercase transition-opacity border p-4 border-outline-variant/30 text-center justify-center">
+                    <span class="material-symbols-outlined">"terminal"</span>
+                    <span>"Admin Terminal"</span>
+                </a>
+            </div>
+        </div>
+        </>
     }
 }
