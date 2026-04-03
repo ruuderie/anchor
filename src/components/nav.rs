@@ -374,12 +374,7 @@ pub fn Nav() -> impl IntoView {
         // Mobile Menu Overlay
         <div
             class="fixed inset-0 bg-surface dark:bg-slate-900 z-50 flex flex-col pt-32 px-6 transition-all duration-300 ease-in-out md:hidden"
-            class:translate-x-0=move || mobile_menu_open.get()
-            class:opacity-100=move || mobile_menu_open.get()
-            class:pointer-events-auto=move || mobile_menu_open.get()
-            class:translate-x-full=move || !mobile_menu_open.get()
-            class:opacity-0=move || !mobile_menu_open.get()
-            class:pointer-events-none=move || !mobile_menu_open.get()
+            style=move || if mobile_menu_open.get() { "transform: translateX(0); opacity: 1; pointer-events: auto;" } else { "transform: translateX(100%); opacity: 0; pointer-events: none;" }
         >
             <div class="flex flex-col space-y-8 overflow-y-auto pb-24 h-full">
                 <Suspense fallback=move || view! { <div class="w-24 h-4 bg-slate-200 dark:bg-slate-700 animate-pulse rounded"></div> }>
