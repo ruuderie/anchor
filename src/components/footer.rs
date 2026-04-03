@@ -128,11 +128,11 @@ pub fn Footer() -> impl IntoView {
     let settings_resource = create_resource(|| (), |_| crate::pages::landing::get_site_settings());
 
     view! {
-        <footer class="w-full border-t border-outline-variant/30 py-8 px-6 md:px-[8.5rem] bg-surface-container-low mt-auto flex flex-col md:flex-row justify-between items-center text-xs jetbrains text-outline gap-6 md:gap-0">
-            <div class="flex items-center space-x-4">
-                <span>"© 2026 RUUD SALYM ERIE. ALL RIGHTS RESERVED."</span>
-                <span class="hidden md:inline text-on-surface-variant">"|"</span>
-                <span class="hidden md:inline text-surface-variant font-bold text-outline">"OPLYST INTERNATIONAL, LLC."</span>
+        <footer class="w-full border-t border-outline-variant/30 py-8 px-6 lg:px-[8.5rem] bg-surface-container-low mt-auto flex flex-col lg:flex-row flex-wrap justify-between items-center text-xs jetbrains text-outline gap-8 lg:gap-6">
+            <div class="flex flex-col lg:flex-row items-center space-y-2 lg:space-y-0 lg:space-x-4 text-center">
+                <span class="break-words">"© 2026 RUUD SALYM ERIE. ALL RIGHTS RESERVED."</span>
+                <span class="hidden lg:inline text-on-surface-variant">"|"</span>
+                <span class="text-surface-variant font-bold text-outline break-words">"OPLYST INTERNATIONAL, LLC."</span>
             </div>
 
             <div class="flex flex-wrap justify-center items-center gap-6">
@@ -141,7 +141,7 @@ pub fn Footer() -> impl IntoView {
                         let items = footer_resource.get().unwrap_or(Ok(vec![])).unwrap_or_default();
                         items.into_iter().map(|item| {
                             view! {
-                                <a href=item.href.clone().unwrap_or_else(|| "#".to_string()) class="text-slate-500 dark:text-slate-400 font-medium hover:text-primary transition-colors tracking-widest uppercase text-[0.65rem]">
+                                <a href=item.href.clone().unwrap_or_else(|| "#".to_string()) class="text-slate-500 dark:text-slate-400 font-medium hover:text-primary transition-colors tracking-widest uppercase text-[0.65rem] text-center whitespace-normal break-words">
                                     {item.label.clone()}
                                 </a>
                             }
@@ -150,7 +150,7 @@ pub fn Footer() -> impl IntoView {
                 </Suspense>
             </div>
 
-            <div class="flex items-center space-x-6">
+            <div class="flex flex-wrap items-center justify-center space-x-6">
                 <Suspense fallback=move || view! { <div></div> }>
                     {move || {
                         let s = settings_resource.get().unwrap_or(Ok(crate::pages::landing::SiteSettings::default())).unwrap_or_default();
@@ -191,8 +191,8 @@ pub fn Footer() -> impl IntoView {
                 </Suspense>
             </div>
 
-            <div class="flex items-center space-x-3">
-                <span class="hidden md:inline text-[0.65rem] tracking-widest uppercase text-on-surface-variant">"Engineered natively in"</span>
+            <div class="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-3 w-full lg:w-auto mt-4 lg:mt-0">
+                <span class="text-[0.65rem] tracking-widest uppercase text-on-surface-variant break-words text-center">"Engineered natively in"</span>
                 <a href="https://www.rust-lang.org/" target="_blank" rel="noopener noreferrer" class="flex items-center opacity-70 hover:opacity-100 transition-opacity p-2 bg-surface-container hover:bg-surface-container-high rounded-sm">
                     <img src="https://upload.wikimedia.org/wikipedia/commons/d/d5/Rust_programming_language_black_logo.svg" alt="Rust Logo" class="h-5 w-5 dark:invert" />
                     <span class="ml-2 font-bold text-on-surface tracking-widest">"RUST"</span>

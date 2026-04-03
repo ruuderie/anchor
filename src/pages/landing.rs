@@ -553,13 +553,16 @@ pub async fn get_lead_options() -> Result<Vec<LeadCaptureOption>, ServerFnError>
         .fetch_all(&state.pool)
         .await?;
 
-    Ok(rows.into_iter().map(|row| LeadCaptureOption {
-        id: row.get("id"),
-        value_key: row.get("value_key"),
-        label: row.get("label"),
-        is_active: row.get("is_active"),
-        display_order: row.get("display_order"),
-    }).collect())
+    Ok(rows
+        .into_iter()
+        .map(|row| LeadCaptureOption {
+            id: row.get("id"),
+            value_key: row.get("value_key"),
+            label: row.get("label"),
+            is_active: row.get("is_active"),
+            display_order: row.get("display_order"),
+        })
+        .collect())
 }
 
 #[server(GetAllLeadOptions, "/api")]
@@ -568,7 +571,7 @@ pub async fn get_all_lead_options() -> Result<Vec<LeadCaptureOption>, ServerFnEr
     use axum::Extension;
     use leptos_axum::extract;
     use sqlx::Row;
-    
+
     if !check_session().await.unwrap_or(false) {
         return Err(ServerFnError::ServerError("Unauthorized".into()));
     }
@@ -578,13 +581,16 @@ pub async fn get_all_lead_options() -> Result<Vec<LeadCaptureOption>, ServerFnEr
         .fetch_all(&state.pool)
         .await?;
 
-    Ok(rows.into_iter().map(|row| LeadCaptureOption {
-        id: row.get("id"),
-        value_key: row.get("value_key"),
-        label: row.get("label"),
-        is_active: row.get("is_active"),
-        display_order: row.get("display_order"),
-    }).collect())
+    Ok(rows
+        .into_iter()
+        .map(|row| LeadCaptureOption {
+            id: row.get("id"),
+            value_key: row.get("value_key"),
+            label: row.get("label"),
+            is_active: row.get("is_active"),
+            display_order: row.get("display_order"),
+        })
+        .collect())
 }
 
 #[server(UpsertLeadOption, "/api")]

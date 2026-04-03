@@ -17,6 +17,25 @@ pub mod ssr {
     }
 }
 
+#[server(IsSystemInitialized, "/api")]
+pub async fn is_system_initialized() -> Result<bool, ServerFnError> {
+    use crate::state::AppState;
+    use axum::Extension;
+    use leptos_axum::extract;
+
+    let app_state = match extract::<Extension<AppState>>().await {
+        Ok(state) => state,
+        Err(_) => return Err(ServerFnError::ServerError("Internal System Error".into())),
+    };
+
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users")
+        .fetch_one(&app_state.pool)
+        .await
+        .unwrap_or(0);
+
+    Ok(count > 0)
+}
+
 #[server(RegisterStart, "/api")]
 pub async fn register_start(
     username: String,

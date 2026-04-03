@@ -1,6 +1,6 @@
 use leptos::*;
-use std::time::Duration;
 use leptos_router::A;
+use std::time::Duration;
 
 #[server(GetBlockHeight, "/api")]
 pub async fn get_block_height() -> Result<u64, ServerFnError> {
@@ -392,14 +392,14 @@ pub fn Nav() -> impl IntoView {
                                     }.into_view()
                                 } else {
                                     view! {
-                                        <div class="flex flex-col space-y-4">
-                                            <div class="text-3xl font-bold text-slate-400 dark:text-slate-500 uppercase bg-transparent w-full text-left">
+                                        <div class="flex flex-col space-y-3 pt-2">
+                                            <div class="text-2xl sm:text-3xl font-bold text-slate-400 dark:text-slate-500 uppercase bg-transparent w-full text-left break-words leading-tight whitespace-normal">
                                                 {root.label.clone()}
                                             </div>
-                                            <div class="flex flex-col space-y-4 pl-4 border-l-2 border-slate-200 dark:border-slate-800">
+                                            <div class="flex flex-col space-y-2 pl-4 border-l-2 border-slate-200 dark:border-slate-800">
                                                 {children.into_iter().map(|child| {
                                                     view! {
-                                                        <a href=child.href.clone().unwrap_or_else(|| "#".to_string()) on:click=move |_| set_mobile_menu_open.set(false) class="text-xl font-medium text-slate-600 dark:text-slate-300 uppercase hover:text-primary transition-colors block py-2 border-b border-outline-variant/20 last:border-0 w-full text-left">
+                                                        <a href=child.href.clone().unwrap_or_else(|| "#".to_string()) on:click=move |_| set_mobile_menu_open.set(false) class="text-lg sm:text-xl font-medium text-slate-600 dark:text-slate-300 hover:text-primary transition-colors block py-2 border-b border-outline-variant/20 last:border-0 w-full text-left break-words leading-tight whitespace-normal">
                                                             {child.label.clone()}
                                                         </a>
                                                     }

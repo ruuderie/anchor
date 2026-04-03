@@ -450,8 +450,8 @@ pub fn SettingsForm() -> impl IntoView {
 
         spawn_local(async move {
             let _ = crate::pages::landing::update_site_settings(
-                cf, st, hq, hs, sttl, lt, ld, ll, lp, lb, lf, le, sc, wu, ae, gai, bu, th, ph,
-                gu, xu, lu, b2b, mt, md, og,
+                cf, st, hq, hs, sttl, lt, ld, ll, lp, lb, lf, le, sc, wu, ae, gai, bu, th, ph, gu,
+                xu, lu, b2b, mt, md, og,
             )
             .await;
             let _ = crate::email::update_smtp_config(shost, sport, suser, stoken, sfrom).await;
@@ -2347,18 +2347,10 @@ pub fn LeadOptionForm(
             .map(|o| o.label.clone())
             .unwrap_or_default(),
     );
-    let (is_active, set_is_active) = create_signal(
-        initial_item
-            .as_ref()
-            .map(|o| o.is_active)
-            .unwrap_or(true),
-    );
-    let (display_order, set_display_order) = create_signal(
-        initial_item
-            .as_ref()
-            .map(|o| o.display_order)
-            .unwrap_or(10),
-    );
+    let (is_active, set_is_active) =
+        create_signal(initial_item.as_ref().map(|o| o.is_active).unwrap_or(true));
+    let (display_order, set_display_order) =
+        create_signal(initial_item.as_ref().map(|o| o.display_order).unwrap_or(10));
 
     let save = move |_| {
         let pk = value_key.get_untracked();
@@ -2385,7 +2377,7 @@ pub fn LeadOptionForm(
                     <input type="text" prop:value=label on:input=move |ev| set_label.set(event_target_value(&ev)) class="bg-surface p-3 border border-outline-variant focus:border-primary focus:ring-0 text-sm jetbrains" placeholder="Front-End Text Display" />
                 </div>
             </div>
-            
+
             <div class="grid grid-cols-2 gap-4 mt-4">
                 <div class="flex flex-col gap-2">
                     <label class="jetbrains text-[0.65rem] uppercase text-outline tracking-wider">"Display Order"</label>

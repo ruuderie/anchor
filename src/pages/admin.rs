@@ -25,6 +25,8 @@ pub fn Admin() -> impl IntoView {
     let (is_loading, set_is_loading) = create_signal(false);
     let (auth_error, set_auth_error) = create_signal(String::new());
 
+    let sys_init_res = create_resource(|| (), |_| is_system_initialized());
+
     let (modal_state, set_modal_state) = create_signal(ModalState::None);
     provide_context(modal_state);
     provide_context(set_modal_state);
@@ -168,16 +170,26 @@ pub fn Admin() -> impl IntoView {
                                             prop:value=username
                                             class="w-full bg-transparent border-none border-b-2 border-outline-variant focus:border-primary focus:ring-0 px-0 py-4 jetbrains text-lg text-on-surface transition-all placeholder:text-outline-variant/50"
                                         />
-                                    </div>                                    <div class="relative w-full group mt-6">
-                                        <label class="jetbrains text-[0.65rem] uppercase tracking-[0.1em] text-outline text-left block mb-2">"Setup Token (First-Run Only)"</label>
-                                        <input
-                                            type="text"
-                                            placeholder="..."
-                                            on:input=move |ev| set_setup_token.set(event_target_value(&ev))
-                                            prop:value=setup_token
-                                            class="w-full bg-transparent border-none border-b-2 border-outline-variant focus:border-primary focus:ring-0 px-0 py-4 jetbrains text-lg text-on-surface transition-all placeholder:text-outline-variant/50"
-                                        />
-                                    </div>
+                                    </div>                                    <Suspense fallback=move || view! { <div class="hidden"></div> }>
+                                        {move || {
+                                            if !sys_init_res.get().unwrap_or(Ok(true)).unwrap_or(true) {
+                                                view! {
+                                                    <div class="relative w-full group mt-6">
+                                                        <label class="jetbrains text-[0.65rem] uppercase tracking-[0.1em] text-outline text-left block mb-2">"Setup Token (First-Run Only)"</label>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="..."
+                                                            on:input=move |ev| set_setup_token.set(event_target_value(&ev))
+                                                            prop:value=setup_token
+                                                            class="w-full bg-transparent border-none border-b-2 border-outline-variant focus:border-primary focus:ring-0 px-0 py-4 jetbrains text-lg text-on-surface transition-all placeholder:text-outline-variant/50"
+                                                        />
+                                                    </div>
+                                                }.into_view()
+                                            } else {
+                                                view! { <div class="hidden"></div> }.into_view()
+                                            }
+                                        }}
+                                    </Suspense>
 
                                     <div class="space-y-4 pt-6">
                                         <Show when=move || !auth_error.get().is_empty()>
@@ -197,13 +209,23 @@ pub fn Admin() -> impl IntoView {
                                             <span class="inline-block translate-y-[1px]">"Authenticate // Passkey"</span>
                                         </button>
 
-                                        <button
-                                            on:click=move |_| register_action.dispatch(())
-                                            disabled=is_loading
-                                            class="w-full border border-primary/20 text-primary py-4 jetbrains font-bold text-sm tracking-[0.2em] uppercase hover:bg-surface-container disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                        >
-                                            "Register Device"
-                                        </button>
+                                        <Suspense fallback=move || view! { <div class="hidden"></div> }>
+                                            {move || {
+                                                if !sys_init_res.get().unwrap_or(Ok(true)).unwrap_or(true) {
+                                                    view! {
+                                                        <button
+                                                            on:click=move |_| register_action.dispatch(())
+                                                            disabled=is_loading
+                                                            class="w-full border border-primary/20 text-primary py-4 jetbrains font-bold text-sm tracking-[0.2em] uppercase hover:bg-surface-container disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                        >
+                                                            "Register Device"
+                                                        </button>
+                                                    }.into_view()
+                                                } else {
+                                                    view! { <div class="hidden"></div> }.into_view()
+                                                }
+                                            }}
+                                        </Suspense>
                                     </div>
                                 </div>
                             </div>
@@ -800,7 +822,7 @@ pub async fn delete_mailing_list(id: i32) -> Result<(), ServerFnError> {
 
 #[component]
 fn LeadOptionTable() -> impl IntoView {
-    use crate::pages::landing::{get_all_lead_options, delete_lead_option};
+    use crate::pages::landing::{delete_lead_option, get_all_lead_options};
     let refresh = expect_context::<ReadSignal<i32>>();
     let set_refresh = expect_context::<WriteSignal<i32>>();
     let set_modal_state =

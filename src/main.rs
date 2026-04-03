@@ -1,11 +1,11 @@
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
+    use anchor::app::*;
+    use anchor::state::AppState;
     use axum::Router;
     use leptos::*;
     use leptos_axum::{generate_route_list, LeptosRoutes};
-    use anchor::app::*;
-    use anchor::state::AppState;
     use sqlx::PgPool;
     use tower_http::services::ServeDir;
 
@@ -15,9 +15,8 @@ async fn main() {
     let routes = generate_route_list(App);
 
     // Initialize Database
-    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
-        "postgres://ruud_admin:R3sUm3_S3cUr3@localhost:5432/anchor".into()
-    });
+    let database_url = std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://ruud_admin:R3sUm3_S3cUr3@localhost:5432/anchor".into());
     let pool = PgPool::connect(&database_url)
         .await
         .expect("Failed to connect to PostgreSQL");
@@ -38,7 +37,10 @@ async fn main() {
 
     let app = Router::new()
         // Export the open metrics endpoint
-        .route("/metrics", axum::routing::get(|| async move { metric_handle.render() }))
+        .route(
+            "/metrics",
+            axum::routing::get(|| async move { metric_handle.render() }),
+        )
         .route(
             "/api/*fn_name",
             axum::routing::get(leptos_axum::handle_server_fns).post(leptos_axum::handle_server_fns),
