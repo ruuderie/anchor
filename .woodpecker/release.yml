@@ -36,7 +36,13 @@ steps:
       - /etc/rancher/k3s/k3s.yaml:/kubeconfig.yaml:ro
     environment:
       KUBECONFIG: /kubeconfig.yaml
+      SOPS_AGE_KEY:
+        from_secret: sops_private_key
     commands:
+      # Alpine comes bare. We need to install SOPS natively to decrypt the manifest before apply!
+      - apk add --no-cache sops
+      - kubectl --server=https://host.containers.internal:6443 --insecure-skip-tls-verify apply -k k8s/instances/buildwithruud/uat/
+      - sops -d k8s/instances/buildwithruud/uat/secret.enc.yaml | kubectl --server=https://host.containers.internal:6443 --insecure-skip-tls-verify apply -f -
       - kubectl --server=https://host.containers.internal:6443 --insecure-skip-tls-verify rollout restart deployment/anchor-app -n buildwithruud-uat
 
   # ===================================================================

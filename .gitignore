@@ -22,3 +22,4 @@ node_modules/
 .DS_Store
 .sync-conflict*
 docker_build.log
+sops-key.txt

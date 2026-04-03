@@ -26,14 +26,23 @@ Your platform manages configuration using `kustomization.yaml`. To create a bran
    Change `namespace: buildwithruud-uat` to `namespace: client-prod`.
    Make sure you uniquely change the hostname in the Ingress file (e.g., `client.domain.com`).
 
-3. **Deploy the Environment Shell:**
+3. **Inject the Decoupled Database Secret:**
+   Because our architecture strictly manages sensitive data outside of Git tracking for supreme security, you must manually generate the `app-secrets` object directly into your new namespace.
+   First, access your database (`psql`) and run `CREATE DATABASE client_prod OWNER your_admin_user;` and set a strong database password.
+   Then, directly securely push the parsed secret to Kubernetes:
+   ```bash
+   kubectl create secret generic app-secrets \
+     --from-literal=DATABASE_URL="postgres://your_admin_user:THE_PASSWORD@10.42.0.1:5432/client_prod" \
+     -n client-prod
+   ```
+
+4. **Deploy the Environment Shell:**
    From your local terminal (connected to your server via `kubectl`), execute the kustomize apply sequentially to lock in the Postgres Database first, then the App instance:
    ```bash
    kubectl apply -k k8s/databases/client-prod/
    kubectl apply -k k8s/apps/client-prod/
    ```
    *Your Kubernetes cluster now has a sealed application instance and isolated database waiting dynamically for the Woodpecker image push.*
-
 ---
 
 ## Step 2: Configure Woodpecker Pipeline Routing

@@ -20,6 +20,8 @@ spec:
         ports:
         - containerPort: 3000
         envFrom:
+        - configMapRef:
+            name: app-config
         - secretRef:
             name: app-secrets
 ---

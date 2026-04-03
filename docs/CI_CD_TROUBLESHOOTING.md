@@ -40,3 +40,52 @@ This document captures the entire diagnostic journey of stabilizing our Woodpeck
 
 ---
 **Summary:** The pipeline executes end-to-end identically to our local development environment without altering system permissions.
+
+## 8. NGINX 503 Service Unavailable (Kustomize Secret Overwrite)
+**Issue:** After preparing the project for CI/CD, navigating to `https://uat.buildwithruud.com/` threw a Cloudflare 503 error. The `anchor-app` pods were stuck in a continuous `CrashLoopBackOff`, reporting a fatal PostgreSQL authentication error for user `ruud_admin`.
+**Cause:** In `k8s/instances/buildwithruud/uat/config.yaml`, the `app-secrets` block was tracked in Git as a `kind: Secret` containing a non-functional `DATABASE_URL` holding the literal string `<PLACEHOLDER>`. When `kubectl apply -k .` was manually issued to prepare the cluster for CI/CD transitions, Kubernetes declaratively evaluated the file and ruthlessly overwrote the *real* cluster secret with the dummy placeholder, permanently locking the pod out of the database.
+**Correction:** 
+1. Regenerated a new, highly secure password for `ruud_admin` manually via `psql`.
+2. Refactored `config.yaml` from `kind: Secret` into a non-sensitive `kind: ConfigMap` (named `app-config`), structurally removing the `DATABASE_URL` from Git completely.
+This completely isolates all stateful passwords from Kustomize tracking, ensuring subsequent file applies or deployments never erase database credentials.
+
+---
+
+## 9. Understanding SOPS & Age Encryption Strategies
+
+Because we are decoupling Secrets from Kustomize via **SOPS**, it is critical to understand the cryptographic lifecycle of **Age** keypairs for our Multi-Tenant clusters.
+
+### Handling and Storing Private Keys
+When you generate an Age key (`age-keygen`), you receive a **Public Key** (`age1...`) and a **Private Key** (`AGE-SECRET-KEY-1...`).
+- **Public Key:** Committed safely to the source code natively inside a `.sops.yaml` configuration file. This allows *anyone* or *any pipeline* to encrypt data without seeing the core secret. 
+- **Private Key:** Stored inside **Woodpecker CI Secrets** UI (e.g., as `SOPS_AGE_KEY`), injected exactly at deployment runtime. Alternatively, it can be securely saved in an external cold-storage vault (like 1Password) by platform admins for emergency rollback or local dev decryption. **Never commit the Private Key to Git.**
+
+### The "Lost Key" Data Scenario
+**Question:** If I lose the private key, is the data permanently lost?
+**Answer:** Technically, yes—the `.enc.yaml` files within the Git repository become completely mathematically unrecoverable. 
+**However, the Application still runs!** The Kubernetes cluster and its running databases physically hold the decrypted, plaintext data in their live memory and volumes. You do not lose your live application state or databases. If a key is completely lost, you simply extract the live secret from Kubernetes (`kubectl get secret -o yaml`), generate a brand-new Age key, and re-encrypt a fresh `.enc.yaml` file into your repository.
+
+### Safely Rotating Keys
+If a developer leaves or a key is suspected of being compromised, rotating keys is incredibly simple because of the SOPS manifest syntax.
+1. Generate the new Age key pair (`age-keygen`).
+2. Update `.sops.yaml` with the new Public Key alongside the old Public Key.
+3. Run `sops updatekeys k8s/instances/**/secret.enc.yaml`. SOPS seamlessly decrypts the secret using your old private key and simultaneously re-encrypts it using the new public key. 
+4. Delete the old key from `.sops.yaml` and upload the new Private Key to Woodpecker CI. 
+
+### Multi-Tenant Architecture Structure
+SOPS handles complex multi-tenant segmentation perfectly via the `.sops.yaml` creation rules structure. 
+You do **not** need a separate key for every tenant unless strict cryptographic isolation is mandated. The optimal standard is **One Key Per Major Environment**.
+```yaml
+creation_rules:
+  # UAT and DEV share one key
+  - path_regex: k8s/instances/.*/(uat|dev)/.*\.enc\.yaml$
+    key_groups:
+    - age:
+      - age1_uat_dev_public_key_here
+  # PROD uses a highly restricted key
+  - path_regex: k8s/instances/.*/prod/.*\.enc\.yaml$
+    key_groups:
+    - age:
+      - age1_prod_public_key_here
+```
+This isolates blast radiuses: A compromise of the Dev pipeline key physically cannot decrypt the Production client configurations. 
