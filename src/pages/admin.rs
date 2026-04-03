@@ -149,7 +149,7 @@ pub fn Admin() -> impl IntoView {
     });
 
     view! {
-        <main class="min-h-screen bg-surface-container-low text-on-surface flex flex-col pt-24 px-6 md:px-[8.5rem]">
+        <main class="min-h-screen bg-surface-container-low text-on-surface flex flex-col pt-24 px-4 md:px-[8.5rem]">
             {move || if !is_authenticated.get() {
                 view! {
                     <div class="flex-1 flex justify-center items-center">

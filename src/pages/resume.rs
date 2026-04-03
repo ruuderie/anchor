@@ -215,7 +215,7 @@ pub fn Resume() -> impl IntoView {
     };
 
     view! {
-        <main class="pt-32 pb-24 px-6 md:px-[8.5rem] bg-surface-container-low min-h-screen">
+        <main class="pt-32 pb-24 px-4 md:px-[8.5rem] bg-surface-container-low min-h-screen">
             <div class="mb-24 flex flex-col md:flex-row justify-between md:items-end max-w-4xl border-b-2 border-outline-variant/30 pb-8">
                 <crate::components::dynamic_header::DynamicPageHeader route_path="/resume".to_string() badge_color="primary".to_string() />
 

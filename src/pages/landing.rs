@@ -358,9 +358,9 @@ pub fn Landing() -> impl IntoView {
     });
 
     view! {
-        <main class="pt-32 pb-24 px-6 md:px-[8.5rem]">
+        <main class="pt-32 pb-24">
             // Hero Section
-            <section class="w-full grid grid-cols-1 md:grid-cols-12 gap-12 min-h-[716px] items-start">
+            <section class="w-full grid grid-cols-1 md:grid-cols-12 gap-12 min-h-[716px] items-start px-4 md:px-[8.5rem]">
                 <div class="w-full md:col-span-12 lg:col-span-8 flex flex-col items-start">
                     <div class="inline-block bg-surface-container-high px-3 py-1 jetbrains text-[0.625rem] font-medium tracking-widest text-on-surface-variant mb-8 uppercase">
                         "RUST SYSTEMS ENGINEER // BITCOIN ENTHUSIAST"
@@ -528,7 +528,9 @@ pub fn Landing() -> impl IntoView {
                 </div>
             </section>
 
-            <HighlightsGallery />
+            <div class="px-4 md:px-[8.5rem] mt-24">
+                <HighlightsGallery />
+            </div>
         </main>
     }
 }

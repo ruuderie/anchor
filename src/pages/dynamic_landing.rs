@@ -187,7 +187,7 @@ pub fn DynamicLanding() -> impl IntoView {
     let page_res = create_resource(move || slug(), |s| get_landing_page(s));
 
     view! {
-        <main class="pt-32 pb-24 px-6 md:px-[8.5rem]">
+        <main class="pt-32 pb-24 px-4 md:px-[8.5rem]">
             <Suspense fallback=move || view! { <div class="text-center pt-24 jetbrains text-outline">"LOADING..."</div> }>
                 {move || match page_res.get() {
                     Some(Ok(Some(page))) => {

@@ -93,7 +93,7 @@ pub fn Projects() -> impl IntoView {
     );
 
     view! {
-        <main class="pt-32 pb-24 px-6 md:px-[8.5rem] bg-surface min-h-screen">
+        <main class="pt-32 pb-24 px-4 md:px-[8.5rem] bg-surface min-h-screen">
             <crate::components::dynamic_header::DynamicPageHeader route_path="/projects".to_string() badge_color="primary".to_string() />
 
             <Suspense fallback=move || view! { <div class="text-on-surface-variant font-bold jetbrains uppercase">"Indexing project graphs..."</div> }>
