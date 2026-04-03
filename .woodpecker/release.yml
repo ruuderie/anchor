@@ -28,7 +28,20 @@ steps:
       password:
         from_secret: docker_password
 
-  # [NEW] CD Step: Tell the UAT Kubernetes server to update to the new image
+  # [NEW] CD Step 1: Securely fetch the Alpine image, install SOPS, and decrypt the payload
+  decrypt_secrets_uat:
+    image: alpine:latest
+    environment:
+      SOPS_AGE_KEY:
+        from_secret: sops_private_key
+    commands:
+      - apk add --no-cache curl
+      - curl -L https://github.com/getsops/sops/releases/download/v3.8.1/sops-v3.8.1.linux.amd64 -o /usr/local/bin/sops
+      - chmod +x /usr/local/bin/sops
+      - sops --version
+      - sops -d k8s/instances/buildwithruud/uat/secret.enc.yaml > k8s/instances/buildwithruud/uat/secret.dec.yaml
+
+  # [NEW] CD Step 2: Use the exact rancher binary to push config flawlessly into the k3s cluster
   deploy_uat:
     image: rancher/k3s:latest
     # Because Woodpecker runs ON the manager server, we can securely mount the internal Kubeconfig!
@@ -36,24 +49,10 @@ steps:
       - /etc/rancher/k3s/k3s.yaml:/kubeconfig.yaml:ro
     environment:
       KUBECONFIG: /kubeconfig.yaml
-      SOPS_AGE_KEY:
-        from_secret: sops_private_key
     commands:
-      # 1. Update apt and install wget
-      - apt-get update && apt-get install -y wget ca-certificates
-      
-      # 2. Download the SOPS binary directly to /usr/local/bin
-      - wget -qO /usr/local/bin/sops https://github.com/getsops/sops/releases/download/v3.8.1/sops-v3.8.1.linux.amd64
-      
-      # 3. Make the SOPS binary executable
-      - chmod +x /usr/local/bin/sops
-      
-      # 4. Verify it's ready to use
-      - sops --version
-      
-      # 5. Apply architecture
       - kubectl --server=https://host.containers.internal:6443 --insecure-skip-tls-verify apply -k k8s/instances/buildwithruud/uat/
-      - sops -d k8s/instances/buildwithruud/uat/secret.enc.yaml | kubectl --server=https://host.containers.internal:6443 --insecure-skip-tls-verify apply -f -
+      - kubectl --server=https://host.containers.internal:6443 --insecure-skip-tls-verify apply -f k8s/instances/buildwithruud/uat/secret.dec.yaml
+      - rm k8s/instances/buildwithruud/uat/secret.dec.yaml
       - kubectl --server=https://host.containers.internal:6443 --insecure-skip-tls-verify rollout restart deployment/anchor-app -n buildwithruud-uat
 
   # ===================================================================
